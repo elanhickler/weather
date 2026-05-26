@@ -554,6 +554,19 @@ function formatBytes(bytes) {
   return `${formatCompactNumber(bytes / 1024)} KB`;
 }
 
+function formatTimestamp(value) {
+  if (!value) {
+    return "missing";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "invalid";
+  }
+
+  return date.toLocaleString();
+}
+
 async function renderParameterSummary(links) {
   const status = document.getElementById("parameterSummaryStatus");
   const path = findArtifactPath(links, "text-summary");
@@ -650,6 +663,23 @@ function renderProducerProof(manifest) {
 
   setStatus("producerStatus", ok ? "Verified" : "Check", ok);
   renderKeyValue(document.getElementById("producerProof"), rows);
+}
+
+function renderSource(response) {
+  const info = response.manifestInfo || {};
+  const hasPath = Boolean(response.manifestPath);
+  const hasRoot = Boolean(response.artifactRoot);
+  const bytes = Number(info.bytes);
+  const hasBytes = Number.isFinite(bytes) && bytes > 0;
+  const modified = formatTimestamp(info.modifiedUtc);
+  const hasModified = modified !== "missing" && modified !== "invalid";
+  const ok = hasPath && hasRoot && hasBytes && hasModified;
+
+  setStatus("sourceStatus", ok ? "Loaded" : "Check", ok);
+  setText("manifestPath", response.manifestPath || "missing");
+  setText("artifactRoot", response.artifactRoot || "missing");
+  setText("manifestBytes", hasBytes ? formatBytes(bytes) : "missing");
+  setText("manifestModified", modified);
 }
 
 function renderArtifacts(links) {
@@ -806,8 +836,7 @@ function render(response) {
     checklist.accepted,
   );
   setText("audioTitle", handoff.primaryAudioArtifact);
-  setText("manifestPath", response.manifestPath);
-  setText("artifactRoot", response.artifactRoot);
+  renderSource(response);
 
   const audio = document.getElementById("audioPlayer");
   audio.src = artifactUrl(handoff.primaryAudioArtifact);
@@ -834,6 +863,11 @@ function renderError(message) {
   setStatus("inspectionMode", "Unavailable", false);
   setText("frameCount", "0");
   setStatus("checklistStatus", "Check", false);
+  setStatus("sourceStatus", "Check", false);
+  setText("manifestPath", "Unavailable");
+  setText("manifestBytes", "Unavailable");
+  setText("manifestModified", "Unavailable");
+  setText("artifactRoot", "Unavailable");
 }
 
 async function loadManifest() {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -78,11 +79,22 @@ class SandboxServer(BaseHTTPRequestHandler):
             )
             return
 
+        manifest_stat = manifest_path.stat()
         self.send_json(
             {
                 "ok": True,
                 "manifestPath": str(manifest_path),
                 "artifactRoot": str(self.artifact_root.resolve()),
+                "manifestInfo": {
+                    "bytes": manifest_stat.st_size,
+                    "modifiedUtc": datetime.fromtimestamp(
+                        manifest_stat.st_mtime,
+                        timezone.utc,
+                    )
+                    .replace(microsecond=0)
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                },
                 "manifest": manifest,
             }
         )
