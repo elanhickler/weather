@@ -41,8 +41,9 @@ checks handoff artifact references, checks artifact and phase coverage, checks
 every manifest artifact link for reachability, checks report documents, checks
 parameter resync summary values, checks primary audio artifact reachability and
 WAV metadata, checks expected error and forbidden path responses, and verifies
-local responses use no-store cache headers. It prints grouped checkpoints so
-failures are easier to locate.
+that readable malformed manifest shapes still preserve source details for the
+browser consumer. It also verifies local responses use no-store cache headers.
+It prints grouped checkpoints so failures are easier to locate.
 
 ## Boundaries
 

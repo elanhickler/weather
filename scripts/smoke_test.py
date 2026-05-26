@@ -632,9 +632,43 @@ def run_manifest_error_smoke(port: int) -> None:
                 stop_server(process)
 
 
+def run_readable_malformed_manifest_smoke(port: int) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        fixture_root = Path(directory)
+        malformed_manifest = fixture_root / "malformed_manifest.json"
+        malformed_manifest.write_text(json.dumps({"allOk": True}), encoding="utf-8")
+
+        case_port = find_free_port() if port == 0 else port
+        base_url = f"http://127.0.0.1:{case_port}"
+        process = start_server(case_port, malformed_manifest)
+        try:
+            wait_for_server(base_url, process)
+            response = request(f"{base_url}/api/manifest")
+            require(response.status == 200, "readable malformed manifest status mismatch")
+            require_no_store(response, "readable malformed manifest")
+            payload = json.loads(response.body.decode("utf-8"))
+            require(payload.get("ok") is True, "readable malformed manifest was not ok")
+            require(
+                payload.get("manifestPath") == str(malformed_manifest.resolve()),
+                "readable malformed manifest path missing",
+            )
+            require(
+                payload.get("artifactRoot") == str(fixture_root.resolve()),
+                "readable malformed manifest artifact root mismatch",
+            )
+            require(
+                payload.get("manifest") == {"allOk": True},
+                "readable malformed manifest payload mismatch",
+            )
+            require("error" not in payload, "readable malformed manifest had error field")
+        finally:
+            stop_server(process)
+
+
 def run_smoke(port: int, manifest: Path) -> None:
     valid_manifest_port = find_free_port() if port == 0 else port
     error_manifest_port = 0 if port == 0 else port + 1
+    malformed_manifest_port = 0 if port == 0 else port + 3
     run_step(
         "valid manifest packet",
         lambda: run_valid_manifest_smoke(valid_manifest_port, manifest),
@@ -642,6 +676,10 @@ def run_smoke(port: int, manifest: Path) -> None:
     run_step(
         "manifest error responses",
         lambda: run_manifest_error_smoke(error_manifest_port),
+    )
+    run_step(
+        "readable malformed manifest source",
+        lambda: run_readable_malformed_manifest_smoke(malformed_manifest_port),
     )
 
 
