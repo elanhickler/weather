@@ -1718,9 +1718,10 @@ function formatRegionRange(region, sampleRate) {
     return "range";
   }
 
+  const frames = Math.max(0, region.endFrame - region.startFrame);
   return `${formatSeconds(region.startFrame / sampleRate)}-${formatSeconds(
     region.endFrame / sampleRate,
-  )}`;
+  )} / ${frames} frames`;
 }
 
 function setPlayheadFrame(frame) {

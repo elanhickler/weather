@@ -1258,6 +1258,8 @@ def require_waveform_seek_source_contract() -> None:
         "const phaseAudioAmplitudeTolerance = 0.001",
         "const phaseAudioRmsTolerance = 0.001",
         "function renderCurrentParameters(region)",
+        "const frames = Math.max(0, region.endFrame - region.startFrame)",
+        ")} / ${frames} frames`",
         "waveformProbeSource: null",
         "function setInspectionCursorSource(sourceName, mode)",
         "source.className = `pill inspection-source ${mode}`",
