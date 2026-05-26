@@ -6,6 +6,7 @@ const state = {
   waveformProbeSource: null,
   waveformPointerActive: false,
   phaseJumpPreviewIndex: null,
+  lastSeekSource: null,
   followAudio: true,
   reports: [],
   activeReportIndex: 0,
@@ -143,6 +144,12 @@ function setInspectionCursorPreview(active) {
   const preview = document.getElementById("inspectionCursorPreview");
   preview.textContent = active ? "preview only" : "preview idle";
   preview.className = `pill inspection-preview ${active ? "active" : "idle"}`;
+}
+
+function setInspectionCursorSeek(sourceName) {
+  const seek = document.getElementById("inspectionCursorSeek");
+  seek.textContent = sourceName ? `seek ${sourceName}` : "seek idle";
+  seek.className = `pill inspection-seek ${sourceName ? "active" : "idle"}`;
 }
 
 function setInspectionCursorTarget(region) {
@@ -1556,7 +1563,7 @@ function renderWaveformPhaseControls() {
     button.addEventListener("focus", () => probePhaseButton(index));
     button.addEventListener("blur", clearPhaseButtonProbe);
     button.addEventListener("click", () => {
-      seekPrimaryAudioToFrame(region.startFrame);
+      seekPrimaryAudioToFrame(region.startFrame, "phase jump");
     });
     container.append(button);
   }
@@ -1717,6 +1724,7 @@ async function renderWaveform(path) {
     state.waveformProbeFrame = null;
     state.waveformProbeSource = null;
     state.phaseJumpPreviewIndex = null;
+    state.lastSeekSource = null;
     state.signalPlotProbe = null;
     state.waveform.stats = analyzeWaveform(state.waveform.samples);
     state.waveform.envelope = buildLevelEnvelope(state.waveform);
@@ -1755,6 +1763,7 @@ async function renderWaveform(path) {
     state.waveformProbeFrame = null;
     state.waveformProbeSource = null;
     state.phaseJumpPreviewIndex = null;
+    state.lastSeekSource = null;
     state.signalPlotProbe = null;
     state.playheadFrame = 0;
     meta.replaceChildren();
@@ -1854,6 +1863,7 @@ function renderInspectionCursor() {
     setInspectionCursorSource("none", "none");
     setInspectionCursorDelta(null, 1);
     setInspectionCursorPreview(false);
+    setInspectionCursorSeek(null);
     setInspectionCursorTransport(null);
     setInspectionCursorTarget(null);
     setInspectionCursorDivergence(null, null);
@@ -1892,6 +1902,7 @@ function renderInspectionCursor() {
   setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
   setInspectionCursorDelta(hoverDeltaFrame, waveform.sampleRate);
   setInspectionCursorPreview(hoverFrame !== null);
+  setInspectionCursorSeek(state.lastSeekSource);
   setInspectionCursorTransport(transportRegion);
   setInspectionCursorTarget(hoverRegion);
   setInspectionCursorDivergence(transportRegion, hoverRegion);
@@ -1980,13 +1991,14 @@ function syncWaveformToAudio() {
   setPlayheadFrame(Math.round(audio.currentTime * state.waveform.sampleRate));
 }
 
-function seekPrimaryAudioToFrame(frame) {
+function seekPrimaryAudioToFrame(frame, source = "waveform") {
   const waveform = state.waveform;
   if (!waveform) {
     return;
   }
 
   const targetFrame = clampFrame(frame, waveform);
+  state.lastSeekSource = source;
   if (state.followAudio) {
     const audio = document.getElementById("audioPlayer");
     const targetTime = targetFrame / waveform.sampleRate;
@@ -2005,7 +2017,7 @@ function seekWaveformAtClientX(clientX) {
     return;
   }
 
-  seekPrimaryAudioToFrame(waveformFrameAtClientX(clientX));
+  seekPrimaryAudioToFrame(waveformFrameAtClientX(clientX), "waveform");
 }
 
 function waveformFrameAtClientX(clientX) {
@@ -2122,7 +2134,7 @@ function scrubWaveform(event) {
   }
 
   const ratio = Number(event.currentTarget.value);
-  seekPrimaryAudioToFrame(Math.round(ratio * waveform.frames));
+  seekPrimaryAudioToFrame(Math.round(ratio * waveform.frames), "scrubber");
 }
 
 function toggleFollowAudio() {
@@ -2762,6 +2774,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
     ["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))],
     ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
+    ["inspection seek pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeek"))],
     ["inspection transport pill", waveformReady && Boolean(document.getElementById("inspectionCursorTransport"))],
     ["inspection target pill", waveformReady && Boolean(document.getElementById("inspectionCursorTarget"))],
     ["inspection divergence pill", waveformReady && Boolean(document.getElementById("inspectionCursorDivergence"))],
@@ -3454,6 +3467,7 @@ function renderError(message, details = {}) {
   state.waveformProbeFrame = null;
   state.waveformProbeSource = null;
   state.phaseJumpPreviewIndex = null;
+  state.lastSeekSource = null;
   state.signalPlotProbe = null;
   state.reports = [];
   state.activeReportIndex = 0;
@@ -3469,6 +3483,7 @@ function renderError(message, details = {}) {
   setInspectionCursorDelta(null, 1);
   setInspectionCursorAudio(0);
   setInspectionCursorPreview(false);
+  setInspectionCursorSeek(null);
   setInspectionCursorTransport(null);
   setInspectionCursorTarget(null);
   setInspectionCursorDivergence(null, null);

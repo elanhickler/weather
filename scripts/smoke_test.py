@@ -81,6 +81,7 @@ REQUIRED_SHELL_IDS = {
     "inspectionCursorDelta",
     "inspectionCursorDivergence",
     "inspectionCursorPreview",
+    "inspectionCursorSeek",
     "inspectionCursorSource",
     "inspectionCursorStatus",
     "inspectionCursorTarget",
@@ -1233,7 +1234,7 @@ def require_waveform_seek_source_contract() -> None:
     app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     require(
-        "function seekPrimaryAudioToFrame(frame)" in app_source,
+        'function seekPrimaryAudioToFrame(frame, source = "waveform")' in app_source,
         "waveform seek helper missing",
     )
     require(
@@ -1266,6 +1267,15 @@ def require_waveform_seek_source_contract() -> None:
         "function setInspectionCursorPreview(active)",
         'preview.textContent = active ? "preview only" : "preview idle"',
         'setInspectionCursorPreview(false)',
+        "lastSeekSource: null",
+        "function setInspectionCursorSeek(sourceName)",
+        'seek.textContent = sourceName ? `seek ${sourceName}` : "seek idle"',
+        'seek.className = `pill inspection-seek ${sourceName ? "active" : "idle"}`',
+        "setInspectionCursorSeek(state.lastSeekSource)",
+        "setInspectionCursorSeek(null)",
+        'seekPrimaryAudioToFrame(region.startFrame, "phase jump")',
+        'seekPrimaryAudioToFrame(waveformFrameAtClientX(clientX), "waveform")',
+        'seekPrimaryAudioToFrame(Math.round(ratio * waveform.frames), "scrubber")',
         "function setInspectionCursorTarget(region)",
         'target.textContent = `target ${region?.name || "none"}`',
         "setInspectionCursorTarget(null)",
@@ -1394,6 +1404,7 @@ def require_waveform_seek_source_contract() -> None:
         '["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))]',
         '["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))]',
         '["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))]',
+        '["inspection seek pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeek"))]',
         '["inspection transport pill", waveformReady && Boolean(document.getElementById("inspectionCursorTransport"))]',
         '["inspection target pill", waveformReady && Boolean(document.getElementById("inspectionCursorTarget"))]',
         '["inspection divergence pill", waveformReady && Boolean(document.getElementById("inspectionCursorDivergence"))]',
@@ -1553,6 +1564,8 @@ def require_waveform_seek_source_contract() -> None:
         ".pill.inspection-delta.hover",
         ".pill.inspection-preview.idle",
         ".pill.inspection-preview.active",
+        ".pill.inspection-seek.idle",
+        ".pill.inspection-seek.active",
         ".pill.inspection-target.none",
         ".pill.inspection-target.active",
         ".pill.inspection-transport.none",
