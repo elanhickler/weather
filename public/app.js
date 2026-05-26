@@ -1025,6 +1025,27 @@ function signalPlotProbeAtClientPoint(clientX, clientY) {
   };
 }
 
+function signalPlotProbeAtFrame(frame) {
+  const waveform = state.waveform;
+  if (!waveform) {
+    return null;
+  }
+
+  const lagFrames = signalPlotLagFrames(waveform);
+  const drawableFrames = Math.max(0, waveform.samples.length - lagFrames);
+  const probeFrame = Math.max(0, Math.min(drawableFrames - 1, frame));
+  return {
+    x: waveform.samples[probeFrame] || 0,
+    y: waveform.samples[probeFrame + lagFrames] || 0,
+    nearest: {
+      frame: probeFrame,
+      phase: waveformRegionAtFrame(probeFrame)?.name || "phase",
+      seconds: probeFrame / waveform.sampleRate,
+      distance: 0,
+    },
+  };
+}
+
 function renderSignalPlotProbe() {
   const probe = document.getElementById("signalPlotProbe");
   const source = document.getElementById("signalPlotProbeSource");
@@ -1614,7 +1635,10 @@ function probeWaveformAtClientX(clientX) {
   }
 
   state.waveformProbeFrame = waveformFrameAtClientX(clientX);
+  state.signalPlotProbe = signalPlotProbeAtFrame(state.waveformProbeFrame);
   renderWaveformProbe();
+  drawSignalPlot();
+  renderSignalPlotProbe();
 }
 
 function seekWaveform(event) {
@@ -1653,7 +1677,10 @@ function clearWaveformProbe() {
   }
 
   state.waveformProbeFrame = null;
+  state.signalPlotProbe = null;
   renderWaveformProbe();
+  drawSignalPlot();
+  renderSignalPlotProbe();
 }
 
 function scrubWaveform(event) {
@@ -2179,6 +2206,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))],
     ["signal plot probe", waveformReady && Boolean(document.getElementById("signalPlotProbe"))],
     ["signal plot source probe", waveformReady && Boolean(document.getElementById("signalPlotProbeSource"))],
+    ["waveform-to-signal probe", waveformReady && Boolean(signalPlotProbeAtFrame(0))],
     ["read-only boundary", validateConsumerChecklist(manifest).accepted],
   ];
   const ok = rows.every(([_label, rowOk]) => rowOk);
