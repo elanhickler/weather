@@ -783,8 +783,7 @@ function renderLevelEnvelopeProbe() {
   const probe = document.getElementById("levelEnvelopeProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    probe.textContent = "probe";
-    setProbePillMetadata(probe, "none", null, "Level envelope probe idle");
+    resetProbePill("levelEnvelopeProbe", "probe", "Level envelope probe idle");
     return;
   }
 
@@ -874,8 +873,7 @@ function renderPhaseAudioStatsProbe() {
   const probe = document.getElementById("phaseAudioStatsProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    probe.textContent = "probe";
-    setProbePillMetadata(probe, "none", null, "Phase audio stats probe idle");
+    resetProbePill("phaseAudioStatsProbe", "probe", "Phase audio stats probe idle");
     updatePhaseProbeTargets();
     return;
   }
@@ -1397,10 +1395,8 @@ function renderSignalPlotProbe() {
   const probe = document.getElementById("signalPlotProbe");
   const source = document.getElementById("signalPlotProbeSource");
   if (!state.waveform || !state.signalPlotProbe) {
-    probe.textContent = "probe";
-    setProbePillMetadata(probe, "none", null, "Signal plot probe idle");
-    source.textContent = "near frame";
-    setProbePillMetadata(source, "none", null, "Signal plot source probe idle");
+    resetProbePill("signalPlotProbe", "probe", "Signal plot probe idle");
+    resetProbePill("signalPlotProbeSource", "near frame", "Signal plot source probe idle");
     return;
   }
 
@@ -2088,7 +2084,6 @@ function renderUnavailableWaveformMeta() {
 function renderWaveformPosition() {
   const position = document.getElementById("waveformPosition");
   const sample = document.getElementById("waveformSample");
-  const probe = document.getElementById("waveformProbe");
   const phase = document.getElementById("waveformPhase");
   const phaseRange = document.getElementById("waveformPhaseRange");
   const phaseJumpTarget = document.getElementById("waveformPhaseJumpTarget");
@@ -2097,7 +2092,7 @@ function renderWaveformPosition() {
   if (!waveform) {
     position.textContent = "0.000s / unknown";
     sample.textContent = "frame 0 / unknown / sample 0";
-    probe.textContent = "probe";
+    resetProbePill("waveformProbe", "probe", "Waveform probe idle");
     phase.textContent = "phase";
     phaseRange.textContent = "range";
     phaseJumpTarget.textContent = "jump idle";
@@ -2163,8 +2158,7 @@ function renderWaveformProbe() {
   const probe = document.getElementById("waveformProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    probe.textContent = "probe";
-    setProbePillMetadata(probe, "none", null, "Waveform probe idle");
+    resetProbePill("waveformProbe", "probe", "Waveform probe idle");
     renderInspectionCursor();
     renderParameterTimelineProbe();
     renderPhaseAudioStatsProbe();
@@ -2918,8 +2912,7 @@ function renderParameterTimelineProbe() {
   const probe = document.getElementById("parameterTimelineProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    probe.textContent = "probe";
-    setProbePillMetadata(probe, "none", null, "Parameter timeline probe idle");
+    resetProbePill("parameterTimelineProbe", "probe", "Parameter timeline probe idle");
     updateParameterTimelinePreview(null);
     updateParameterTimelineProbeMarker();
     return;
@@ -3824,8 +3817,7 @@ function renderPhaseProbe() {
   const probe = document.getElementById("phaseProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    probe.textContent = "probe";
-    setProbePillMetadata(probe, "none", null, "Phase list probe idle");
+    resetProbePill("phaseProbe", "probe", "Phase list probe idle");
     updatePhaseProbeTargets();
     return;
   }
