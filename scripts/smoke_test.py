@@ -109,17 +109,19 @@ class ShellContractParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.duplicate_ids: set[str] = set()
+        self.elements_by_id: dict[str, tuple[str, dict[str, str]]] = {}
         self.ids: set[str] = set()
         self.scripts: set[str] = set()
         self.stylesheets: set[str] = set()
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        attributes = dict(attrs)
+        attributes = {key: value if value is not None else "" for key, value in attrs}
         element_id = attributes.get("id")
         if element_id:
             if element_id in self.ids:
                 self.duplicate_ids.add(element_id)
             self.ids.add(element_id)
+            self.elements_by_id[element_id] = (tag, attributes)
 
         if tag == "script":
             src = attributes.get("src")
@@ -215,6 +217,24 @@ def require_content_type(response: Response, expected: str | tuple[str, ...], la
     )
 
 
+def require_shell_element(
+  parser: ShellContractParser,
+  element_id: str,
+  tag: str,
+  expected_attrs: dict[str, str],
+) -> None:
+    element = parser.elements_by_id.get(element_id)
+    require(element is not None, f"shell element {element_id} missing")
+    actual_tag, actual_attrs = element
+    require(actual_tag == tag, f"shell element {element_id} was {actual_tag}, expected {tag}")
+    for key, expected in expected_attrs.items():
+        actual = actual_attrs.get(key)
+        require(
+            actual == expected,
+            f"shell element {element_id} {key} was {actual!r}, expected {expected!r}",
+        )
+
+
 def require_shell_contract(html: str) -> None:
     parser = ShellContractParser()
     parser.feed(html)
@@ -227,6 +247,37 @@ def require_shell_contract(html: str) -> None:
     require(
         "/public/styles.css" in parser.stylesheets,
         "shell missing styles.css stylesheet",
+    )
+    require_shell_element(
+        parser,
+        "audioPlayer",
+        "audio",
+        {"controls": "", "preload": "metadata"},
+    )
+    require_shell_element(
+        parser,
+        "followAudioButton",
+        "button",
+        {"type": "button", "aria-pressed": "true"},
+    )
+    require_shell_element(
+        parser,
+        "waveformCanvas",
+        "canvas",
+        {"width": "1120", "height": "180", "aria-label": "Primary WAV waveform"},
+    )
+    require_shell_element(
+        parser,
+        "waveformScrubber",
+        "input",
+        {
+            "type": "range",
+            "min": "0",
+            "max": "1",
+            "step": "0.001",
+            "value": "0",
+            "aria-label": "Waveform position",
+        },
     )
 
 

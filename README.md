@@ -36,17 +36,18 @@ python C:\Users\argit\Desktop\soemdsp-sandbox\scripts\smoke_test.py
 
 The smoke test starts isolated local servers on automatic temporary ports, checks
 the manifest endpoint, checks the root shell DOM contract, duplicate IDs, and
-static assets, checks producer proof flags, checks the handoff contract and
-boundary flags, checks handoff artifact references, checks artifact and phase
-coverage, checks every manifest artifact link for reachability, checks report
-documents, checks parameter resync summary values, checks primary audio artifact
-reachability and WAV metadata, checks expected error and forbidden path
-responses including encoded traversal, checks that non-read methods are rejected
-by the read-only server, and verifies that readable malformed manifest shapes
-still preserve source details for the browser consumer. It also verifies local
-responses use no-store cache headers. It prints grouped checkpoints so failures
-are easier to locate, including sub-checkpoints for shell, static assets,
-manifest contracts, artifact reports, audio, and server error responses.
+audio/waveform control attributes, checks static assets, checks producer proof
+flags, checks the handoff contract and boundary flags, checks handoff artifact
+references, checks artifact and phase coverage, checks every manifest artifact
+link for reachability, checks report documents, checks parameter resync summary
+values, checks primary audio artifact reachability and WAV metadata, checks
+expected error and forbidden path responses including encoded traversal, checks
+that non-read methods are rejected by the read-only server, and verifies that
+readable malformed manifest shapes still preserve source details for the browser
+consumer. It also verifies local responses use no-store cache headers. It prints
+grouped checkpoints so failures are easier to locate, including sub-checkpoints
+for shell, static assets, manifest contracts, artifact reports, audio, and
+server error responses.
 
 ## Boundaries
 
