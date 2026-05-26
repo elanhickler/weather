@@ -953,29 +953,72 @@ function drawSignalPlot() {
 
 function signalPlotProbeAtClientPoint(clientX, clientY) {
   const canvas = document.getElementById("signalPlotCanvas");
+  const waveform = state.waveform;
   const rect = canvas.getBoundingClientRect();
   const width = Math.max(1, rect.width);
   const height = Math.max(1, rect.height);
   const scale = Math.min(width, height) * 0.44 * state.signalPlotScale;
   const x = (clientX - rect.left - width / 2) / scale;
   const y = -(clientY - rect.top - height / 2) / scale;
+  const normalizedX = Math.max(-1, Math.min(1, x));
+  const normalizedY = Math.max(-1, Math.min(1, y));
+
+  if (!waveform) {
+    return {
+      x: normalizedX,
+      y: normalizedY,
+      nearest: null,
+    };
+  }
+
+  const lagFrames = signalPlotLagFrames(waveform);
+  const drawableFrames = Math.max(0, waveform.samples.length - lagFrames);
+  const stride = Math.max(1, Math.floor(drawableFrames / 4200));
+  let nearest = null;
+
+  for (const region of signalPlotRegions(waveform, drawableFrames)) {
+    const startFrame = Math.max(0, Math.min(drawableFrames, region.startFrame));
+    const endFrame = Math.max(startFrame, Math.min(drawableFrames, region.endFrame));
+    for (let frame = startFrame; frame < endFrame; frame += stride) {
+      const sampleX = waveform.samples[frame] || 0;
+      const sampleY = waveform.samples[frame + lagFrames] || 0;
+      const distance =
+        (sampleX - normalizedX) * (sampleX - normalizedX) +
+        (sampleY - normalizedY) * (sampleY - normalizedY);
+      if (!nearest || distance < nearest.distance) {
+        nearest = {
+          frame,
+          phase: waveformRegionAtFrame(frame)?.name || "phase",
+          seconds: frame / waveform.sampleRate,
+          distance,
+        };
+      }
+    }
+  }
 
   return {
-    x: Math.max(-1, Math.min(1, x)),
-    y: Math.max(-1, Math.min(1, y)),
+    x: normalizedX,
+    y: normalizedY,
+    nearest,
   };
 }
 
 function renderSignalPlotProbe() {
   const probe = document.getElementById("signalPlotProbe");
+  const source = document.getElementById("signalPlotProbeSource");
   if (!state.waveform || !state.signalPlotProbe) {
     probe.textContent = "probe";
+    source.textContent = "near frame";
     return;
   }
 
   probe.textContent = `probe x ${formatCompactNumber(
     state.signalPlotProbe.x,
   )} / y ${formatCompactNumber(state.signalPlotProbe.y)}`;
+  const nearest = state.signalPlotProbe.nearest;
+  source.textContent = nearest
+    ? `near frame ${nearest.frame} / ${formatSeconds(nearest.seconds)} / ${nearest.phase}`
+    : "near frame";
 }
 
 function probeSignalPlot(event) {
@@ -2111,6 +2154,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0],
     ["signal inspection", waveformReady && Boolean(document.getElementById("signalPlotCanvas"))],
     ["signal plot probe", waveformReady && Boolean(document.getElementById("signalPlotProbe"))],
+    ["signal plot source probe", waveformReady && Boolean(document.getElementById("signalPlotProbeSource"))],
     ["read-only boundary", validateConsumerChecklist(manifest).accepted],
   ];
   const ok = rows.every(([_label, rowOk]) => rowOk);
@@ -2754,6 +2798,7 @@ function renderError(message, details = {}) {
   setText("signalPlotLagSummary", "lag 1 ms");
   setText("signalPlotPoint", "x 0 / y 0");
   setText("signalPlotProbe", "probe");
+  setText("signalPlotProbeSource", "near frame");
   setStatus("phaseCoverageStatus", "Check", false);
   setStatus("phaseAudioStatsStatus", "Check", false);
   setStatus("phaseStatus", "Check", false);
