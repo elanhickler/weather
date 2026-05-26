@@ -617,6 +617,15 @@ def require_waveform_seek_source_contract() -> None:
         "audio.currentTime = targetTime;" in app_source,
         "waveform seek helper does not seek primary audio",
     )
+    for snippet in [
+        "function beginWaveformDrag(event)",
+        "function dragWaveform(event)",
+        "function endWaveformDrag(event)",
+        '.addEventListener("pointerdown", beginWaveformDrag)',
+        '.addEventListener("pointermove", dragWaveform)',
+        '.addEventListener("pointerup", endWaveformDrag)',
+    ]:
+        require(snippet in app_source, f"waveform drag source missing {snippet}")
     require(
         "setFollowAudio(false, false);" not in app_source,
         "waveform controls still force free-view mode",

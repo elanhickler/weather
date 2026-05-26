@@ -2,6 +2,7 @@ const state = {
   response: null,
   waveform: null,
   playheadFrame: 0,
+  waveformPointerActive: false,
   followAudio: true,
   reports: [],
   activeReportIndex: 0,
@@ -481,7 +482,7 @@ function seekPrimaryAudioToFrame(frame) {
   setPlayheadFrame(targetFrame);
 }
 
-function seekWaveform(event) {
+function seekWaveformAtClientX(clientX) {
   const waveform = state.waveform;
   if (!waveform) {
     return;
@@ -489,8 +490,33 @@ function seekWaveform(event) {
 
   const canvas = document.getElementById("waveformCanvas");
   const rect = canvas.getBoundingClientRect();
-  const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   seekPrimaryAudioToFrame(Math.round(ratio * waveform.frames));
+}
+
+function seekWaveform(event) {
+  seekWaveformAtClientX(event.clientX);
+}
+
+function beginWaveformDrag(event) {
+  state.waveformPointerActive = true;
+  event.currentTarget.setPointerCapture(event.pointerId);
+  seekWaveformAtClientX(event.clientX);
+}
+
+function dragWaveform(event) {
+  if (!state.waveformPointerActive) {
+    return;
+  }
+
+  seekWaveformAtClientX(event.clientX);
+}
+
+function endWaveformDrag(event) {
+  state.waveformPointerActive = false;
+  if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
 }
 
 function scrubWaveform(event) {
@@ -1322,6 +1348,22 @@ document
 document
   .getElementById("waveformCanvas")
   .addEventListener("click", seekWaveform);
+
+document
+  .getElementById("waveformCanvas")
+  .addEventListener("pointerdown", beginWaveformDrag);
+
+document
+  .getElementById("waveformCanvas")
+  .addEventListener("pointermove", dragWaveform);
+
+document
+  .getElementById("waveformCanvas")
+  .addEventListener("pointerup", endWaveformDrag);
+
+document
+  .getElementById("waveformCanvas")
+  .addEventListener("pointercancel", endWaveformDrag);
 
 document
   .getElementById("waveformScrubber")
