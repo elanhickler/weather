@@ -193,6 +193,22 @@ audio {
   color: var(--warn);
 }
 
+.pill.inspection-source.none {
+  color: var(--muted);
+}
+
+.pill.inspection-source.transport {
+  border-color: rgba(113, 212, 155, 0.42);
+  background: rgba(113, 212, 155, 0.09);
+  color: var(--good);
+}
+
+.pill.inspection-source.hover {
+  border-color: rgba(127, 199, 217, 0.5);
+  background: rgba(127, 199, 217, 0.11);
+  color: var(--accent);
+}
+
 .waveform {
   display: block;
   width: 100%;

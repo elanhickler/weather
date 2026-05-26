@@ -113,6 +113,12 @@ function setStatus(id, value, ok) {
   element.className = isPill ? `pill ${ok ? "good" : "warn"}` : ok ? "" : "warn";
 }
 
+function setInspectionCursorSource(sourceName, mode) {
+  const source = document.getElementById("inspectionCursorSource");
+  source.textContent = `source ${sourceName}`;
+  source.className = `pill inspection-source ${mode}`;
+}
+
 function boolText(value) {
   return value ? "true" : "false";
 }
@@ -1792,12 +1798,11 @@ function renderWaveformProbe() {
 
 function renderInspectionCursor() {
   const status = document.getElementById("inspectionCursorStatus");
-  const source = document.getElementById("inspectionCursorSource");
   const cursor = document.getElementById("inspectionCursor");
   const waveform = state.waveform;
   if (!waveform) {
     setStatus("inspectionCursorStatus", "Check", false);
-    source.textContent = "source none";
+    setInspectionCursorSource("none", "none");
     renderKeyValue(cursor, [
       ["transport frame", "0"],
       ["transport time", "0.000s"],
@@ -1829,7 +1834,7 @@ function renderInspectionCursor() {
   const hoverSource = hoverFrame === null ? "transport" : state.waveformProbeSource || "probe";
 
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
-  source.textContent = `source ${hoverSource}`;
+  setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
   renderKeyValue(cursor, [
     ["transport frame", String(transportFrame)],
     ["transport time", formatSeconds(transportFrame / waveform.sampleRate)],
@@ -3385,7 +3390,7 @@ function renderError(message, details = {}) {
   setStatus("checklistStatus", "Check", false);
   setStatus("producerStatus", "Check", false);
   setStatus("handsOnReadinessStatus", "Check", false);
-  setText("inspectionCursorSource", "source none");
+  setInspectionCursorSource("none", "none");
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
