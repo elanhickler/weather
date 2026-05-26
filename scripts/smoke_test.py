@@ -123,6 +123,9 @@ def require_handoff_contract(payload: dict[str, object]) -> None:
 def require_artifact_contract(payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
+    handoff = manifest.get("sandboxHandoff")
+    require(isinstance(handoff, dict), "sandbox handoff missing")
+
     links = manifest.get("artifactLinks")
     require(isinstance(links, list), "artifact links missing")
     require(all(isinstance(link, dict) for link in links), "artifact link not object")
@@ -131,6 +134,22 @@ def require_artifact_contract(payload: dict[str, object]) -> None:
     kinds = {str(link.get("kind")) for link in links}
     missing_kinds = REQUIRED_ARTIFACT_KINDS - kinds
     require(not missing_kinds, f"required artifact kinds missing: {sorted(missing_kinds)}")
+
+    links_by_kind = {str(link.get("kind")): link for link in links}
+    entry_point = handoff.get("entryPoint")
+    primary_audio = handoff.get("primaryAudioArtifact")
+    require(
+        links_by_kind["entry-point"].get("path") == entry_point,
+        "entry-point link did not match handoff entry point",
+    )
+    require(
+        links_by_kind["audio"].get("path") == primary_audio,
+        "audio link did not match handoff primary audio",
+    )
+
+    wav = manifest.get("wav")
+    require(isinstance(wav, dict), "wav metadata missing")
+    require(wav.get("path") == primary_audio, "wav path did not match primary audio")
 
     phases = manifest.get("phases")
     require(isinstance(phases, list), "phases missing")
