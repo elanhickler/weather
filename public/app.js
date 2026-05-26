@@ -1153,6 +1153,17 @@ function manifestShapeError(payload) {
     return "sandbox handoff missing";
   }
 
+  if (typeof handoff.entryPoint !== "string" || !handoff.entryPoint) {
+    return "sandbox entry point missing";
+  }
+
+  if (
+    typeof handoff.primaryAudioArtifact !== "string" ||
+    !handoff.primaryAudioArtifact
+  ) {
+    return "primary audio artifact missing";
+  }
+
   if (!manifest.wav || typeof manifest.wav !== "object") {
     return "wav metadata missing";
   }
