@@ -1606,6 +1606,8 @@ function renderInspectionCursor() {
       ? waveform.samples[Math.max(0, Math.min(waveform.samples.length - 1, hoverFrame))] || 0
       : null;
   const hoverSignal = hoverFrame !== null ? signalPlotProbeAtFrame(hoverFrame) : null;
+  const hoverFrequency = activeParameterValue("frequency", hoverRegion);
+  const hoverAmplitude = activeParameterValue("amplitude", hoverRegion);
 
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
   renderKeyValue(cursor, [
@@ -1620,6 +1622,14 @@ function renderInspectionCursor() {
     ],
     ["hover phase", hoverRegion?.name || "none"],
     ["hover sample", hoverSample === null ? "none" : formatCompactNumber(hoverSample)],
+    [
+      "hover frequency",
+      hoverFrequency === null ? "none" : `${formatCompactNumber(hoverFrequency)} Hz`,
+    ],
+    [
+      "hover amplitude",
+      hoverAmplitude === null ? "none" : formatCompactNumber(hoverAmplitude),
+    ],
     [
       "hover signal",
       hoverSignal
