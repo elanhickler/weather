@@ -630,8 +630,17 @@ function renderChecklist(result) {
 }
 
 function renderArtifacts(links) {
+  const packetStatus = document.getElementById("artifactStatus");
   const list = document.getElementById("artifactList");
   list.replaceChildren();
+  packetStatus.textContent = links.length > 0 ? "Checking" : "Check";
+  packetStatus.className = links.length > 0 ? "pill" : "pill warn";
+
+  if (links.length === 0) {
+    return;
+  }
+
+  const checks = [];
   for (const link of links) {
     const anchor = document.createElement("a");
     anchor.className = "artifact-row";
@@ -654,15 +663,23 @@ function renderArtifacts(links) {
 
     anchor.append(label, kind, path, status);
     list.append(anchor);
-    checkArtifactAvailability(link, status);
+    checks.push(checkArtifactAvailability(link, status));
   }
+
+  Promise.all(checks)
+    .then((results) => renderArtifactPacketStatus(results))
+    .catch((error) => {
+      packetStatus.textContent = "Check";
+      packetStatus.className = "pill warn";
+      console.error(error);
+    });
 }
 
 async function checkArtifactAvailability(link, status) {
   if (!link.path) {
     status.textContent = "Check";
     status.className = "artifact-status warn";
-    return;
+    return { ok: false };
   }
 
   try {
@@ -670,18 +687,35 @@ async function checkArtifactAvailability(link, status) {
     if (!response.ok) {
       status.textContent = `Check ${response.status}`;
       status.className = "artifact-status warn";
-      return;
+      return { ok: false };
     }
 
     const bytes = Number(response.headers.get("content-length"));
     const size = formatBytes(bytes);
     status.textContent = size ? `OK ${size}` : "OK";
     status.className = "artifact-status good";
+    return { ok: true, bytes };
   } catch (error) {
     status.textContent = "Check";
     status.className = "artifact-status warn";
     console.error(error);
+    return { ok: false };
   }
+}
+
+function renderArtifactPacketStatus(results) {
+  const status = document.getElementById("artifactStatus");
+  const okCount = results.filter((result) => result.ok).length;
+  const byteCount = results.reduce(
+    (total, result) =>
+      total + (Number.isFinite(result.bytes) ? result.bytes : 0),
+    0,
+  );
+  const allOk = okCount === results.length;
+  status.textContent = allOk
+    ? `${okCount}/${results.length} OK ${formatBytes(byteCount)}`
+    : `${okCount}/${results.length} OK`;
+  status.className = allOk ? "pill good" : "pill warn";
 }
 
 function renderPhases(phases, wav) {
