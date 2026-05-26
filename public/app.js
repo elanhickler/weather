@@ -144,6 +144,37 @@ function parsePcm16Wav(buffer) {
   };
 }
 
+function analyzeWaveform(samples) {
+  if (!samples.length) {
+    return {
+      dcOffset: 0,
+      max: 0,
+      min: 0,
+      peak: 0,
+      rms: 0,
+    };
+  }
+
+  let max = -Infinity;
+  let min = Infinity;
+  let sum = 0;
+  let squareSum = 0;
+  for (const sample of samples) {
+    max = Math.max(max, sample);
+    min = Math.min(min, sample);
+    sum += sample;
+    squareSum += sample * sample;
+  }
+
+  return {
+    dcOffset: sum / samples.length,
+    max,
+    min,
+    peak: Math.max(Math.abs(min), Math.abs(max)),
+    rms: Math.sqrt(squareSum / samples.length),
+  };
+}
+
 function phaseDisplayRange(phase, fallbackStartFrame, totalFrames) {
   const frames = Number(phase.samplesProcessed || 0);
   const explicitStart = Number(phase.startFrame);
@@ -375,6 +406,7 @@ async function renderWaveform(path) {
     }
 
     state.waveform = parsePcm16Wav(await response.arrayBuffer());
+    state.waveform.stats = analyzeWaveform(state.waveform.samples);
     state.waveform.regions = buildPhaseRegions(
       state.response?.manifest?.phases || [],
       state.waveform.frames,
@@ -383,6 +415,7 @@ async function renderWaveform(path) {
     drawWaveform();
     renderWaveformPhaseControls();
     const wav = state.response?.manifest?.wav || {};
+    const stats = state.waveform.stats;
     renderKeyValue(meta, [
       ["sample rate", String(state.waveform.sampleRate), manifestNumberText(wav.sampleRate)],
       ["channels", String(state.waveform.channels), manifestNumberText(wav.channels)],
@@ -390,6 +423,11 @@ async function renderWaveform(path) {
       ["frames", String(state.waveform.frames), manifestNumberText(wav.frames)],
       ["data bytes", formatBytes(state.waveform.dataBytes), manifestBytesText(wav.dataBytes)],
       ["file bytes", formatBytes(state.waveform.fileBytes), manifestBytesText(wav.fileBytes)],
+      ["peak", formatCompactNumber(stats.peak)],
+      ["rms", formatCompactNumber(stats.rms)],
+      ["min", formatCompactNumber(stats.min)],
+      ["max", formatCompactNumber(stats.max)],
+      ["dc offset", formatCompactNumber(stats.dcOffset)],
     ]);
     status.textContent = "Drawn";
     status.className = "pill good";

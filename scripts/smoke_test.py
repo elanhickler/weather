@@ -661,6 +661,13 @@ def require_waveform_seek_source_contract() -> None:
         "waveform seek helper does not seek primary audio",
     )
     for snippet in [
+        "function analyzeWaveform(samples)",
+        '["peak", formatCompactNumber(stats.peak)]',
+        '["rms", formatCompactNumber(stats.rms)]',
+        '["dc offset", formatCompactNumber(stats.dcOffset)]',
+    ]:
+        require(snippet in app_source, f"waveform analysis source missing {snippet}")
+    for snippet in [
         "function beginWaveformDrag(event)",
         "function dragWaveform(event)",
         "function endWaveformDrag(event)",
