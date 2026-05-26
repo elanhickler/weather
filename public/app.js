@@ -66,6 +66,12 @@ const inspectionSources = Object.freeze({
   phaseList: "phase list",
   phaseJump: "phase jump",
 });
+const inspectionModes = Object.freeze({
+  none: "none",
+  transport: "transport",
+  hover: "hover",
+  probe: "probe",
+});
 
 function artifactUrl(path) {
   return `/artifact?path=${encodeURIComponent(path)}`;
@@ -161,7 +167,9 @@ function formatInspectionDelta(deltaFrame, sampleRate) {
 function setInspectionCursorDelta(deltaFrame, sampleRate) {
   const delta = document.getElementById("inspectionCursorDelta");
   delta.textContent = `delta ${formatInspectionDelta(deltaFrame, sampleRate)}`;
-  delta.className = `pill inspection-delta ${deltaFrame === null ? "none" : "hover"}`;
+  delta.className = `pill inspection-delta ${
+    deltaFrame === null ? inspectionModes.none : inspectionModes.hover
+  }`;
 }
 
 function formatAudioDuration(duration) {
@@ -272,7 +280,9 @@ function formatSeconds(seconds) {
 }
 
 function probeSourceText() {
-  return state.waveformProbeSource ? `probe ${state.waveformProbeSource}` : "probe";
+  return state.waveformProbeSource
+    ? `${inspectionModes.probe} ${state.waveformProbeSource}`
+    : inspectionModes.probe;
 }
 
 function formatProbeFrame(frame, waveform, region = waveformRegionAtFrameFor(waveform, frame)) {
@@ -2201,7 +2211,7 @@ function renderInspectionCursor() {
   const waveform = state.waveform;
   if (!waveform) {
     setStatus("inspectionCursorStatus", "Check", false);
-    setInspectionCursorSource("none", "none");
+    setInspectionCursorSource(inspectionModes.none, inspectionModes.none);
     setInspectionCursorDelta(null, 1);
     setInspectionCursorPreview(false);
     setInspectionCursorSeek(null);
@@ -2247,7 +2257,10 @@ function renderInspectionCursor() {
   const hoverEnvelope = hoverFrame !== null ? levelEnvelopeWindowAtFrame(hoverFrame) : null;
   const hoverFrequency = activeParameterValue("frequency", hoverRegion);
   const hoverAmplitude = activeParameterValue("amplitude", hoverRegion);
-  const hoverSource = hoverFrame === null ? "transport" : state.waveformProbeSource || "probe";
+  const hoverSource =
+    hoverFrame === null
+      ? inspectionModes.transport
+      : state.waveformProbeSource || inspectionModes.probe;
   const hoverDeltaFrame = hoverFrame === null ? null : hoverFrame - transportFrame;
   const lastSeekFrame =
     state.lastSeekFrame === null ? null : clampFrame(state.lastSeekFrame, waveform);
@@ -2271,7 +2284,10 @@ function renderInspectionCursor() {
         : "diverged";
 
   setStatus("inspectionCursorStatus", hoverFrame === null ? "Transport" : "Hover", true);
-  setInspectionCursorSource(hoverSource, hoverFrame === null ? "transport" : "hover");
+  setInspectionCursorSource(
+    hoverSource,
+    hoverFrame === null ? inspectionModes.transport : inspectionModes.hover,
+  );
   setInspectionCursorDelta(hoverDeltaFrame, waveform.sampleRate);
   setInspectionCursorPreview(hoverFrame !== null);
   setInspectionCursorSeek(state.lastSeekSource);
