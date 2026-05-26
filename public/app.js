@@ -1040,6 +1040,29 @@ function activeWaveformRegion() {
   );
 }
 
+function activeParameterValue(name, region) {
+  const resync = state.response?.manifest?.parameterResync || {};
+  const values = resync[name] || {};
+  const number = Number(values[region?.name]);
+  return Number.isFinite(number) ? number : null;
+}
+
+function renderCurrentParameters(region) {
+  const frequency = document.getElementById("currentFrequency");
+  const amplitude = document.getElementById("currentAmplitude");
+  const status = document.getElementById("currentParameterStatus");
+  const frequencyValue = activeParameterValue("frequency", region);
+  const amplitudeValue = activeParameterValue("amplitude", region);
+  const ok = frequencyValue !== null && amplitudeValue !== null;
+
+  frequency.textContent =
+    frequencyValue === null ? "freq" : `freq ${formatCompactNumber(frequencyValue)} Hz`;
+  amplitude.textContent =
+    amplitudeValue === null ? "amp" : `amp ${formatCompactNumber(amplitudeValue)}`;
+  status.textContent = ok ? "params synced" : "params missing";
+  status.className = `pill ${ok ? "good" : "warn"}`;
+}
+
 function formatRegionRange(region, sampleRate) {
   if (!region || !sampleRate) {
     return "range";
@@ -1136,6 +1159,7 @@ function renderWaveformPosition() {
     phase.textContent = "phase";
     phaseRange.textContent = "range";
     scrubber.value = "0";
+    renderCurrentParameters(null);
     updateActivePhaseButtons(null);
     return;
   }
@@ -1152,6 +1176,7 @@ function renderWaveformPosition() {
   )}`;
   phase.textContent = activeRegion ? activeRegion.name : "phase";
   phaseRange.textContent = formatRegionRange(activeRegion, waveform.sampleRate);
+  renderCurrentParameters(activeRegion);
   scrubber.value = String(
     waveform.frames > 0 ? state.playheadFrame / waveform.frames : 0,
   );
@@ -2038,6 +2063,9 @@ function renderError(message, details = {}) {
   setStatus("levelEnvelopeStatus", "Check", false);
   setText("levelEnvelopePeak", "peak 0");
   setText("levelEnvelopeRms", "rms 0");
+  setStatus("currentParameterStatus", "Check", false);
+  setText("currentFrequency", "freq");
+  setText("currentAmplitude", "amp");
   setStatus("signalPlotStatus", "Check", false);
   setText("signalPlotModeSummary", "all / trace / x1");
   setText("signalPlotWindowSummary", "window full");
