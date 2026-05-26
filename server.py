@@ -242,6 +242,7 @@ class SandboxServer(BaseHTTPRequestHandler):
         self.send_response(416)
         self.send_header("Content-Range", f"bytes */{file_size}")
         self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", "0")
         self.send_no_store_headers()
         self.end_headers()
 

@@ -1276,6 +1276,10 @@ def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None
         unsatisfied_range.headers.get("content-range") == f"bytes */{expected_file_bytes}",
         "unsatisfied primary audio range content-range mismatch",
     )
+    require(
+        unsatisfied_range.headers.get("content-length") == "0",
+        "unsatisfied primary audio range content-length mismatch",
+    )
 
     for label, header in [
         ("unsupported unit", "samples=0-15"),
@@ -1289,6 +1293,10 @@ def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None
         require(
             invalid_range.headers.get("content-range") == f"bytes */{expected_file_bytes}",
             f"{label} primary audio range content-range mismatch",
+        )
+        require(
+            invalid_range.headers.get("content-length") == "0",
+            f"{label} primary audio range content-length mismatch",
         )
         require(invalid_range.body == b"", f"{label} primary audio range returned a body")
 
