@@ -152,6 +152,12 @@ audio {
   gap: 14px;
 }
 
+.panel-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -179,6 +185,26 @@ audio {
   border: 1px solid var(--line);
   border-radius: 6px;
   background: #14171a;
+  cursor: crosshair;
+}
+
+.waveform-scrubber {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  accent-color: var(--accent);
+}
+
+.phase-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.phase-button {
+  min-height: 32px;
+  padding: 0 12px;
 }
 
 .grid .panel {

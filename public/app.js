@@ -1,6 +1,7 @@
 const state = {
   response: null,
   waveform: null,
+  playheadFrame: 0,
 };
 
 const requiredFlags = [
@@ -37,6 +38,10 @@ function boolText(value) {
 
 function statusText(ok) {
   return ok ? "OK" : "Check";
+}
+
+function formatSeconds(seconds) {
+  return `${seconds.toFixed(3)}s`;
 }
 
 function readAscii(view, offset, length) {
@@ -105,6 +110,21 @@ function parsePcm16Wav(buffer) {
   };
 }
 
+function buildPhaseRegions(phases, totalFrames) {
+  let startFrame = 0;
+  return phases.map((phase) => {
+    const frames = Number(phase.samplesProcessed || 0);
+    const endFrame = Math.min(totalFrames, startFrame + frames);
+    const region = {
+      endFrame,
+      name: phase.name || "phase",
+      startFrame,
+    };
+    startFrame = endFrame;
+    return region;
+  });
+}
+
 function renderKeyValue(container, rows) {
   container.replaceChildren();
   for (const [key, value, expected] of rows) {
@@ -138,6 +158,27 @@ function drawWaveform() {
   context.clearRect(0, 0, width, height);
   context.fillStyle = "#14171a";
   context.fillRect(0, 0, width, height);
+
+  const regions = waveform.regions || [];
+  for (const [index, region] of regions.entries()) {
+    const startX = Math.round((region.startFrame / waveform.frames) * width);
+    const endX = Math.round((region.endFrame / waveform.frames) * width);
+    const regionWidth = Math.max(1, endX - startX);
+    context.fillStyle =
+      index % 2 === 0 ? "rgba(127,199,217,0.10)" : "rgba(226,168,109,0.12)";
+    context.fillRect(startX, 0, regionWidth, height);
+
+    context.strokeStyle = "rgba(243,241,236,0.20)";
+    context.lineWidth = Math.max(1, pixelRatio);
+    context.beginPath();
+    context.moveTo(startX, 0);
+    context.lineTo(startX, height);
+    context.stroke();
+
+    context.fillStyle = "rgba(243,241,236,0.82)";
+    context.font = `${Math.max(11, Math.floor(12 * pixelRatio))}px Segoe UI, Arial`;
+    context.fillText(region.name, startX + 10 * pixelRatio, 18 * pixelRatio);
+  }
 
   const center = height / 2;
   const scale = height * 0.42;
@@ -175,6 +216,52 @@ function drawWaveform() {
   }
 
   context.stroke();
+
+  const playheadRatio = waveform.frames > 0 ? state.playheadFrame / waveform.frames : 0;
+  const playheadX = Math.max(0, Math.min(width, playheadRatio * width));
+  context.strokeStyle = "#f3f1ec";
+  context.lineWidth = Math.max(1, pixelRatio);
+  context.beginPath();
+  context.moveTo(playheadX, 0);
+  context.lineTo(playheadX, height);
+  context.stroke();
+}
+
+function renderWaveformPhaseControls() {
+  const container = document.getElementById("waveformPhaseControls");
+  container.replaceChildren();
+
+  const waveform = state.waveform;
+  if (!waveform) {
+    return;
+  }
+
+  for (const region of waveform.regions || []) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "phase-button";
+    button.textContent = region.name;
+    button.addEventListener("click", () => {
+      setPlayheadFrame(region.startFrame, true);
+    });
+    container.append(button);
+  }
+}
+
+function setPlayheadFrame(frame, syncAudio) {
+  const waveform = state.waveform;
+  if (!waveform) {
+    state.playheadFrame = 0;
+    return;
+  }
+
+  state.playheadFrame = Math.min(waveform.frames, Math.max(0, frame));
+  if (syncAudio) {
+    document.getElementById("audioPlayer").currentTime =
+      state.playheadFrame / waveform.sampleRate;
+  }
+  renderWaveformPosition();
+  drawWaveform();
 }
 
 async function renderWaveform(path) {
@@ -190,7 +277,13 @@ async function renderWaveform(path) {
     }
 
     state.waveform = parsePcm16Wav(await response.arrayBuffer());
+    state.waveform.regions = buildPhaseRegions(
+      state.response?.manifest?.phases || [],
+      state.waveform.frames,
+    );
+    setPlayheadFrame(0, false);
     drawWaveform();
+    renderWaveformPhaseControls();
     renderKeyValue(meta, [
       ["sample rate", String(state.waveform.sampleRate)],
       ["channels", String(state.waveform.channels)],
@@ -199,13 +292,64 @@ async function renderWaveform(path) {
     ]);
     status.textContent = "Drawn";
     status.className = "pill good";
+    renderWaveformPosition();
   } catch (error) {
     state.waveform = null;
+    state.playheadFrame = 0;
     meta.replaceChildren();
+    renderWaveformPhaseControls();
     status.textContent = "Check";
     status.className = "pill warn";
+    renderWaveformPosition();
     console.error(error);
   }
+}
+
+function renderWaveformPosition() {
+  const position = document.getElementById("waveformPosition");
+  const scrubber = document.getElementById("waveformScrubber");
+  const waveform = state.waveform;
+  if (!waveform) {
+    position.textContent = "0.000s";
+    scrubber.value = "0";
+    return;
+  }
+
+  position.textContent = formatSeconds(state.playheadFrame / waveform.sampleRate);
+  scrubber.value = String(
+    waveform.frames > 0 ? state.playheadFrame / waveform.frames : 0,
+  );
+}
+
+function syncWaveformToAudio() {
+  const audio = document.getElementById("audioPlayer");
+  if (!state.waveform || Number.isNaN(audio.currentTime)) {
+    return;
+  }
+
+  setPlayheadFrame(Math.round(audio.currentTime * state.waveform.sampleRate), false);
+}
+
+function seekWaveform(event) {
+  const waveform = state.waveform;
+  if (!waveform) {
+    return;
+  }
+
+  const canvas = document.getElementById("waveformCanvas");
+  const rect = canvas.getBoundingClientRect();
+  const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  setPlayheadFrame(Math.round(ratio * waveform.frames), true);
+}
+
+function scrubWaveform(event) {
+  const waveform = state.waveform;
+  if (!waveform) {
+    return;
+  }
+
+  const ratio = Number(event.currentTarget.value);
+  setPlayheadFrame(Math.round(ratio * waveform.frames), true);
 }
 
 function hasArtifactKind(links, kind) {
@@ -376,6 +520,22 @@ async function loadManifest() {
 document
   .getElementById("refreshButton")
   .addEventListener("click", loadManifest);
+
+document
+  .getElementById("waveformCanvas")
+  .addEventListener("click", seekWaveform);
+
+document
+  .getElementById("waveformScrubber")
+  .addEventListener("input", scrubWaveform);
+
+document
+  .getElementById("audioPlayer")
+  .addEventListener("timeupdate", syncWaveformToAudio);
+
+document
+  .getElementById("audioPlayer")
+  .addEventListener("seeked", syncWaveformToAudio);
 
 window.addEventListener("resize", drawWaveform);
 
