@@ -480,6 +480,118 @@ def require_read_only_method_rejections(base_url: str) -> None:
         require_no_store(response, label)
 
 
+def require_root_shell(base_url: str) -> None:
+    root_response = request(f"{base_url}/")
+    require(root_response.status == 200, "root shell did not return 200")
+    require_no_store(root_response, "root shell")
+    require_content_type(root_response, "text/html", "root shell")
+    require_shell_contract(root_response.body.decode("utf-8"))
+
+
+def require_static_assets(base_url: str) -> None:
+    for path, content_type in [
+        ("/public/app.js", ("application/javascript", "text/javascript")),
+        ("/public/styles.css", "text/css"),
+    ]:
+        static_response = request(f"{base_url}{path}", method="HEAD")
+        require(static_response.status == 200, f"{path} did not return 200")
+        require_no_store(static_response, path)
+        require_content_type(static_response, content_type, path)
+
+
+def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
+    manifest_response = request(f"{base_url}/api/manifest")
+    require(manifest_response.status == 200, "manifest endpoint did not return 200")
+    require_no_store(manifest_response, "manifest endpoint")
+    payload = json.loads(manifest_response.body.decode("utf-8"))
+    require(isinstance(payload, dict), "manifest response payload was not object")
+    require(payload.get("ok") is True, "manifest payload was not ok")
+    require(payload.get("manifestPath"), "manifest path missing")
+    require(payload.get("artifactRoot"), "artifact root missing")
+    return payload
+
+
+def require_manifest_contracts(payload: dict[str, object]) -> None:
+    require_producer_proof(payload)
+    require_handoff_contract(payload)
+    require_artifact_contract(payload)
+    require_phase_contract(payload)
+
+
+def require_artifact_report_and_audio_contracts(
+  base_url: str,
+  payload: dict[str, object],
+) -> None:
+    require_artifact_reachability(base_url, payload)
+    require_report_documents(base_url, payload)
+    require_parameter_summary(base_url, payload)
+    require_primary_audio_wav(base_url, payload)
+
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+    handoff = manifest.get("sandboxHandoff", {})
+    require(isinstance(handoff, dict), "sandbox handoff missing")
+    audio_path = handoff.get("primaryAudioArtifact")
+    require(audio_path, "primary audio artifact missing from handoff")
+    audio_response = request(
+        f"{base_url}/artifact?path={urllib.parse.quote(str(audio_path))}",
+        method="HEAD",
+    )
+    require(audio_response.status == 200, "primary audio artifact did not return 200")
+    require_no_store(audio_response, "primary audio artifact")
+
+
+def require_server_error_contracts(base_url: str) -> None:
+    missing_path = request(f"{base_url}/artifact", method="HEAD")
+    require(missing_path.status == 400, "missing artifact path did not return 400")
+    require_no_store(missing_path, "missing artifact path")
+
+    missing_route = request(f"{base_url}/missing", method="HEAD")
+    require(missing_route.status == 404, "missing route did not return 404")
+    require_no_store(missing_route, "missing route")
+
+    missing_public = request(f"{base_url}/public/missing.js", method="HEAD")
+    require(missing_public.status == 404, "missing public file did not return 404")
+    require_no_store(missing_public, "missing public file")
+
+    missing_artifact = request(
+        f"{base_url}/artifact?path=missing.wav",
+        method="HEAD",
+    )
+    require(missing_artifact.status == 404, "missing artifact did not return 404")
+    require_no_store(missing_artifact, "missing artifact")
+
+    forbidden_artifact = request(
+        f"{base_url}/artifact?path=../server.py",
+        method="HEAD",
+    )
+    require(forbidden_artifact.status == 403, "artifact traversal did not return 403")
+    require_no_store(forbidden_artifact, "artifact traversal")
+
+    forbidden_encoded_artifact = request(
+        f"{base_url}/artifact?path=%2e%2e/server.py",
+        method="HEAD",
+    )
+    require(
+        forbidden_encoded_artifact.status == 403,
+        "encoded artifact traversal did not return 403",
+    )
+    require_no_store(forbidden_encoded_artifact, "encoded artifact traversal")
+
+    forbidden_public = request(
+        f"{base_url}/public/%2e%2e/server.py",
+        method="HEAD",
+    )
+    require(forbidden_public.status == 403, "public traversal did not return 403")
+    require_no_store(forbidden_public, "public traversal")
+
+    manifest_head = request(f"{base_url}/api/manifest", method="HEAD")
+    require(manifest_head.status == 405, "manifest HEAD did not return 405")
+    require_no_store(manifest_head, "manifest HEAD")
+
+    require_read_only_method_rejections(base_url)
+
+
 def wait_for_server(base_url: str, process: subprocess.Popen[bytes]) -> None:
     deadline = time.monotonic() + 5
     last_status = ""
@@ -538,95 +650,22 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
     try:
         wait_for_server(base_url, process)
 
-        root_response = request(f"{base_url}/")
-        require(root_response.status == 200, "root shell did not return 200")
-        require_no_store(root_response, "root shell")
-        require_content_type(root_response, "text/html", "root shell")
-        require_shell_contract(root_response.body.decode("utf-8"))
+        run_step("root shell contract", lambda: require_root_shell(base_url))
+        run_step("static assets", lambda: require_static_assets(base_url))
 
-        for path, content_type in [
-            ("/public/app.js", ("application/javascript", "text/javascript")),
-            ("/public/styles.css", "text/css"),
-        ]:
-            static_response = request(f"{base_url}{path}", method="HEAD")
-            require(static_response.status == 200, f"{path} did not return 200")
-            require_no_store(static_response, path)
-            require_content_type(static_response, content_type, path)
+        payload: dict[str, object] = {}
 
-        manifest_response = request(f"{base_url}/api/manifest")
-        require(manifest_response.status == 200, "manifest endpoint did not return 200")
-        require_no_store(manifest_response, "manifest endpoint")
-        payload = json.loads(manifest_response.body.decode("utf-8"))
-        require(payload.get("ok") is True, "manifest payload was not ok")
-        require(payload.get("manifestPath"), "manifest path missing")
-        require(payload.get("artifactRoot"), "artifact root missing")
-        require_producer_proof(payload)
-        require_handoff_contract(payload)
-        require_artifact_contract(payload)
-        require_phase_contract(payload)
-        require_artifact_reachability(base_url, payload)
-        require_report_documents(base_url, payload)
-        require_parameter_summary(base_url, payload)
-        require_primary_audio_wav(base_url, payload)
+        def fetch_payload() -> None:
+            nonlocal payload
+            payload = fetch_valid_manifest_payload(base_url)
 
-        handoff = payload["manifest"].get("sandboxHandoff", {})
-        audio_path = handoff.get("primaryAudioArtifact")
-        require(audio_path, "primary audio artifact missing from handoff")
-        audio_response = request(
-            f"{base_url}/artifact?path={urllib.parse.quote(audio_path)}",
-            method="HEAD",
+        run_step("manifest transport", fetch_payload)
+        run_step("manifest contracts", lambda: require_manifest_contracts(payload))
+        run_step(
+            "artifact reports and audio",
+            lambda: require_artifact_report_and_audio_contracts(base_url, payload),
         )
-        require(audio_response.status == 200, "primary audio artifact did not return 200")
-        require_no_store(audio_response, "primary audio artifact")
-
-        missing_path = request(f"{base_url}/artifact", method="HEAD")
-        require(missing_path.status == 400, "missing artifact path did not return 400")
-        require_no_store(missing_path, "missing artifact path")
-
-        missing_route = request(f"{base_url}/missing", method="HEAD")
-        require(missing_route.status == 404, "missing route did not return 404")
-        require_no_store(missing_route, "missing route")
-
-        missing_public = request(f"{base_url}/public/missing.js", method="HEAD")
-        require(missing_public.status == 404, "missing public file did not return 404")
-        require_no_store(missing_public, "missing public file")
-
-        missing_artifact = request(
-            f"{base_url}/artifact?path=missing.wav",
-            method="HEAD",
-        )
-        require(missing_artifact.status == 404, "missing artifact did not return 404")
-        require_no_store(missing_artifact, "missing artifact")
-
-        forbidden_artifact = request(
-            f"{base_url}/artifact?path=../server.py",
-            method="HEAD",
-        )
-        require(forbidden_artifact.status == 403, "artifact traversal did not return 403")
-        require_no_store(forbidden_artifact, "artifact traversal")
-
-        forbidden_encoded_artifact = request(
-            f"{base_url}/artifact?path=%2e%2e/server.py",
-            method="HEAD",
-        )
-        require(
-            forbidden_encoded_artifact.status == 403,
-            "encoded artifact traversal did not return 403",
-        )
-        require_no_store(forbidden_encoded_artifact, "encoded artifact traversal")
-
-        forbidden_public = request(
-            f"{base_url}/public/%2e%2e/server.py",
-            method="HEAD",
-        )
-        require(forbidden_public.status == 403, "public traversal did not return 403")
-        require_no_store(forbidden_public, "public traversal")
-
-        manifest_head = request(f"{base_url}/api/manifest", method="HEAD")
-        require(manifest_head.status == 405, "manifest HEAD did not return 405")
-        require_no_store(manifest_head, "manifest HEAD")
-
-        require_read_only_method_rejections(base_url)
+        run_step("server error responses", lambda: require_server_error_contracts(base_url))
     finally:
         stop_server(process)
 

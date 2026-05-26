@@ -45,7 +45,8 @@ responses including encoded traversal, checks that non-read methods are rejected
 by the read-only server, and verifies that readable malformed manifest shapes
 still preserve source details for the browser consumer. It also verifies local
 responses use no-store cache headers. It prints grouped checkpoints so failures
-are easier to locate.
+are easier to locate, including sub-checkpoints for shell, static assets,
+manifest contracts, artifact reports, audio, and server error responses.
 
 ## Boundaries
 
