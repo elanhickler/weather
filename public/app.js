@@ -1922,6 +1922,8 @@ function validateConsumerChecklist(manifest) {
   const links = manifest.artifactLinks || [];
   const phases = manifest.phases || [];
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
+  const entryPointPath = findArtifactPath(links, "entry-point");
+  const primaryAudioPath = findArtifactPath(links, "audio");
   const checks = [
     ["allOk", manifest.allOk === true],
     ["contract", handoff.contract === expectedContract],
@@ -1934,7 +1936,9 @@ function validateConsumerChecklist(manifest) {
       handoff[key] === expected,
     ]),
     ["entry-point link", hasArtifactKind(links, "entry-point")],
+    ["entry-point matches handoff", entryPointPath === handoff.entryPoint],
     ["audio link", hasArtifactKind(links, "audio")],
+    ["audio matches handoff", primaryAudioPath === handoff.primaryAudioArtifact],
     ["phase report", phases.length > 0],
     ["phase audio measurements", phaseAudioIssues.length === 0],
   ];
@@ -2023,15 +2027,24 @@ function renderSandboxContract(manifest) {
   setStatus("sandboxContractStatus", ok ? "Bounded" : "Check", ok);
 }
 
-function renderArtifactCoverage(links, phases) {
+function renderArtifactCoverage(manifest) {
+  const links = manifest.artifactLinks || [];
+  const phases = manifest.phases || [];
+  const handoff = manifest.sandboxHandoff || {};
   const phaseReportCount = countArtifactKind(links, "phase-report");
   const missingPathCount = links.filter((link) => !link.path).length;
+  const entryPointPath = findArtifactPath(links, "entry-point");
+  const primaryAudioPath = findArtifactPath(links, "audio");
+  const entryPointMatches = entryPointPath === handoff.entryPoint;
+  const primaryAudioMatches = primaryAudioPath === handoff.primaryAudioArtifact;
   const rows = [
     ["total links", String(links.length)],
     ["missing paths", String(missingPathCount), 0],
     ["reachability method", "HEAD", "HEAD"],
     ["entry point", String(countArtifactKind(links, "entry-point")), 1],
+    ["entry point path", entryPointMatches ? "match" : "mismatch", "match"],
     ["audio", String(countArtifactKind(links, "audio")), 1],
+    ["audio path", primaryAudioMatches ? "match" : "mismatch", "match"],
     ["manifest", String(countArtifactKind(links, "manifest")), 1],
     ["text summary", String(countArtifactKind(links, "text-summary")), 1],
     ["wav report", String(countArtifactKind(links, "wav-report")), 1],
@@ -2042,6 +2055,8 @@ function renderArtifactCoverage(links, phases) {
     missingPathCount === 0 &&
     countArtifactKind(links, "entry-point") >= 1 &&
     countArtifactKind(links, "audio") >= 1 &&
+    entryPointMatches &&
+    primaryAudioMatches &&
     countArtifactKind(links, "manifest") >= 1 &&
     countArtifactKind(links, "text-summary") >= 1 &&
     countArtifactKind(links, "wav-report") >= 1 &&
@@ -2309,7 +2324,7 @@ function render(response) {
   renderPhaseCoverage(manifest.phases || [], manifest.wav);
   renderPhases(manifest.phases || [], manifest.wav);
   renderChecklist(checklist);
-  renderArtifactCoverage(manifest.artifactLinks || [], manifest.phases || []);
+  renderArtifactCoverage(manifest);
   renderParameterSummary(manifest, manifest.artifactLinks || []);
   renderReports(manifest.artifactLinks || []);
   renderArtifacts(manifest.artifactLinks || []);
@@ -2359,6 +2374,17 @@ function manifestShapeError(payload) {
 
   if (!Array.isArray(manifest.artifactLinks)) {
     return "artifact links missing";
+  }
+
+  if (findArtifactPath(manifest.artifactLinks, "entry-point") !== handoff.entryPoint) {
+    return "entry-point link mismatch";
+  }
+
+  if (
+    findArtifactPath(manifest.artifactLinks, "audio") !==
+    handoff.primaryAudioArtifact
+  ) {
+    return "audio link mismatch";
   }
 
   if (!Array.isArray(manifest.phases)) {

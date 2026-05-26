@@ -399,6 +399,94 @@ def require_artifact_contract(payload: dict[str, object]) -> None:
     )
 
 
+def artifact_contract_fixture() -> dict[str, object]:
+    return {
+        "manifest": {
+            "sandboxHandoff": {
+                "entryPoint": "runtime_dsp_object_bound_wav_resync_demo.html",
+                "primaryAudioArtifact": "runtime_dsp_object_bound_wav_resync_demo.wav",
+            },
+            "artifactLinks": [
+                {
+                    "label": "HTML report",
+                    "kind": "entry-point",
+                    "path": "runtime_dsp_object_bound_wav_resync_demo.html",
+                },
+                {
+                    "label": "Primary WAV",
+                    "kind": "audio",
+                    "path": "runtime_dsp_object_bound_wav_resync_demo.wav",
+                },
+                {
+                    "label": "Manifest",
+                    "kind": "manifest",
+                    "path": "runtime_dsp_object_bound_wav_resync_demo.manifest.json",
+                },
+                {
+                    "label": "Summary",
+                    "kind": "text-summary",
+                    "path": "runtime_dsp_object_bound_wav_resync_demo_summary.txt",
+                },
+                {
+                    "label": "WAV report",
+                    "kind": "wav-report",
+                    "path": "runtime_dsp_object_bound_wav_resync_demo_wav_report.txt",
+                },
+                {
+                    "label": "Phase report",
+                    "kind": "phase-report",
+                    "path": "runtime_dsp_object_bound_wav_resync_demo_first_phase.txt",
+                },
+            ],
+            "wav": {
+                "path": "runtime_dsp_object_bound_wav_resync_demo.wav",
+            },
+            "phases": [
+                {
+                    "name": "first",
+                },
+            ],
+        },
+    }
+
+
+def require_artifact_contract_failure(
+  label: str,
+  mutate: Callable[[dict[str, object]], None],
+  expected: str,
+) -> None:
+    payload = json.loads(json.dumps(artifact_contract_fixture()))
+    manifest = payload["manifest"]
+    require(isinstance(manifest, dict), f"{label} fixture manifest missing")
+    mutate(manifest)
+    try:
+        require_artifact_contract(payload)
+    except AssertionError as error:
+        require(expected in str(error), f"{label} produced {error}, expected {expected}")
+        return
+
+    raise AssertionError(f"{label} did not fail")
+
+
+def require_artifact_contract_negative_cases() -> None:
+    require_artifact_contract(artifact_contract_fixture())
+    require_artifact_contract_failure(
+        "entry point link mismatch",
+        lambda manifest: manifest["artifactLinks"][0].update({"path": "other.html"}),
+        "entry-point link did not match handoff entry point",
+    )
+    require_artifact_contract_failure(
+        "audio link mismatch",
+        lambda manifest: manifest["artifactLinks"][1].update({"path": "other.wav"}),
+        "audio link did not match handoff primary audio",
+    )
+    require_artifact_contract_failure(
+        "wav path mismatch",
+        lambda manifest: manifest["wav"].update({"path": "other.wav"}),
+        "wav path did not match primary audio",
+    )
+
+
 def require_phase_contract(payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
@@ -1033,7 +1121,13 @@ def require_waveform_seek_source_contract() -> None:
         '["producer rms", Number.isFinite(producerRms) ? formatCompactNumber(producerRms) : "missing"]',
         '["producer rms delta", producerRmsDeltaText]',
         'status.textContent = allOk ? "Verified" : "Check"',
+        '["entry-point matches handoff", entryPointPath === handoff.entryPoint]',
+        '["audio matches handoff", primaryAudioPath === handoff.primaryAudioArtifact]',
         '["phase audio measurements", phaseAudioIssues.length === 0]',
+        '["entry point path", entryPointMatches ? "match" : "mismatch", "match"]',
+        '["audio path", primaryAudioMatches ? "match" : "mismatch", "match"]',
+        'return "entry-point link mismatch"',
+        'return "audio link mismatch"',
         "function drawSignalPlot()",
         "function renderSignalPlotControls()",
         "function signalPlotWindowFrameRange(waveform, drawableFrames)",
@@ -1290,6 +1384,10 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
 
         run_step("manifest transport", fetch_payload)
         run_step("manifest contracts", lambda: require_manifest_contracts(payload))
+        run_step(
+            "artifact contract negative cases",
+            require_artifact_contract_negative_cases,
+        )
         run_step(
             "phase audio contract negative cases",
             require_phase_audio_contract_negative_cases,
