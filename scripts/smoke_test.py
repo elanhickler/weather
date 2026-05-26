@@ -1309,10 +1309,23 @@ def require_read_only_method_rejections(base_url: str) -> None:
 
 
 def require_root_shell(base_url: str) -> None:
-    root_response = request(f"{base_url}/")
-    require(root_response.status == 200, "root shell did not return 200")
-    require_no_store(root_response, "root shell")
-    require_content_type(root_response, "text/html", "root shell")
+    expected = (PUBLIC / "index.html").read_bytes()
+    expected_size = str(len(expected))
+    root_response: Response | None = None
+    for path in ["/", "/public/index.html"]:
+        response = request(f"{base_url}{path}")
+        require(response.status == 200, f"{path} shell did not return 200")
+        require_no_store(response, f"{path} shell")
+        require_content_type(response, "text/html", f"{path} shell")
+        require(
+            response.headers.get("content-length") == expected_size,
+            f"{path} shell content-length mismatch",
+        )
+        require(response.body == expected, f"{path} shell did not match local index.html")
+        if path == "/":
+            root_response = response
+
+    require(root_response is not None, "root shell response missing")
     require_shell_contract(root_response.body.decode("utf-8"))
 
 
