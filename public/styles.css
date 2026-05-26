@@ -249,6 +249,16 @@ audio {
   color: var(--good);
 }
 
+.pill.inspection-divergence.aligned {
+  color: var(--muted);
+}
+
+.pill.inspection-divergence.diverged {
+  border-color: rgba(226, 168, 109, 0.54);
+  background: rgba(226, 168, 109, 0.13);
+  color: var(--accent-2);
+}
+
 .waveform {
   display: block;
   width: 100%;

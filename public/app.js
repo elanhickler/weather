@@ -157,6 +157,17 @@ function setInspectionCursorTransport(region) {
   transport.className = `pill inspection-transport ${region ? "active" : "none"}`;
 }
 
+function setInspectionCursorDivergence(transportRegion, targetRegion) {
+  const divergence = document.getElementById("inspectionCursorDivergence");
+  const diverged = Boolean(
+    transportRegion &&
+      targetRegion &&
+      transportRegion.name !== targetRegion.name,
+  );
+  divergence.textContent = diverged ? "phase diverged" : "phase aligned";
+  divergence.className = `pill inspection-divergence ${diverged ? "diverged" : "aligned"}`;
+}
+
 function boolText(value) {
   return value ? "true" : "false";
 }
@@ -1845,6 +1856,7 @@ function renderInspectionCursor() {
     setInspectionCursorPreview(false);
     setInspectionCursorTransport(null);
     setInspectionCursorTarget(null);
+    setInspectionCursorDivergence(null, null);
     renderKeyValue(cursor, [
       ["transport frame", "0"],
       ["transport time", "0.000s"],
@@ -1882,6 +1894,7 @@ function renderInspectionCursor() {
   setInspectionCursorPreview(hoverFrame !== null);
   setInspectionCursorTransport(transportRegion);
   setInspectionCursorTarget(hoverRegion);
+  setInspectionCursorDivergence(transportRegion, hoverRegion);
   renderKeyValue(cursor, [
     ["transport frame", String(transportFrame)],
     ["transport time", formatSeconds(transportFrame / waveform.sampleRate)],
@@ -2751,6 +2764,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
     ["inspection transport pill", waveformReady && Boolean(document.getElementById("inspectionCursorTransport"))],
     ["inspection target pill", waveformReady && Boolean(document.getElementById("inspectionCursorTarget"))],
+    ["inspection divergence pill", waveformReady && Boolean(document.getElementById("inspectionCursorDivergence"))],
     [
       "inspection hover delta",
       waveformReady && document.getElementById("inspectionCursor")?.textContent.includes("hover delta"),
@@ -3457,6 +3471,7 @@ function renderError(message, details = {}) {
   setInspectionCursorPreview(false);
   setInspectionCursorTransport(null);
   setInspectionCursorTarget(null);
+  setInspectionCursorDivergence(null, null);
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
