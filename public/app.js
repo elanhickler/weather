@@ -818,11 +818,15 @@ function resetProbePill(id, text, title) {
   setProbePillMetadata(probe, inspectionModes.none, null, title);
 }
 
+function resetIdleProbePill(id, title) {
+  resetProbePill(id, inspectionModes.probe, title);
+}
+
 function renderLevelEnvelopeProbe() {
   const probe = document.getElementById("levelEnvelopeProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    resetProbePill("levelEnvelopeProbe", "probe", "Level envelope probe idle");
+    resetIdleProbePill("levelEnvelopeProbe", "Level envelope probe idle");
     return;
   }
 
@@ -912,7 +916,7 @@ function renderPhaseAudioStatsProbe() {
   const probe = document.getElementById("phaseAudioStatsProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    resetProbePill("phaseAudioStatsProbe", "probe", "Phase audio stats probe idle");
+    resetIdleProbePill("phaseAudioStatsProbe", "Phase audio stats probe idle");
     updatePhaseProbeTargets();
     return;
   }
@@ -1432,7 +1436,7 @@ function renderSignalPlotProbe() {
   const probe = document.getElementById("signalPlotProbe");
   const source = document.getElementById("signalPlotProbeSource");
   if (!state.waveform || !state.signalPlotProbe) {
-    resetProbePill("signalPlotProbe", "probe", "Signal plot probe idle");
+    resetIdleProbePill("signalPlotProbe", "Signal plot probe idle");
     resetProbePill("signalPlotProbeSource", "near frame", "Signal plot source probe idle");
     return;
   }
@@ -2110,7 +2114,7 @@ function renderWaveformPosition() {
   if (!waveform) {
     position.textContent = "0.000s / unknown";
     sample.textContent = "frame 0 / unknown / sample 0";
-    resetProbePill("waveformProbe", "probe", "Waveform probe idle");
+    resetIdleProbePill("waveformProbe", "Waveform probe idle");
     phase.textContent = "phase";
     phaseRange.textContent = "range";
     phaseJumpTarget.textContent = "jump idle";
@@ -2176,7 +2180,7 @@ function renderWaveformProbe() {
   const probe = document.getElementById("waveformProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    resetProbePill("waveformProbe", "probe", "Waveform probe idle");
+    resetIdleProbePill("waveformProbe", "Waveform probe idle");
     renderInspectionCursor();
     renderParameterTimelineProbe();
     renderPhaseAudioStatsProbe();
@@ -2932,7 +2936,7 @@ function renderParameterTimelineProbe() {
   const probe = document.getElementById("parameterTimelineProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    resetProbePill("parameterTimelineProbe", "probe", "Parameter timeline probe idle");
+    resetIdleProbePill("parameterTimelineProbe", "Parameter timeline probe idle");
     updateParameterTimelinePreview(null);
     updateParameterTimelineProbeMarker();
     return;
@@ -3835,7 +3839,7 @@ function renderPhaseProbe() {
   const probe = document.getElementById("phaseProbe");
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
-    resetProbePill("phaseProbe", "probe", "Phase list probe idle");
+    resetIdleProbePill("phaseProbe", "Phase list probe idle");
     updatePhaseProbeTargets();
     return;
   }
@@ -4291,13 +4295,13 @@ function renderError(message, details = {}) {
   setStatus("parameterSummaryStatus", "Check", false);
   setStatus("parameterTimelineStatus", "Check", false);
   setText("parameterTimelinePhase", "phase");
-  resetProbePill("parameterTimelineProbe", "probe", "Parameter timeline probe idle");
+  resetIdleProbePill("parameterTimelineProbe", "Parameter timeline probe idle");
   setStatus("waveformStatus", "Check", false);
-  resetProbePill("waveformProbe", "probe", "Waveform probe idle");
+  resetIdleProbePill("waveformProbe", "Waveform probe idle");
   setStatus("levelEnvelopeStatus", "Check", false);
   setText("levelEnvelopePeak", "peak 0");
   setText("levelEnvelopeRms", "rms 0");
-  resetProbePill("levelEnvelopeProbe", "probe", "Level envelope probe idle");
+  resetIdleProbePill("levelEnvelopeProbe", "Level envelope probe idle");
   setStatus("currentParameterStatus", "Check", false);
   setText("currentFrequency", "freq");
   setText("currentAmplitude", "amp");
@@ -4312,12 +4316,12 @@ function renderError(message, details = {}) {
   setText("signalPlotWindowSummary", "window full");
   setText("signalPlotLagSummary", "lag 1 ms");
   setText("signalPlotPoint", "frame 0 / phase none / x 0 / y 0");
-  resetProbePill("signalPlotProbe", "probe", "Signal plot probe idle");
+  resetIdleProbePill("signalPlotProbe", "Signal plot probe idle");
   resetProbePill("signalPlotProbeSource", "near frame", "Signal plot source probe idle");
   setStatus("phaseCoverageStatus", "Check", false);
   setStatus("phaseAudioStatsStatus", "Check", false);
-  resetProbePill("phaseAudioStatsProbe", "probe", "Phase audio stats probe idle");
-  resetProbePill("phaseProbe", "probe", "Phase list probe idle");
+  resetIdleProbePill("phaseAudioStatsProbe", "Phase audio stats probe idle");
+  resetIdleProbePill("phaseProbe", "Phase list probe idle");
   setStatus("phaseStatus", "Check", false);
   setStatus("artifactCoverageStatus", "Check", false);
   setStatus("reportStatus", "Check", false);
