@@ -11,6 +11,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 from wave import Error as WaveError
 from wave import open as open_wave
 
@@ -84,6 +85,15 @@ def request(url: str, method: str = "GET") -> Response:
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def run_step(label: str, action: Callable[[], None]) -> None:
+    print(f"[smoke] {label}...", flush=True)
+    try:
+        action()
+    except Exception as error:
+        raise AssertionError(f"{label} failed: {error}") from error
+    print(f"[smoke] {label}: ok", flush=True)
 
 
 def require_no_store(response: Response, label: str) -> None:
@@ -501,8 +511,14 @@ def run_manifest_error_smoke(port: int) -> None:
 
 
 def run_smoke(port: int, manifest: Path) -> None:
-    run_valid_manifest_smoke(port, manifest)
-    run_manifest_error_smoke(port + 1)
+    run_step(
+        "valid manifest packet",
+        lambda: run_valid_manifest_smoke(port, manifest),
+    )
+    run_step(
+        "manifest error responses",
+        lambda: run_manifest_error_smoke(port + 1),
+    )
 
 
 def main() -> None:

@@ -41,7 +41,7 @@ artifact and phase coverage, checks every manifest artifact link for
 reachability, checks report documents, checks parameter resync summary values,
 checks primary audio artifact reachability and WAV metadata, checks expected
 error and forbidden path responses, and verifies local responses use no-store
-cache headers.
+cache headers. It prints grouped checkpoints so failures are easier to locate.
 
 ## Boundaries
 
