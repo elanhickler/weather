@@ -945,6 +945,9 @@ def require_parameter_resync_contract_negative_cases() -> None:
 def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
+    artifact_root = payload.get("artifactRoot")
+    require(isinstance(artifact_root, str) and artifact_root, "artifact root missing")
+    artifact_root_path = Path(artifact_root).resolve()
     links = manifest.get("artifactLinks")
     require(isinstance(links, list), "artifact links missing")
 
@@ -952,6 +955,12 @@ def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> 
         require(isinstance(link, dict), f"artifact link {index} not object")
         path = link.get("path")
         require(isinstance(path, str) and path, f"artifact link {index} path missing")
+        local_path = (artifact_root_path / path).resolve()
+        require(
+            local_path.is_relative_to(artifact_root_path),
+            f"artifact link {index} escapes artifact root",
+        )
+        require(local_path.is_file(), f"artifact link {index} local file missing")
         artifact_response = request(
             f"{base_url}/artifact?path={urllib.parse.quote(path)}",
             method="HEAD",
@@ -962,7 +971,18 @@ def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> 
         )
         require_no_store(artifact_response, f"artifact link {index}")
         content_length = int(artifact_response.headers.get("content-length", "0"))
-        require(content_length > 0, f"artifact link {index} content length missing")
+        require(
+            content_length == local_path.stat().st_size,
+            f"artifact link {index} content length mismatch",
+        )
+        require(
+            artifact_response.headers.get("accept-ranges") == "bytes",
+            f"artifact link {index} did not advertise byte ranges",
+        )
+        require(
+            bool(artifact_response.headers.get("last-modified")),
+            f"artifact link {index} last-modified missing",
+        )
 
 
 def require_report_documents(base_url: str, payload: dict[str, object]) -> None:
