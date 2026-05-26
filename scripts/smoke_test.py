@@ -163,6 +163,29 @@ def require_phase_contract(payload: dict[str, object]) -> None:
     )
 
 
+def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+    links = manifest.get("artifactLinks")
+    require(isinstance(links, list), "artifact links missing")
+
+    for index, link in enumerate(links):
+        require(isinstance(link, dict), f"artifact link {index} not object")
+        path = link.get("path")
+        require(isinstance(path, str) and path, f"artifact link {index} path missing")
+        artifact_response = request(
+            f"{base_url}/artifact?path={urllib.parse.quote(path)}",
+            method="HEAD",
+        )
+        require(
+            artifact_response.status == 200,
+            f"artifact link {index} did not return 200",
+        )
+        require_no_store(artifact_response, f"artifact link {index}")
+        content_length = int(artifact_response.headers.get("content-length", "0"))
+        require(content_length > 0, f"artifact link {index} content length missing")
+
+
 def wait_for_server(base_url: str) -> None:
     deadline = time.monotonic() + 5
     last_status = ""
@@ -232,6 +255,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         require_handoff_contract(payload)
         require_artifact_contract(payload)
         require_phase_contract(payload)
+        require_artifact_reachability(base_url, payload)
 
         handoff = payload["manifest"].get("sandboxHandoff", {})
         audio_path = handoff.get("primaryAudioArtifact")
