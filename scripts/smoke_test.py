@@ -1379,6 +1379,7 @@ def require_waveform_seek_source_contract() -> None:
         "sample.textContent = \"frame 0 / unknown / sample 0\"",
         "sample.textContent = `frame ${state.playheadFrame} / ${waveform.frames} / sample ${formatCompactNumber(",
         "function setProbePillMetadata(probe, source, frame, title)",
+        "function resetProbePill(id, text, title)",
         "probe.dataset.probeSource = source",
         'probe.dataset.probeFrame = frame === null || frame === undefined ? "none" : String(frame)',
         "probe.title = title",
@@ -1946,6 +1947,16 @@ def require_manifest_error_surface_contract() -> None:
     ]
     for renderer in required_unavailable_renderers:
         require(renderer in render_error, f"manifest error surface missing {renderer}")
+    for resetter in [
+        'resetProbePill("waveformProbe", "probe", "Waveform probe idle");',
+        'resetProbePill("parameterTimelineProbe", "probe", "Parameter timeline probe idle");',
+        'resetProbePill("levelEnvelopeProbe", "probe", "Level envelope probe idle");',
+        'resetProbePill("signalPlotProbe", "probe", "Signal plot probe idle");',
+        'resetProbePill("signalPlotProbeSource", "near frame", "Signal plot source probe idle");',
+        'resetProbePill("phaseAudioStatsProbe", "probe", "Phase audio stats probe idle");',
+        'resetProbePill("phaseProbe", "probe", "Phase list probe idle");',
+    ]:
+        require(resetter in render_error, f"manifest error surface missing {resetter}")
     require(
         "clearElement(" not in render_error,
         "manifest error surface clears a user-facing panel",
