@@ -629,6 +629,29 @@ function renderChecklist(result) {
   }
 }
 
+function renderProducerProof(manifest) {
+  const status = document.getElementById("producerStatus");
+  const setters = manifest.parameterSetters || {};
+  const rows = [
+    ["demo", manifest.demo || "missing"],
+    ["kind", manifest.kind || "missing"],
+    ["runtime API", boolText(Boolean(manifest.runtimeApi)), false],
+    ["scheduler", boolText(Boolean(manifest.scheduler)), false],
+    ["audio engine", boolText(Boolean(manifest.audioEngine)), false],
+    ["frequency setter", boolText(Boolean(setters.frequency)), true],
+    ["amplitude setter", boolText(Boolean(setters.amplitude)), true],
+  ];
+  const ok = rows.every(([, value, expected]) => {
+    if (expected === undefined) {
+      return value !== "missing";
+    }
+    return value === boolText(expected);
+  });
+
+  setStatus("producerStatus", ok ? "Verified" : "Check", ok);
+  renderKeyValue(document.getElementById("producerProof"), rows);
+}
+
 function renderArtifacts(links) {
   const packetStatus = document.getElementById("artifactStatus");
   const list = document.getElementById("artifactList");
@@ -798,6 +821,7 @@ function render(response) {
       expected,
     ]),
   );
+  renderProducerProof(manifest);
   renderPhases(manifest.phases || [], manifest.wav);
   renderChecklist(checklist);
   renderParameterSummary(manifest.artifactLinks || []);
