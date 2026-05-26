@@ -1822,7 +1822,7 @@ function renderWaveformPosition() {
   const waveform = state.waveform;
   if (!waveform) {
     position.textContent = "0.000s / unknown";
-    sample.textContent = "frame 0 / sample 0";
+    sample.textContent = "frame 0 / unknown / sample 0";
     probe.textContent = "probe";
     phase.textContent = "phase";
     phaseRange.textContent = "range";
@@ -1846,7 +1846,7 @@ function renderWaveformPosition() {
   position.textContent = `${formatSeconds(
     state.playheadFrame / waveform.sampleRate,
   )} / ${formatAudioDuration(waveform.frames / waveform.sampleRate)}`;
-  sample.textContent = `frame ${state.playheadFrame} / sample ${formatCompactNumber(
+  sample.textContent = `frame ${state.playheadFrame} / ${waveform.frames} / sample ${formatCompactNumber(
     sampleValue,
   )}`;
   phase.textContent = activeRegion ? activeRegion.name : "phase";

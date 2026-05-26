@@ -1270,6 +1270,8 @@ def require_waveform_seek_source_contract() -> None:
         "position.textContent = `audio ${formatSeconds(Number.isFinite(time) ? time : 0)} / ${formatAudioDuration(duration)}`",
         "position.textContent = \"0.000s / unknown\"",
         "formatAudioDuration(waveform.frames / waveform.sampleRate)",
+        "sample.textContent = \"frame 0 / unknown / sample 0\"",
+        "sample.textContent = `frame ${state.playheadFrame} / ${waveform.frames} / sample ${formatCompactNumber(",
         "setInspectionCursorAudio(time, duration)",
         "setInspectionCursorAudio(0, Number.NaN)",
         "function setInspectionCursorPlayback(audio)",
