@@ -618,23 +618,45 @@ function renderParameterSummaryCards(pairs) {
   const secondFrequency = parseSummaryNumber(pairs.get("second half frequency"));
   const secondAmplitude = parseSummaryNumber(pairs.get("second half amplitude"));
   const values = [
-    ["First Frequency", pairs.get("first half frequency")],
-    ["First Amplitude", pairs.get("first half amplitude")],
-    ["Second Frequency", pairs.get("second half frequency")],
-    ["Second Amplitude", pairs.get("second half amplitude")],
+    [
+      "First Frequency",
+      pairs.get("first half frequency"),
+      "",
+      isPositiveNumber(firstFrequency),
+    ],
+    [
+      "First Amplitude",
+      pairs.get("first half amplitude"),
+      "",
+      isPositiveNumber(firstAmplitude),
+    ],
+    [
+      "Second Frequency",
+      pairs.get("second half frequency"),
+      "",
+      isPositiveNumber(secondFrequency),
+    ],
+    [
+      "Second Amplitude",
+      pairs.get("second half amplitude"),
+      "",
+      isPositiveNumber(secondAmplitude),
+    ],
     [
       "Frequency Change",
       formatSummaryChange(firstFrequency, secondFrequency),
       "comparison",
+      isUpwardChange(firstFrequency, secondFrequency),
     ],
     [
       "Amplitude Change",
       formatSummaryChange(firstAmplitude, secondAmplitude),
       "comparison",
+      isUpwardChange(firstAmplitude, secondAmplitude),
     ],
   ];
 
-  for (const [label, value, kind] of values) {
+  for (const [label, value, kind, ok] of values) {
     const item = document.createElement("div");
     item.className = "summary-card";
     if (kind === "comparison") {
@@ -647,7 +669,7 @@ function renderParameterSummaryCards(pairs) {
 
     const body = document.createElement("strong");
     body.textContent = value || "missing";
-    if (!value) {
+    if (!value || ok !== true) {
       body.className = "warn";
     }
 
@@ -659,6 +681,14 @@ function renderParameterSummaryCards(pairs) {
 function parseSummaryNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function isPositiveNumber(value) {
+  return value !== null && value > 0;
+}
+
+function isUpwardChange(first, second) {
+  return first !== null && second !== null && second > first;
 }
 
 function formatSummaryChange(first, second) {
