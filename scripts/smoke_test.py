@@ -344,6 +344,16 @@ def require_shell_contract(html: str) -> None:
     )
     require_shell_element(
         parser,
+        "parameterTimelineProbe",
+        "span",
+        {
+            "data-probe-source": "none",
+            "data-probe-frame": "none",
+            "title": "Parameter timeline probe idle",
+        },
+    )
+    require_shell_element(
+        parser,
         "signalPlotCanvas",
         "canvas",
         {"width": "720", "height": "360", "aria-label": "Primary WAV signal plot"},
@@ -1337,6 +1347,8 @@ def require_waveform_seek_source_contract() -> None:
         "probe.title = \"Level envelope probe idle\"",
         "probe.title = entry",
         "`Level envelope probe ${source}",
+        "probe.title = \"Parameter timeline probe idle\"",
+        "probe.title = `Parameter timeline probe ${source}",
         "function updateWaveformScrubberLabel(scrubber, waveform, activeRegion)",
         "scrubber.setAttribute(\"aria-valuetext\"",
         "scrubber.dataset.followMode = followText",
@@ -1598,6 +1610,7 @@ def require_waveform_seek_source_contract() -> None:
         "function waveformScrubberLabeled()",
         "function waveformProbeLabeled()",
         "function levelEnvelopeProbeLabeled()",
+        "function parameterTimelineProbeLabeled()",
         'label.startsWith("Jump waveform to ")',
         'label.includes(" phase at frame ")',
         'button.title.startsWith("Jump to ")',
@@ -1613,6 +1626,7 @@ def require_waveform_seek_source_contract() -> None:
         '["level envelope probe", waveformReady && Boolean(document.getElementById("levelEnvelopeProbe"))]',
         '["level envelope probe labels", waveformReady && levelEnvelopeProbeLabeled()]',
         '["parameter timeline probe", waveformReady && Boolean(document.getElementById("parameterTimelineProbe"))]',
+        '["parameter timeline probe labels", waveformReady && parameterTimelineProbeLabeled()]',
         '["parameter timeline preview", waveformReady && Boolean(document.querySelector(".parameter-segment"))]',
         '["probe frame labels", waveformReady && typeof formatProbeFrame === "function"]',
         '["follow/free view", Boolean(document.getElementById("followAudioButton"))]',

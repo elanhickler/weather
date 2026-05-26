@@ -2863,6 +2863,9 @@ function renderParameterTimelineProbe() {
   const waveform = state.waveform;
   if (!waveform || state.waveformProbeFrame === null) {
     probe.textContent = "probe";
+    probe.dataset.probeSource = "none";
+    probe.dataset.probeFrame = "none";
+    probe.title = "Parameter timeline probe idle";
     updateParameterTimelinePreview(null);
     updateParameterTimelineProbeMarker();
     return;
@@ -2872,11 +2875,19 @@ function renderParameterTimelineProbe() {
   const region = waveformRegionAtFrame(frame);
   const frequency = activeParameterValue("frequency", region);
   const amplitude = activeParameterValue("amplitude", region);
+  const source = state.waveformProbeSource || "probe";
+  const frequencyText = frequency === null ? "missing" : `${formatCompactNumber(frequency)} Hz`;
+  const amplitudeText = amplitude === null ? "missing" : formatCompactNumber(amplitude);
   probe.textContent = `${probeSourceText()} ${formatProbeFrame(frame, waveform, region)} / freq ${
-    frequency === null ? "missing" : `${formatCompactNumber(frequency)} Hz`
-  } / amp ${
-    amplitude === null ? "missing" : formatCompactNumber(amplitude)
-  }`;
+    frequencyText
+  } / amp ${amplitudeText}`;
+  probe.dataset.probeSource = source;
+  probe.dataset.probeFrame = String(frame);
+  probe.title = `Parameter timeline probe ${source} / ${formatProbeFrame(
+    frame,
+    waveform,
+    region,
+  )} / freq ${frequencyText} / amp ${amplitudeText}`;
   updateParameterTimelinePreview(region);
   updateParameterTimelineProbeMarker();
 }
@@ -3285,6 +3296,15 @@ function levelEnvelopeProbeLabeled() {
   );
 }
 
+function parameterTimelineProbeLabeled() {
+  const probe = document.getElementById("parameterTimelineProbe");
+  return (
+    Boolean(probe?.dataset.probeSource) &&
+    Boolean(probe?.dataset.probeFrame) &&
+    Boolean(probe?.title)
+  );
+}
+
 function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform)) {
   const rows = [
     [
@@ -3302,6 +3322,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["level envelope probe", waveformReady && Boolean(document.getElementById("levelEnvelopeProbe"))],
     ["level envelope probe labels", waveformReady && levelEnvelopeProbeLabeled()],
     ["parameter timeline probe", waveformReady && Boolean(document.getElementById("parameterTimelineProbe"))],
+    ["parameter timeline probe labels", waveformReady && parameterTimelineProbeLabeled()],
     ["parameter timeline preview", waveformReady && Boolean(document.querySelector(".parameter-segment"))],
     ["probe frame labels", waveformReady && typeof formatProbeFrame === "function"],
     ["follow/free view", Boolean(document.getElementById("followAudioButton"))],
