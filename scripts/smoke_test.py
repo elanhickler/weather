@@ -133,6 +133,36 @@ def require_artifact_contract(payload: dict[str, object]) -> None:
     )
 
 
+def require_phase_contract(payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+
+    wav = manifest.get("wav")
+    require(isinstance(wav, dict), "wav metadata missing")
+    wav_frames = int(wav.get("frames", 0))
+    require(wav_frames > 0, "wav frame count missing")
+
+    phases = manifest.get("phases")
+    require(isinstance(phases, list), "phases missing")
+    require(phases, "phases empty")
+
+    total_phase_frames = 0
+    for index, phase in enumerate(phases):
+        require(isinstance(phase, dict), f"phase {index} not object")
+        require(phase.get("name"), f"phase {index} name missing")
+        require(phase.get("preflightOk") is True, f"phase {index} preflight failed")
+        require(phase.get("applyOk") is True, f"phase {index} apply failed")
+        require(phase.get("processOk") is True, f"phase {index} process failed")
+        samples = int(phase.get("samplesProcessed", 0))
+        require(samples > 0, f"phase {index} samples missing")
+        total_phase_frames += samples
+
+    require(
+        total_phase_frames == wav_frames,
+        f"phase frames {total_phase_frames} did not match wav frames {wav_frames}",
+    )
+
+
 def wait_for_server(base_url: str) -> None:
     deadline = time.monotonic() + 5
     last_status = ""
@@ -201,6 +231,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         require(payload.get("artifactRoot"), "artifact root missing")
         require_handoff_contract(payload)
         require_artifact_contract(payload)
+        require_phase_contract(payload)
 
         handoff = payload["manifest"].get("sandboxHandoff", {})
         audio_path = handoff.get("primaryAudioArtifact")
