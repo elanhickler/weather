@@ -1663,6 +1663,19 @@ function clearPhaseButtonProbe() {
   clearSharedProbeFrame();
 }
 
+function clearPhaseButtonProbeFromOutside(event) {
+  if (state.phaseJumpPreviewIndex === null || state.waveformPointerActive) {
+    return;
+  }
+
+  const target = event.target;
+  if (target instanceof Element && target.closest("#waveformPhaseControls")) {
+    return;
+  }
+
+  clearPhaseButtonProbe();
+}
+
 function activeWaveformRegion() {
   const waveform = state.waveform;
   if (!waveform) {
@@ -1730,6 +1743,22 @@ function formatRegionRange(region, sampleRate) {
   return `${formatSeconds(region.startFrame / sampleRate)}-${formatSeconds(
     region.endFrame / sampleRate,
   )} / ${frames} frames`;
+}
+
+function renderPhaseJumpTarget() {
+  const target = document.getElementById("waveformPhaseJumpTarget");
+  const waveform = state.waveform;
+  const region =
+    state.phaseJumpPreviewIndex === null
+      ? null
+      : waveform?.regions?.[state.phaseJumpPreviewIndex];
+
+  target.textContent =
+    waveform && region
+      ? `jump ${region.name} / ${formatSeconds(
+          region.startFrame / waveform.sampleRate,
+        )} / frame ${region.startFrame}`
+      : "jump idle";
 }
 
 function setPlayheadFrame(frame) {
@@ -1827,6 +1856,7 @@ function renderWaveformPosition() {
   const probe = document.getElementById("waveformProbe");
   const phase = document.getElementById("waveformPhase");
   const phaseRange = document.getElementById("waveformPhaseRange");
+  const phaseJumpTarget = document.getElementById("waveformPhaseJumpTarget");
   const scrubber = document.getElementById("waveformScrubber");
   const waveform = state.waveform;
   if (!waveform) {
@@ -1835,6 +1865,7 @@ function renderWaveformPosition() {
     probe.textContent = "probe";
     phase.textContent = "phase";
     phaseRange.textContent = "range";
+    phaseJumpTarget.textContent = "jump idle";
     scrubber.value = "0";
     renderCurrentParameters(null);
     updateParameterTimelinePlayhead(null);
@@ -2072,6 +2103,7 @@ function updateActivePhaseButtons(activeRegion) {
       button.dataset.phaseIndex === String(state.phaseJumpPreviewIndex),
     );
   }
+  renderPhaseJumpTarget();
 }
 
 function syncWaveformToAudio() {
@@ -2859,6 +2891,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
         phaseReportCoverageIssue(manifest) === "",
     ],
     ["phase jump preview", waveformReady && Boolean(document.querySelector("#waveformPhaseControls button"))],
+    ["phase jump target", waveformReady && Boolean(document.getElementById("waveformPhaseJumpTarget"))],
     ["phase list probe", waveformReady && Boolean(document.getElementById("phaseProbe"))],
     ["phase preview target", waveformReady && Boolean(document.querySelector(".phase"))],
     ["phase parameter readout", parameterResyncContractIssue(manifest) === ""],
@@ -3608,6 +3641,7 @@ function renderError(message, details = {}) {
   setStatus("currentParameterStatus", "Check", false);
   setText("currentFrequency", "freq");
   setText("currentAmplitude", "amp");
+  setText("waveformPhaseJumpTarget", "jump idle");
   setStatus("signalPlotStatus", "Check", false);
   setText("signalPlotModeSummary", "all / trace / x1");
   setText("signalPlotWindowSummary", "window full");
@@ -3742,6 +3776,8 @@ document
 document
   .getElementById("signalPlotCanvas")
   .addEventListener("pointerleave", clearSignalPlotProbe);
+
+document.addEventListener("pointermove", clearPhaseButtonProbeFromOutside);
 
 document
   .getElementById("followAudioButton")
