@@ -219,6 +219,22 @@ audio {
   color: var(--accent-2);
 }
 
+.pill.inspection-playback.paused {
+  color: var(--muted);
+}
+
+.pill.inspection-playback.playing {
+  border-color: rgba(113, 212, 155, 0.42);
+  background: rgba(113, 212, 155, 0.09);
+  color: var(--good);
+}
+
+.pill.inspection-playback.ended {
+  border-color: rgba(226, 168, 109, 0.48);
+  background: rgba(226, 168, 109, 0.11);
+  color: var(--accent-2);
+}
+
 .pill.inspection-preview.idle {
   color: var(--muted);
 }

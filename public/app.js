@@ -141,6 +141,13 @@ function setInspectionCursorAudio(time) {
   audio.textContent = `audio ${formatSeconds(Number.isFinite(time) ? time : 0)}`;
 }
 
+function setInspectionCursorPlayback(audio) {
+  const playback = document.getElementById("inspectionCursorPlayback");
+  const stateName = audio?.ended ? "ended" : audio?.paused === false ? "playing" : "paused";
+  playback.textContent = `playback ${stateName}`;
+  playback.className = `pill inspection-playback ${stateName}`;
+}
+
 function setInspectionCursorPreview(active) {
   const preview = document.getElementById("inspectionCursorPreview");
   preview.textContent = active ? "preview only" : "preview idle";
@@ -2015,6 +2022,7 @@ function renderAudioPosition() {
   const time = Number(audio.currentTime);
   position.textContent = `audio ${formatSeconds(Number.isFinite(time) ? time : 0)}`;
   setInspectionCursorAudio(time);
+  setInspectionCursorPlayback(audio);
 }
 
 function setFollowAudio(enabled, syncNow) {
@@ -2835,6 +2843,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["inspection source pill", waveformReady && Boolean(document.getElementById("inspectionCursorSource"))],
     ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
     ["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))],
+    ["inspection playback pill", waveformReady && Boolean(document.getElementById("inspectionCursorPlayback"))],
     ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
     ["inspection seek pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeek"))],
     ["inspection seek sync pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeekSync"))],
@@ -3546,6 +3555,7 @@ function renderError(message, details = {}) {
   setInspectionCursorSource("none", "none");
   setInspectionCursorDelta(null, 1);
   setInspectionCursorAudio(0);
+  setInspectionCursorPlayback(null);
   setInspectionCursorPreview(false);
   setInspectionCursorSeek(null);
   setInspectionCursorSeekSync("none");
@@ -3715,6 +3725,18 @@ document
 document
   .getElementById("audioPlayer")
   .addEventListener("loadedmetadata", renderAudioPosition);
+
+document
+  .getElementById("audioPlayer")
+  .addEventListener("play", renderAudioPosition);
+
+document
+  .getElementById("audioPlayer")
+  .addEventListener("pause", renderAudioPosition);
+
+document
+  .getElementById("audioPlayer")
+  .addEventListener("ended", renderAudioPosition);
 
 window.addEventListener("resize", () => {
   drawWaveform();
