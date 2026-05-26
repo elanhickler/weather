@@ -8,6 +8,7 @@ const state = {
   activeReportIndex: 0,
   signalLagMs: 1,
   signalPhaseFocusIndex: null,
+  signalPlotMode: "trace",
 };
 
 const requiredFlags = [
@@ -404,6 +405,10 @@ function signalPlotFocusStats(waveform, drawableFrames) {
   };
 }
 
+function signalPlotRegionColor(index) {
+  return index % 2 === 0 ? "rgba(127,199,217,0.76)" : "rgba(226,168,109,0.72)";
+}
+
 function drawSignalPlot() {
   const canvas = document.getElementById("signalPlotCanvas");
   const waveform = state.waveform;
@@ -450,24 +455,33 @@ function drawSignalPlot() {
   for (const [regionIndex, region] of regions.entries()) {
     const startFrame = Math.max(0, Math.min(drawableFrames, region.startFrame));
     const endFrame = Math.max(startFrame, Math.min(drawableFrames, region.endFrame));
-    context.strokeStyle =
-      regionIndex % 2 === 0 ? "rgba(127,199,217,0.76)" : "rgba(226,168,109,0.72)";
+    context.strokeStyle = signalPlotRegionColor(regionIndex);
+    context.fillStyle = signalPlotRegionColor(regionIndex);
     context.lineWidth = Math.max(1, pixelRatio);
-    context.beginPath();
+    if (state.signalPlotMode === "trace") {
+      context.beginPath();
+    }
     let started = false;
 
     for (let frame = startFrame; frame < endFrame; frame += stride) {
       const x = centerX + samples[frame] * scale;
       const y = centerY - samples[frame + lagFrames] * scale;
-      if (!started) {
-        context.moveTo(x, y);
-        started = true;
+
+      if (state.signalPlotMode === "points") {
+        context.fillRect(x, y, Math.max(1, pixelRatio), Math.max(1, pixelRatio));
       } else {
-        context.lineTo(x, y);
+        if (!started) {
+          context.moveTo(x, y);
+          started = true;
+        } else {
+          context.lineTo(x, y);
+        }
       }
     }
 
-    context.stroke();
+    if (state.signalPlotMode === "trace") {
+      context.stroke();
+    }
   }
 
   const pointFrame = Math.max(
@@ -505,6 +519,7 @@ function renderSignalPlot() {
   drawSignalPlot();
   renderKeyValue(meta, [
     ["focus", signalPlotFocusName(waveform)],
+    ["mode", state.signalPlotMode],
     ["x", "sample[n]"],
     ["y", "sample[n + lag]"],
     ["lag", `${state.signalLagMs} ms`],
@@ -566,6 +581,21 @@ function renderSignalPlotControls() {
     button.classList.toggle("active", index === state.signalPhaseFocusIndex);
     button.addEventListener("click", () => {
       state.signalPhaseFocusIndex = index;
+      renderSignalPlot();
+    });
+    container.append(button);
+  }
+
+  for (const mode of ["trace", "points"]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "phase-button";
+    button.dataset.signalMode = mode;
+    button.setAttribute("aria-label", `Signal plot mode ${mode}`);
+    button.textContent = mode;
+    button.classList.toggle("active", mode === state.signalPlotMode);
+    button.addEventListener("click", () => {
+      state.signalPlotMode = mode;
       renderSignalPlot();
     });
     container.append(button);
