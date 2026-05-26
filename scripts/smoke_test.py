@@ -1363,6 +1363,7 @@ def require_waveform_seek_source_contract() -> None:
         '"hover delta"',
         'state.waveformProbeSource = "waveform"',
         'state.waveformProbeSource = "level envelope"',
+        "/ frame ${frame} / peak ${formatCompactNumber(",
         'state.waveformProbeSource = state.waveformProbeFrame === null ? null : "signal plot"',
         'state.waveformProbeSource = "parameter timeline"',
         'state.waveformProbeSource = "phase audio stats"',

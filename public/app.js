@@ -767,7 +767,7 @@ function renderLevelEnvelopeProbe() {
   const entry = levelEnvelopeWindowAtFrame(frame);
   const region = waveformRegionAtFrame(frame);
   probe.textContent = entry
-    ? `${probeSourceText()} ${formatSeconds(frame / waveform.sampleRate)} / peak ${formatCompactNumber(
+    ? `${probeSourceText()} ${formatSeconds(frame / waveform.sampleRate)} / frame ${frame} / peak ${formatCompactNumber(
         entry.peak,
       )} / rms ${formatCompactNumber(entry.rms)} / ${region?.name || "phase"}`
     : "probe";
