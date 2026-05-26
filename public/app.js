@@ -191,10 +191,13 @@ function setInspectionCursorSeekSync(match) {
   sync.className = `pill inspection-seek-sync ${match}`;
 }
 
-function setInspectionCursorTarget(region) {
+function setInspectionCursorTarget(region, frame, sampleRate) {
   const target = document.getElementById("inspectionCursorTarget");
-  target.textContent = `target ${region?.name || "none"}`;
-  target.className = `pill inspection-target ${region ? "active" : "none"}`;
+  const hasTarget = region && frame !== null && Number.isFinite(sampleRate) && sampleRate > 0;
+  target.textContent = hasTarget
+    ? `target ${region.name} / ${formatSeconds(frame / sampleRate)} / frame ${frame}`
+    : "target none";
+  target.className = `pill inspection-target ${hasTarget ? "active" : "none"}`;
 }
 
 function setInspectionCursorTransport(region) {
@@ -1950,7 +1953,7 @@ function renderInspectionCursor() {
     setInspectionCursorSeekTarget(null, null, 1);
     setInspectionCursorSeekSync("none");
     setInspectionCursorTransport(null);
-    setInspectionCursorTarget(null);
+    setInspectionCursorTarget(null, null, 1);
     setInspectionCursorDivergence(null, null);
     renderKeyValue(cursor, [
       ["transport frame", "0"],
@@ -2019,7 +2022,7 @@ function renderInspectionCursor() {
   setInspectionCursorSeekTarget(lastSeekRegion, lastSeekFrame, waveform.sampleRate);
   setInspectionCursorSeekSync(lastSeekTransportMatch);
   setInspectionCursorTransport(transportRegion);
-  setInspectionCursorTarget(hoverRegion);
+  setInspectionCursorTarget(hoverRegion, hoverFrame, waveform.sampleRate);
   setInspectionCursorDivergence(transportRegion, hoverRegion);
   renderKeyValue(cursor, [
     ["transport frame", String(transportFrame)],
@@ -3639,7 +3642,7 @@ function renderError(message, details = {}) {
   setInspectionCursorSeekTarget(null, null, 1);
   setInspectionCursorSeekSync("none");
   setInspectionCursorTransport(null);
-  setInspectionCursorTarget(null);
+  setInspectionCursorTarget(null, null, 1);
   setInspectionCursorDivergence(null, null);
   setStatus("sandboxContractStatus", "Check", false);
   setStatus("parameterSummaryStatus", "Check", false);
