@@ -1826,16 +1826,28 @@ function measuredPhaseAudioMatches(measurement, targetFrequency, targetAmplitude
   );
 }
 
+function measuredPhaseDelta(measuredValue, targetValue) {
+  if (!Number.isFinite(measuredValue) || targetValue === null) {
+    return null;
+  }
+
+  return measuredValue - targetValue;
+}
+
 function renderCurrentParameters(region) {
   const frequency = document.getElementById("currentFrequency");
   const amplitude = document.getElementById("currentAmplitude");
   const measuredFrequency = document.getElementById("currentMeasuredFrequency");
   const measuredPeak = document.getElementById("currentMeasuredPeak");
+  const measuredFrequencyDelta = document.getElementById("currentMeasuredFrequencyDelta");
+  const measuredPeakDelta = document.getElementById("currentMeasuredPeakDelta");
   const measuredStatus = document.getElementById("currentMeasuredStatus");
   const status = document.getElementById("currentParameterStatus");
   const frequencyValue = activeParameterValue("frequency", region);
   const amplitudeValue = activeParameterValue("amplitude", region);
   const measurement = measuredPhaseAudio(region);
+  const frequencyDelta = measuredPhaseDelta(measurement?.frequency, frequencyValue);
+  const peakDelta = measuredPhaseDelta(measurement?.peak, amplitudeValue);
   const ok = frequencyValue !== null && amplitudeValue !== null;
   const measurementOk = measuredPhaseAudioMatches(
     measurement,
@@ -1853,6 +1865,10 @@ function renderCurrentParameters(region) {
       : `measured ${formatCompactNumber(measurement.frequency)} Hz`;
   measuredPeak.textContent =
     measurement ? `peak ${formatCompactNumber(measurement.peak)}` : "peak";
+  measuredFrequencyDelta.textContent =
+    frequencyDelta === null ? "freq delta" : `freq delta ${formatSignedNumber(frequencyDelta)}`;
+  measuredPeakDelta.textContent =
+    peakDelta === null ? "peak delta" : `peak delta ${formatSignedNumber(peakDelta)}`;
   measuredStatus.textContent = measurementOk
     ? "measured ok"
     : measurement
@@ -4052,6 +4068,8 @@ function renderError(message, details = {}) {
   setText("currentAmplitude", "amp");
   setText("currentMeasuredFrequency", "measured freq");
   setText("currentMeasuredPeak", "peak");
+  setText("currentMeasuredFrequencyDelta", "freq delta");
+  setText("currentMeasuredPeakDelta", "peak delta");
   setStatus("currentMeasuredStatus", "measured", false);
   setText("waveformPhaseJumpTarget", "jump idle");
   setStatus("signalPlotStatus", "Check", false);
