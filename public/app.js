@@ -825,7 +825,15 @@ function renderSource(response) {
   const hasBytes = Number.isFinite(bytes) && bytes > 0;
   const modified = formatTimestamp(info.modifiedUtc);
   const hasModified = modified !== "missing" && modified !== "invalid";
-  const ok = hasPath && hasRoot && hasBytes && hasModified;
+  const headers = response.responseHeaders || {};
+  const cacheControl = headers.cacheControl || "missing";
+  const pragma = headers.pragma || "missing";
+  const expires = headers.expires || "missing";
+  const cacheOk =
+    cacheControl.includes("no-store") &&
+    pragma === "no-cache" &&
+    expires === "0";
+  const ok = hasPath && hasRoot && hasBytes && hasModified && cacheOk;
 
   setStatus("sourceStatus", ok ? "Loaded" : "Check", ok);
   setText("manifestPath", response.manifestPath || "missing");
@@ -833,6 +841,9 @@ function renderSource(response) {
   setText("manifestBytes", hasBytes ? formatBytes(bytes) : "missing");
   setText("manifestModified", modified);
   setText("manifestLoadedAt", formatTimestamp(new Date().toISOString()));
+  setText("manifestCacheControl", cacheControl);
+  setText("manifestPragma", pragma);
+  setText("manifestExpires", expires);
 }
 
 function renderArtifacts(links) {
@@ -1086,6 +1097,9 @@ function renderError(message) {
   setText("manifestBytes", "Unavailable");
   setText("manifestModified", "Unavailable");
   setText("manifestLoadedAt", "Unavailable");
+  setText("manifestCacheControl", "Unavailable");
+  setText("manifestPragma", "Unavailable");
+  setText("manifestExpires", "Unavailable");
   setText("artifactRoot", "Unavailable");
 
   const audio = document.getElementById("audioPlayer");
@@ -1115,6 +1129,11 @@ async function loadManifest() {
       renderError(payload.error || "Manifest failed");
       return;
     }
+    payload.responseHeaders = {
+      cacheControl: response.headers.get("cache-control") || "",
+      expires: response.headers.get("expires") || "",
+      pragma: response.headers.get("pragma") || "",
+    };
     render(payload);
   } catch (error) {
     renderError(error instanceof Error ? error.message : String(error));
