@@ -135,15 +135,22 @@ class SandboxServer(BaseHTTPRequestHandler):
         self.send_header("Content-Type", mime_type or "application/octet-stream")
         self.send_header("Content-Length", str(stat.st_size))
         self.send_header("Last-Modified", formatdate(stat.st_mtime, usegmt=True))
+        self.send_no_store_headers()
         self.end_headers()
         if send_body:
             self.wfile.write(path.read_bytes())
+
+    def send_no_store_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
 
     def send_json(self, payload: object, status: int = 200) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_no_store_headers()
         self.end_headers()
         self.wfile.write(body)
 
