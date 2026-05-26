@@ -1878,6 +1878,8 @@ function renderInspectionCursor() {
       ["last seek frame", "none"],
       ["last seek time", "none"],
       ["last seek phase", "none"],
+      ["last seek transport match", "none"],
+      ["last seek transport delta", "none"],
       ["last seek hover match", "none"],
       ["last seek hover delta", "none"],
       ["hover source", "none"],
@@ -1910,6 +1912,14 @@ function renderInspectionCursor() {
     state.lastSeekFrame === null ? null : clampFrame(state.lastSeekFrame, waveform);
   const lastSeekRegion =
     lastSeekFrame === null ? null : waveformRegionAtFrame(lastSeekFrame);
+  const lastSeekTransportDeltaFrame =
+    lastSeekFrame === null ? null : transportFrame - lastSeekFrame;
+  const lastSeekTransportMatch =
+    lastSeekTransportDeltaFrame === null
+      ? "none"
+      : lastSeekTransportDeltaFrame === 0
+        ? "aligned"
+        : "diverged";
   const lastSeekHoverDeltaFrame =
     lastSeekFrame === null || hoverFrame === null ? null : hoverFrame - lastSeekFrame;
   const lastSeekHoverMatch =
@@ -1939,6 +1949,11 @@ function renderInspectionCursor() {
       lastSeekFrame === null ? "none" : formatSeconds(lastSeekFrame / waveform.sampleRate),
     ],
     ["last seek phase", lastSeekRegion?.name || "none"],
+    ["last seek transport match", lastSeekTransportMatch],
+    [
+      "last seek transport delta",
+      formatInspectionDelta(lastSeekTransportDeltaFrame, waveform.sampleRate),
+    ],
     ["last seek hover match", lastSeekHoverMatch],
     [
       "last seek hover delta",
