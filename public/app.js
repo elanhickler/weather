@@ -247,7 +247,7 @@ function probeSourceText() {
   return state.waveformProbeSource ? `probe ${state.waveformProbeSource}` : "probe";
 }
 
-function formatProbeFrame(frame, waveform, region = waveformRegionAtFrame(frame)) {
+function formatProbeFrame(frame, waveform, region = waveformRegionAtFrameFor(waveform, frame)) {
   return `${formatSeconds(frame / waveform.sampleRate)} / frame ${frame} / ${
     region?.name || "phase"
   }`;
@@ -1711,7 +1711,10 @@ function activeWaveformRegion() {
 }
 
 function waveformRegionAtFrame(frame) {
-  const waveform = state.waveform;
+  return waveformRegionAtFrameFor(state.waveform, frame);
+}
+
+function waveformRegionAtFrameFor(waveform, frame) {
   if (!waveform) {
     return null;
   }
