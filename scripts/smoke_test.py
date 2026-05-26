@@ -280,6 +280,32 @@ def require_content_type(response: Response, expected: str | tuple[str, ...], la
     )
 
 
+def require_json_response_metadata(response: Response, label: str) -> None:
+    require_no_store(response, label)
+    require_content_type(response, "application/json", label)
+    require(
+        response.headers.get("content-length") == str(len(response.body)),
+        f"{label} content-length mismatch",
+    )
+
+
+def require_manifest_file_info(
+  payload: dict[str, object],
+  manifest_file: Path,
+  label: str,
+) -> None:
+    manifest_info = payload.get("manifestInfo")
+    require(isinstance(manifest_info, dict), f"{label} manifest info missing")
+    require(
+        manifest_info.get("bytes") == manifest_file.stat().st_size,
+        f"{label} manifest byte count mismatch",
+    )
+    require(
+        isinstance(manifest_info.get("modifiedUtc"), str),
+        f"{label} manifest modified time missing",
+    )
+
+
 def require_shell_element(
   parser: ShellContractParser,
   element_id: str,
@@ -2132,12 +2158,7 @@ def require_follow_free_seek_contract() -> None:
 def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
     manifest_response = request(f"{base_url}/api/manifest")
     require(manifest_response.status == 200, "manifest endpoint did not return 200")
-    require_no_store(manifest_response, "manifest endpoint")
-    require_content_type(manifest_response, "application/json", "manifest endpoint")
-    require(
-        manifest_response.headers.get("content-length") == str(len(manifest_response.body)),
-        "manifest endpoint content-length mismatch",
-    )
+    require_json_response_metadata(manifest_response, "manifest endpoint")
     payload = json.loads(manifest_response.body.decode("utf-8"))
     require(isinstance(payload, dict), "manifest response payload was not object")
     require(payload.get("ok") is True, "manifest payload was not ok")
@@ -2148,13 +2169,7 @@ def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
     manifest_file = Path(manifest_path).resolve()
     require(manifest_file.is_file(), "manifest path does not point to a file")
     require(Path(artifact_root).resolve() == manifest_file.parent, "artifact root mismatch")
-    manifest_info = payload.get("manifestInfo")
-    require(isinstance(manifest_info, dict), "manifest info missing")
-    require(
-        manifest_info.get("bytes") == manifest_file.stat().st_size,
-        "manifest info byte count mismatch",
-    )
-    require(isinstance(manifest_info.get("modifiedUtc"), str), "manifest info modified time missing")
+    require_manifest_file_info(payload, manifest_file, "manifest endpoint")
     return payload
 
 
@@ -2358,12 +2373,7 @@ def run_manifest_error_smoke(port: int) -> None:
                 wait_for_server(base_url, process)
                 response = request(f"{base_url}/api/manifest")
                 require(response.status == status, f"{error} status mismatch")
-                require_no_store(response, error)
-                require_content_type(response, "application/json", error)
-                require(
-                    response.headers.get("content-length") == str(len(response.body)),
-                    f"{error} content-length mismatch",
-                )
+                require_json_response_metadata(response, error)
                 payload = json.loads(response.body.decode("utf-8"))
                 require(payload.get("ok") is False, f"{error} payload was not false")
                 require(payload.get("error") == error, f"{error} payload mismatch")
@@ -2391,12 +2401,7 @@ def run_readable_malformed_manifest_smoke(port: int) -> None:
             wait_for_server(base_url, process)
             response = request(f"{base_url}/api/manifest")
             require(response.status == 200, "readable malformed manifest status mismatch")
-            require_no_store(response, "readable malformed manifest")
-            require_content_type(response, "application/json", "readable malformed manifest")
-            require(
-                response.headers.get("content-length") == str(len(response.body)),
-                "readable malformed manifest content-length mismatch",
-            )
+            require_json_response_metadata(response, "readable malformed manifest")
             payload = json.loads(response.body.decode("utf-8"))
             require(payload.get("ok") is True, "readable malformed manifest was not ok")
             require(
@@ -2407,16 +2412,7 @@ def run_readable_malformed_manifest_smoke(port: int) -> None:
                 payload.get("artifactRoot") == str(fixture_root.resolve()),
                 "readable malformed manifest artifact root mismatch",
             )
-            manifest_info = payload.get("manifestInfo")
-            require(isinstance(manifest_info, dict), "readable malformed manifest info missing")
-            require(
-                manifest_info.get("bytes") == malformed_manifest.stat().st_size,
-                "readable malformed manifest byte count mismatch",
-            )
-            require(
-                isinstance(manifest_info.get("modifiedUtc"), str),
-                "readable malformed manifest modified time missing",
-            )
+            require_manifest_file_info(payload, malformed_manifest, "readable malformed manifest")
             require(
                 payload.get("manifest") == {"allOk": True},
                 "readable malformed manifest payload mismatch",
