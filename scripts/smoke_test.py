@@ -44,6 +44,12 @@ REPORT_ARTIFACT_KINDS = {
     "wav-report",
     "phase-report",
 }
+SUMMARY_PARAMETER_KEYS = (
+    "first half frequency",
+    "first half amplitude",
+    "second half frequency",
+    "second half amplitude",
+)
 
 
 @dataclass
@@ -239,6 +245,48 @@ def require_report_documents(base_url: str, payload: dict[str, object]) -> None:
             json.loads(text)
 
 
+def parse_summary_pairs(text: str) -> dict[str, str]:
+    pairs: dict[str, str] = {}
+    for line in text.splitlines():
+        key, separator, value = line.partition(":")
+        if separator and key.strip():
+            pairs[key.strip()] = value.strip()
+    return pairs
+
+
+def require_parameter_summary(base_url: str, payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+
+    links = manifest.get("artifactLinks")
+    require(isinstance(links, list), "artifact links missing")
+    summary_links = [
+        link
+        for link in links
+        if isinstance(link, dict) and link.get("kind") == "text-summary"
+    ]
+    require(len(summary_links) == 1, "expected exactly one text summary")
+
+    path = summary_links[0].get("path")
+    require(isinstance(path, str) and path, "text summary path missing")
+    response = request(f"{base_url}/artifact?path={urllib.parse.quote(path)}")
+    require(response.status == 200, "text summary did not return 200")
+    require_no_store(response, "text summary")
+    pairs = parse_summary_pairs(response.body.decode("utf-8"))
+
+    for key in SUMMARY_PARAMETER_KEYS:
+        require(key in pairs, f"text summary missing {key}")
+        number = float(pairs[key])
+        require(number > 0, f"text summary {key} was not positive")
+
+    first_frequency = float(pairs["first half frequency"])
+    second_frequency = float(pairs["second half frequency"])
+    first_amplitude = float(pairs["first half amplitude"])
+    second_amplitude = float(pairs["second half amplitude"])
+    require(second_frequency > first_frequency, "frequency did not resync upward")
+    require(second_amplitude > first_amplitude, "amplitude did not resync upward")
+
+
 def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
@@ -349,6 +397,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         require_phase_contract(payload)
         require_artifact_reachability(base_url, payload)
         require_report_documents(base_url, payload)
+        require_parameter_summary(base_url, payload)
         require_primary_audio_wav(base_url, payload)
 
         handoff = payload["manifest"].get("sandboxHandoff", {})

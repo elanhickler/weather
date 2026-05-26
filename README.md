@@ -38,9 +38,9 @@ The smoke test starts an isolated local server, checks the manifest endpoint,
 checks the root shell and static assets, checks the handoff contract and
 boundary flags, checks handoff artifact references, checks artifact and phase
 coverage, checks every manifest artifact link for reachability, checks report
-documents, checks primary audio artifact reachability and WAV metadata, checks
-expected error and forbidden path responses, and verifies local responses use
-no-store cache headers.
+documents, checks parameter resync summary values, checks primary audio artifact
+reachability and WAV metadata, checks expected error and forbidden path
+responses, and verifies local responses use no-store cache headers.
 
 ## Boundaries
 
