@@ -466,6 +466,19 @@ def require_primary_audio_wav(base_url: str, payload: dict[str, object]) -> None
         raise AssertionError(f"primary audio WAV parse failed: {error}") from error
 
 
+def require_read_only_method_rejections(base_url: str) -> None:
+    for method, path in [
+        ("POST", "/api/manifest"),
+        ("PUT", "/artifact?path=runtime_dsp_object_bound_wav_resync_demo.wav"),
+        ("PATCH", "/public/app.js"),
+        ("DELETE", "/"),
+    ]:
+        response = request(f"{base_url}{path}", method=method)
+        label = f"{method} {path}"
+        require(response.status == 405, f"{label} did not return 405")
+        require_no_store(response, label)
+
+
 def wait_for_server(base_url: str, process: subprocess.Popen[bytes]) -> None:
     deadline = time.monotonic() + 5
     last_status = ""
@@ -593,6 +606,8 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         manifest_head = request(f"{base_url}/api/manifest", method="HEAD")
         require(manifest_head.status == 405, "manifest HEAD did not return 405")
         require_no_store(manifest_head, "manifest HEAD")
+
+        require_read_only_method_rejections(base_url)
     finally:
         stop_server(process)
 

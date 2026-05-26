@@ -49,6 +49,21 @@ class SandboxServer(BaseHTTPRequestHandler):
     def do_HEAD(self) -> None:
         self.serve_request(send_body=False)
 
+    def do_POST(self) -> None:
+        self.reject_mutation_method()
+
+    def do_PUT(self) -> None:
+        self.reject_mutation_method()
+
+    def do_PATCH(self) -> None:
+        self.reject_mutation_method()
+
+    def do_DELETE(self) -> None:
+        self.reject_mutation_method()
+
+    def reject_mutation_method(self) -> None:
+        self.send_error(405, "Method not allowed")
+
     def serve_request(self, send_body: bool) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/":
