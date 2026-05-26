@@ -2696,9 +2696,17 @@ function renderReportControls() {
 
   for (const [index, report] of state.reports.entries()) {
     const button = document.createElement("button");
+    const active = index === state.activeReportIndex;
+    const label = `Show report ${report.label}`;
     button.type = "button";
     button.className = "report-button";
-    button.classList.toggle("active", index === state.activeReportIndex);
+    button.classList.toggle("active", active);
+    button.dataset.reportIndex = String(index);
+    button.dataset.reportKind = report.kind;
+    button.dataset.reportPath = report.path || "";
+    button.setAttribute("aria-label", label);
+    button.setAttribute("aria-pressed", String(active));
+    button.title = label;
     button.textContent = report.label;
     button.addEventListener("click", () => setActiveReport(index));
     container.append(button);
@@ -2774,6 +2782,7 @@ async function renderReports(links) {
   status.className = ok ? "pill good" : "pill warn";
   renderReportControls();
   renderActiveReport();
+  renderHandsOnReadiness(state.response?.manifest, Boolean(state.waveform));
 }
 
 function formatJsonDocument(text) {
@@ -3351,6 +3360,24 @@ function waveformScrubberLabeled() {
   );
 }
 
+function reportControlsLabeled() {
+  const buttons = [...document.querySelectorAll("#reportControls button")];
+  return (
+    buttons.length > 0 &&
+    buttons.every((button) => {
+      const label = button.getAttribute("aria-label") || "";
+      return (
+        button.dataset.reportIndex !== undefined &&
+        button.dataset.reportKind !== undefined &&
+        button.dataset.reportPath !== undefined &&
+        label.startsWith("Show report ") &&
+        button.title === label &&
+        ["true", "false"].includes(button.getAttribute("aria-pressed"))
+      );
+    })
+  );
+}
+
 function probePillLabeled(id) {
   const probe = document.getElementById(id);
   return (
@@ -3397,6 +3424,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ],
     ["waveform play control", Boolean(document.getElementById("waveformPlayButton"))],
     ["waveform control labels", waveformControlsLabeled()],
+    ["report control labels", reportControlsLabeled()],
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
     ["waveform scrubber labels", waveformReady && waveformScrubberLabeled()],
