@@ -1156,6 +1156,18 @@ function manifestShapeError(payload) {
     return "wav frame count missing";
   }
 
+  for (const [key, message] of [
+    ["sampleRate", "wav sample rate missing"],
+    ["channels", "wav channel count missing"],
+    ["bitDepth", "wav bit depth missing"],
+    ["dataBytes", "wav data byte count missing"],
+    ["fileBytes", "wav file byte count missing"],
+  ]) {
+    if (!Number.isFinite(Number(manifest.wav[key]))) {
+      return message;
+    }
+  }
+
   if (!Array.isArray(manifest.artifactLinks)) {
     return "artifact links missing";
   }
