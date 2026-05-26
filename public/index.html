@@ -47,6 +47,21 @@
       <audio id="audioPlayer" controls preload="metadata"></audio>
     </section>
 
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Waveform</h2>
+        <span id="waveformStatus" class="pill">Loading</span>
+      </div>
+      <canvas
+        id="waveformCanvas"
+        class="waveform"
+        width="1120"
+        height="180"
+        aria-label="Primary WAV waveform">
+      </canvas>
+      <dl id="waveformMeta" class="kv compact"></dl>
+    </section>
+
     <section class="grid">
       <div class="panel">
         <h2>Boundary Flags</h2>

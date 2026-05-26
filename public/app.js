@@ -1,5 +1,6 @@
 const state = {
   response: null,
+  waveform: null,
 };
 
 const requiredFlags = [
@@ -38,6 +39,72 @@ function statusText(ok) {
   return ok ? "OK" : "Check";
 }
 
+function readAscii(view, offset, length) {
+  let value = "";
+  for (let index = 0; index < length; index += 1) {
+    value += String.fromCharCode(view.getUint8(offset + index));
+  }
+  return value;
+}
+
+function parsePcm16Wav(buffer) {
+  const view = new DataView(buffer);
+  if (readAscii(view, 0, 4) !== "RIFF" || readAscii(view, 8, 4) !== "WAVE") {
+    throw new Error("Expected RIFF/WAVE data");
+  }
+
+  let channels = 0;
+  let sampleRate = 0;
+  let bitsPerSample = 0;
+  let audioFormat = 0;
+  let dataOffset = 0;
+  let dataSize = 0;
+  let offset = 12;
+
+  while (offset + 8 <= view.byteLength) {
+    const id = readAscii(view, offset, 4);
+    const size = view.getUint32(offset + 4, true);
+    const dataStart = offset + 8;
+
+    if (id === "fmt ") {
+      audioFormat = view.getUint16(dataStart, true);
+      channels = view.getUint16(dataStart + 2, true);
+      sampleRate = view.getUint32(dataStart + 4, true);
+      bitsPerSample = view.getUint16(dataStart + 14, true);
+    }
+
+    if (id === "data") {
+      dataOffset = dataStart;
+      dataSize = size;
+    }
+
+    offset = dataStart + size + (size % 2);
+  }
+
+  if (audioFormat !== 1 || bitsPerSample !== 16 || channels < 1 || dataSize === 0) {
+    throw new Error("Expected PCM 16-bit WAV data");
+  }
+
+  const frames = Math.floor(dataSize / (channels * 2));
+  const samples = new Float32Array(frames);
+  for (let frame = 0; frame < frames; frame += 1) {
+    let sum = 0;
+    for (let channel = 0; channel < channels; channel += 1) {
+      const sampleOffset = dataOffset + (frame * channels + channel) * 2;
+      sum += view.getInt16(sampleOffset, true) / 32768;
+    }
+    samples[frame] = sum / channels;
+  }
+
+  return {
+    bitsPerSample,
+    channels,
+    frames,
+    sampleRate,
+    samples,
+  };
+}
+
 function renderKeyValue(container, rows) {
   container.replaceChildren();
   for (const [key, value, expected] of rows) {
@@ -49,6 +116,95 @@ function renderKeyValue(container, rows) {
       dd.className = "warn";
     }
     container.append(dt, dd);
+  }
+}
+
+function drawWaveform() {
+  const canvas = document.getElementById("waveformCanvas");
+  const waveform = state.waveform;
+  if (!waveform) {
+    return;
+  }
+
+  const pixelRatio = window.devicePixelRatio || 1;
+  const width = Math.max(320, Math.floor(canvas.clientWidth * pixelRatio));
+  const height = Math.max(120, Math.floor(canvas.clientHeight * pixelRatio));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "#14171a";
+  context.fillRect(0, 0, width, height);
+
+  const center = height / 2;
+  const scale = height * 0.42;
+  context.strokeStyle = "#343a40";
+  context.lineWidth = Math.max(1, pixelRatio);
+  context.beginPath();
+  context.moveTo(0, center);
+  context.lineTo(width, center);
+  context.stroke();
+
+  const samples = waveform.samples;
+  const framesPerPixel = Math.max(1, Math.floor(samples.length / width));
+  context.strokeStyle = "#7fc7d9";
+  context.lineWidth = Math.max(1, pixelRatio);
+  context.beginPath();
+
+  for (let x = 0; x < width; x += 1) {
+    const start = x * framesPerPixel;
+    const end = Math.min(samples.length, start + framesPerPixel);
+    let min = 1;
+    let max = -1;
+
+    for (let index = start; index < end; index += 1) {
+      const value = samples[index];
+      if (value < min) {
+        min = value;
+      }
+      if (value > max) {
+        max = value;
+      }
+    }
+
+    context.moveTo(x, center - max * scale);
+    context.lineTo(x, center - min * scale);
+  }
+
+  context.stroke();
+}
+
+async function renderWaveform(path) {
+  const status = document.getElementById("waveformStatus");
+  const meta = document.getElementById("waveformMeta");
+  status.textContent = "Loading";
+  status.className = "pill";
+
+  try {
+    const response = await fetch(artifactUrl(path), { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`WAV fetch failed: ${response.status}`);
+    }
+
+    state.waveform = parsePcm16Wav(await response.arrayBuffer());
+    drawWaveform();
+    renderKeyValue(meta, [
+      ["sample rate", String(state.waveform.sampleRate)],
+      ["channels", String(state.waveform.channels)],
+      ["bit depth", String(state.waveform.bitsPerSample)],
+      ["frames", String(state.waveform.frames)],
+    ]);
+    status.textContent = "Drawn";
+    status.className = "pill good";
+  } catch (error) {
+    state.waveform = null;
+    meta.replaceChildren();
+    status.textContent = "Check";
+    status.className = "pill warn";
+    console.error(error);
   }
 }
 
@@ -180,6 +336,7 @@ function render(response) {
 
   const audio = document.getElementById("audioPlayer");
   audio.src = artifactUrl(handoff.primaryAudioArtifact);
+  renderWaveform(handoff.primaryAudioArtifact);
 
   renderKeyValue(
     document.getElementById("boundaryFlags"),
@@ -219,5 +376,7 @@ async function loadManifest() {
 document
   .getElementById("refreshButton")
   .addEventListener("click", loadManifest);
+
+window.addEventListener("resize", drawWaveform);
 
 loadManifest();
