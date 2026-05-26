@@ -411,6 +411,13 @@ function renderWaveformPosition() {
   updateActivePhaseButtons(activeRegion);
 }
 
+function renderAudioPosition() {
+  const audio = document.getElementById("audioPlayer");
+  const position = document.getElementById("audioPosition");
+  const time = Number(audio.currentTime);
+  position.textContent = `audio ${formatSeconds(Number.isFinite(time) ? time : 0)}`;
+}
+
 function setFollowAudio(enabled, syncNow) {
   state.followAudio = enabled;
   renderFollowAudioControl();
@@ -434,6 +441,7 @@ function updateActivePhaseButtons(activeRegion) {
 
 function syncWaveformToAudio() {
   const audio = document.getElementById("audioPlayer");
+  renderAudioPosition();
   if (!state.followAudio || !state.waveform || Number.isNaN(audio.currentTime)) {
     return;
   }
@@ -453,6 +461,7 @@ function seekPrimaryAudioToFrame(frame) {
     const targetTime = targetFrame / waveform.sampleRate;
     if (Number.isFinite(targetTime)) {
       audio.currentTime = targetTime;
+      renderAudioPosition();
     }
   }
 
@@ -1250,6 +1259,7 @@ function renderError(message, details = {}) {
   const audio = document.getElementById("audioPlayer");
   audio.removeAttribute("src");
   audio.load();
+  renderAudioPosition();
 
   clearElement("producerProof");
   clearElement("parameterSummary");
@@ -1315,6 +1325,10 @@ document
 document
   .getElementById("audioPlayer")
   .addEventListener("seeked", syncWaveformToAudio);
+
+document
+  .getElementById("audioPlayer")
+  .addEventListener("loadedmetadata", renderAudioPosition);
 
 window.addEventListener("resize", drawWaveform);
 

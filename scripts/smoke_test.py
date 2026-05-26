@@ -63,6 +63,7 @@ REQUIRED_SHELL_IDS = {
     "artifactRoot",
     "artifactStatus",
     "audioPlayer",
+    "audioPosition",
     "audioTitle",
     "boundaryFlags",
     "checklist",
