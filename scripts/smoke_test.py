@@ -739,6 +739,93 @@ def require_phase_audio_contract_negative_cases() -> None:
     )
 
 
+def parameter_resync_contract_fixture() -> dict[str, object]:
+    return {
+        "manifest": {
+            "parameterResync": {
+                "frequency": {
+                    "changed": True,
+                    "first": 220,
+                    "second": 440,
+                },
+                "amplitude": {
+                    "changed": True,
+                    "first": 0.2,
+                    "second": 0.35,
+                },
+            },
+        },
+    }
+
+
+def require_parameter_resync_contract(payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+    resync = manifest.get("parameterResync")
+    require(isinstance(resync, dict), "parameter resync missing")
+
+    for key in ("frequency", "amplitude"):
+        values = resync.get(key)
+        require(isinstance(values, dict), f"{key} resync missing")
+        require(values.get("changed") is True, f"{key} resync changed flag missing")
+        first = float(values.get("first", 0))
+        second = float(values.get("second", 0))
+        require(first > 0, f"{key} first value invalid")
+        require(second > 0, f"{key} second value invalid")
+        require(second > first, f"{key} did not resync upward")
+
+
+def require_parameter_resync_contract_failure(
+  label: str,
+  mutate: Callable[[dict[str, object]], None],
+  expected: str,
+) -> None:
+    payload = json.loads(json.dumps(parameter_resync_contract_fixture()))
+    manifest = payload["manifest"]
+    require(isinstance(manifest, dict), f"{label} fixture manifest missing")
+    mutate(manifest)
+    try:
+        require_parameter_resync_contract(payload)
+    except AssertionError as error:
+        require(expected in str(error), f"{label} produced {error}, expected {expected}")
+        return
+
+    raise AssertionError(f"{label} did not fail")
+
+
+def require_parameter_resync_contract_negative_cases() -> None:
+    require_parameter_resync_contract(parameter_resync_contract_fixture())
+    require_parameter_resync_contract_failure(
+        "missing parameter resync",
+        lambda manifest: manifest.pop("parameterResync"),
+        "parameter resync missing",
+    )
+    require_parameter_resync_contract_failure(
+        "missing frequency",
+        lambda manifest: manifest["parameterResync"].pop("frequency"),
+        "frequency resync missing",
+    )
+    require_parameter_resync_contract_failure(
+        "frequency changed flag false",
+        lambda manifest: manifest["parameterResync"]["frequency"].update(
+            {"changed": False},
+        ),
+        "frequency resync changed flag missing",
+    )
+    require_parameter_resync_contract_failure(
+        "amplitude first invalid",
+        lambda manifest: manifest["parameterResync"]["amplitude"].update({"first": 0}),
+        "amplitude first value invalid",
+    )
+    require_parameter_resync_contract_failure(
+        "amplitude not upward",
+        lambda manifest: manifest["parameterResync"]["amplitude"].update(
+            {"second": 0.1},
+        ),
+        "amplitude did not resync upward",
+    )
+
+
 def require_artifact_reachability(base_url: str, payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
@@ -1191,6 +1278,11 @@ def require_waveform_seek_source_contract() -> None:
         '["audio matches handoff", primaryAudioPath === handoff.primaryAudioArtifact]',
         '["phase report coverage", phaseReportIssue === "" ? "match" : phaseReportIssue, "match"]',
         '["phase report coverage", phaseReportIssue === ""]',
+        '["parameter resync", parameterResyncIssue === ""]',
+        "function parameterResyncContractIssue(manifest)",
+        'return "parameter resync missing"',
+        'return `${key} resync changed flag missing`',
+        'return `${key} did not resync upward`',
         '["phase audio measurements", phaseAudioIssues.length === 0]',
         "function phaseReportCoverageIssue(manifest)",
         'return "phase report phase missing"',
@@ -1316,6 +1408,7 @@ def require_manifest_contracts(payload: dict[str, object]) -> None:
     require_handoff_contract(payload)
     require_artifact_contract(payload)
     require_phase_contract(payload)
+    require_parameter_resync_contract(payload)
 
 
 def require_artifact_report_and_audio_contracts(
@@ -1469,6 +1562,10 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         run_step(
             "phase audio contract negative cases",
             require_phase_audio_contract_negative_cases,
+        )
+        run_step(
+            "parameter resync contract negative cases",
+            require_parameter_resync_contract_negative_cases,
         )
         run_step(
             "artifact reports and audio",

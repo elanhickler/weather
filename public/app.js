@@ -1923,6 +1923,7 @@ function validateConsumerChecklist(manifest) {
   const phases = manifest.phases || [];
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
   const phaseReportIssue = phaseReportCoverageIssue(manifest);
+  const parameterResyncIssue = parameterResyncContractIssue(manifest);
   const entryPointPath = findArtifactPath(links, "entry-point");
   const primaryAudioPath = findArtifactPath(links, "audio");
   const checks = [
@@ -1942,6 +1943,7 @@ function validateConsumerChecklist(manifest) {
     ["audio matches handoff", primaryAudioPath === handoff.primaryAudioArtifact],
     ["phase report", phases.length > 0],
     ["phase report coverage", phaseReportIssue === ""],
+    ["parameter resync", parameterResyncIssue === ""],
     ["phase audio measurements", phaseAudioIssues.length === 0],
   ];
 
@@ -2407,9 +2409,45 @@ function manifestShapeError(payload) {
     return phaseReportIssue;
   }
 
+  const parameterResyncIssue = parameterResyncContractIssue(manifest);
+  if (parameterResyncIssue) {
+    return parameterResyncIssue;
+  }
+
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
   if (phaseAudioIssues.length) {
     return phaseAudioIssues[0];
+  }
+
+  return "";
+}
+
+function parameterResyncContractIssue(manifest) {
+  const resync = manifest?.parameterResync;
+  if (!resync || typeof resync !== "object") {
+    return "parameter resync missing";
+  }
+
+  for (const key of ["frequency", "amplitude"]) {
+    const values = resync[key];
+    if (!values || typeof values !== "object") {
+      return `${key} resync missing`;
+    }
+    if (values.changed !== true) {
+      return `${key} resync changed flag missing`;
+    }
+
+    const first = Number(values.first);
+    const second = Number(values.second);
+    if (!Number.isFinite(first) || first <= 0) {
+      return `${key} first value invalid`;
+    }
+    if (!Number.isFinite(second) || second <= 0) {
+      return `${key} second value invalid`;
+    }
+    if (second <= first) {
+      return `${key} did not resync upward`;
+    }
   }
 
   return "";

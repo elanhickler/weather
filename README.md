@@ -46,7 +46,8 @@ consumer measurements, checks decoded phase frequency and peak amplitude against
 negative artifact handoff contract cases for entry point, audio, WAV path,
 duplicate single-role artifact, and phase-report coverage mismatches, checks
 negative phase-audio measurement contract cases for missing, mismatched, and
-drifting producer values, checks
+drifting producer values, checks negative parameter-resync contract cases for
+missing, unchanged, invalid, and non-upward values, checks
 expected error and forbidden path responses including encoded traversal, checks
 that non-read methods are rejected by the read-only server, and verifies that
 readable malformed manifest shapes still preserve source details for the browser
