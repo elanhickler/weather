@@ -3071,11 +3071,24 @@ function renderParameterTimeline(manifest) {
     for (const [index, phase] of phases.entries()) {
       const frames = Number(phase.samplesProcessed || 0);
       const span = spans[index] || { startFrame: 0, endFrame: frames };
+      const valueText = manifestValueText(values[phase.name]) || "missing";
+      const startTime = formatSeconds(span.startFrame / manifest.wav.sampleRate);
+      const endTime = formatSeconds(span.endFrame / manifest.wav.sampleRate);
+      const segmentLabel =
+        `Parameter ${name} ${phase.name || "phase"} value ${valueText} ` +
+        `from frame ${span.startFrame} to ${span.endFrame}`;
       const segment = document.createElement("div");
       segment.className = "parameter-segment";
       segment.dataset.phaseName = phase.name || "";
+      segment.dataset.parameterName = name;
+      segment.dataset.parameterValue = valueText;
       segment.dataset.startFrame = String(span.startFrame);
       segment.dataset.endFrame = String(span.endFrame);
+      segment.dataset.startTime = startTime;
+      segment.dataset.endTime = endTime;
+      segment.setAttribute("aria-label", segmentLabel);
+      segment.setAttribute("role", "group");
+      segment.title = `${segmentLabel} / ${startTime} to ${endTime}`;
       segment.style.flexBasis = `${Math.max(1, (frames / totalFrames) * 100)}%`;
       segment.addEventListener("pointermove", probeParameterTimelineSegment);
       segment.addEventListener("pointerleave", clearParameterTimelineProbe);
@@ -3084,7 +3097,7 @@ function renderParameterTimeline(manifest) {
       phaseLabel.textContent = phase.name || "phase";
 
       const value = document.createElement("strong");
-      value.textContent = manifestValueText(values[phase.name]) || "missing";
+      value.textContent = valueText;
 
       segment.append(phaseLabel, value);
       rail.append(segment);
@@ -3125,6 +3138,16 @@ function renderUnavailableParameterTimeline() {
 
   const segment = document.createElement("div");
   segment.className = "parameter-segment warn-row";
+  segment.dataset.phaseName = "unavailable";
+  segment.dataset.parameterName = "resync";
+  segment.dataset.parameterValue = "manifest required";
+  segment.dataset.startFrame = "none";
+  segment.dataset.endFrame = "none";
+  segment.dataset.startTime = "unavailable";
+  segment.dataset.endTime = "unavailable";
+  segment.setAttribute("aria-label", "Parameter resync unavailable: manifest required");
+  segment.setAttribute("role", "group");
+  segment.title = "Parameter resync unavailable: manifest required";
 
   const phase = document.createElement("span");
   phase.textContent = "unavailable";
@@ -3443,6 +3466,30 @@ function signalPlotControlsLabeled() {
   );
 }
 
+function parameterTimelineSegmentsLabeled() {
+  const segments = [...document.querySelectorAll("#parameterTimeline .parameter-segment")];
+  return (
+    segments.length > 0 &&
+    segments.every((segment) => {
+      const label = segment.getAttribute("aria-label") || "";
+      return (
+        segment.dataset.phaseName !== undefined &&
+        segment.dataset.parameterName !== undefined &&
+        segment.dataset.parameterValue !== undefined &&
+        segment.dataset.startFrame !== undefined &&
+        segment.dataset.endFrame !== undefined &&
+        segment.dataset.startTime !== undefined &&
+        segment.dataset.endTime !== undefined &&
+        label.startsWith("Parameter ") &&
+        label.includes(" from frame ") &&
+        label.includes(" to ") &&
+        segment.getAttribute("role") === "group" &&
+        segment.title.startsWith(label)
+      );
+    })
+  );
+}
+
 function probePillLabeled(id) {
   const probe = document.getElementById(id);
   return (
@@ -3500,6 +3547,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["level envelope probe labels", waveformReady && levelEnvelopeProbeLabeled()],
     ["parameter timeline probe", waveformReady && Boolean(document.getElementById("parameterTimelineProbe"))],
     ["parameter timeline probe labels", waveformReady && parameterTimelineProbeLabeled()],
+    ["parameter timeline segment labels", waveformReady && parameterTimelineSegmentsLabeled()],
     ["parameter timeline preview", waveformReady && Boolean(document.querySelector(".parameter-segment"))],
     ["probe frame labels", waveformReady && typeof formatProbeFrame === "function"],
     ["follow/free view", Boolean(document.getElementById("followAudioButton"))],
