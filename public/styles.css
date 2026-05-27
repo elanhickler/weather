@@ -300,12 +300,12 @@ audio {
 .node-slider-readout-value {
   min-width: 0;
   overflow: hidden;
-  text-align: right;
+  text-align: left;
   text-overflow: ellipsis;
 }
 
 .node-slider-readout-unit {
-  min-width: 1.75em;
+  min-width: 2.5em;
   color: var(--accent);
   font-size: 0.68rem;
   text-align: left;
@@ -313,7 +313,7 @@ audio {
 }
 
 .node-slider-readout-unit[hidden] {
-  display: none;
+  visibility: hidden;
 }
 
 .node-slider-readout.value-dragging {
