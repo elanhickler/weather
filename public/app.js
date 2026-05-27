@@ -196,6 +196,17 @@ function labelStatusStripValue(element, label, value, ok) {
   element.title = `${label}: ${valueText} / ${stateName}`;
 }
 
+function labelPrimaryAudio(path, ok) {
+  const audio = document.getElementById("audioPlayer");
+  const pathText = path || "unavailable";
+  const stateName = ok ? "ok" : "check";
+  audio.dataset.audioLabel = "Primary Audio";
+  audio.dataset.audioPath = pathText;
+  audio.dataset.audioState = stateName;
+  audio.setAttribute("aria-label", `Primary Audio: ${pathText}`);
+  audio.title = `Primary Audio: ${pathText} / ${stateName}`;
+}
+
 function labelInspectionCursorPill(element, label, value, stateName) {
   element.setAttribute("aria-label", `${label}: ${value}`);
   element.title = `${label}: ${value}`;
@@ -3748,6 +3759,20 @@ function statusStripItemsLabeled() {
   });
 }
 
+function primaryAudioLabeled(manifest) {
+  const audio = document.getElementById("audioPlayer");
+  const path = manifest?.sandboxHandoff?.primaryAudioArtifact || "";
+  return (
+    Boolean(path) &&
+    audio.dataset.audioLabel === "Primary Audio" &&
+    audio.dataset.audioPath === path &&
+    audio.dataset.audioState === "ok" &&
+    audio.getAttribute("aria-label") === `Primary Audio: ${path}` &&
+    audio.title === `Primary Audio: ${path} / ok` &&
+    audio.getAttribute("src") === artifactUrl(path)
+  );
+}
+
 function artifactRowsLabeled() {
   const rows = [...document.querySelectorAll("#artifactList .artifact-row")];
   return (
@@ -4070,6 +4095,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
       hasArtifactKind(manifest?.artifactLinks || [], "audio") &&
         Boolean(manifest?.sandboxHandoff?.primaryAudioArtifact),
     ],
+    ["primary audio labels", primaryAudioLabeled(manifest)],
     ["waveform play control", Boolean(document.getElementById("waveformPlayButton"))],
     ["waveform control labels", waveformControlsLabeled()],
     ["status strip labels", statusStripItemsLabeled()],
@@ -4755,6 +4781,7 @@ function render(response) {
 
   const audio = document.getElementById("audioPlayer");
   audio.src = artifactUrl(handoff.primaryAudioArtifact);
+  labelPrimaryAudio(handoff.primaryAudioArtifact, true);
   renderAudioPosition();
   renderWaveform(handoff.primaryAudioArtifact);
 
@@ -5108,6 +5135,7 @@ function renderError(message, details = {}) {
 
   const audio = document.getElementById("audioPlayer");
   audio.removeAttribute("src");
+  labelPrimaryAudio("", false);
   audio.load();
   renderAudioPosition();
 
