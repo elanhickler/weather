@@ -5993,9 +5993,17 @@ function syncNodeSliderReadout(slider) {
     return;
   }
 
+  const min = Number(slider.min);
+  const max = Number(slider.max);
+  const range = max - min;
+  const position = range === 0 ? 0 : ((Number(slider.value) - min) / range) * 100;
   readout.textContent = formatNodeSliderNumber(slider.value);
   readout.dataset.value = slider.value;
-  readout.title = "Double-click to type value";
+  readout.title = `${formatNodeSliderMetadataTooltip(slider)} / double-click to type`;
+  readout.style.setProperty(
+    "--value-position",
+    `${Math.max(0, Math.min(100, position))}%`,
+  );
   syncNodeSliderMetadataTooltip(slider);
 }
 
@@ -6084,22 +6092,6 @@ function endNodeSliderDrag(event) {
   nodeGraphMvp.sliderDragging = null;
 }
 
-function createNodeSliderDragSurface(slider) {
-  if (slider.parentElement?.classList.contains("node-slider-drag-surface")) {
-    return slider.parentElement;
-  }
-
-  const surface = document.createElement("div");
-  surface.className = "node-slider-drag-surface";
-  surface.dataset.sliderTarget = slider.id;
-  surface.setAttribute("role", "presentation");
-  syncNodeSliderMetadataTooltip(slider);
-  slider.insertAdjacentElement("beforebegin", surface);
-  surface.append(slider);
-  syncNodeSliderMetadataTooltip(slider);
-  return surface;
-}
-
 function commitNodeSliderReadoutEdit(input) {
   updateNodeSliderCurrentValue(document.getElementById(input.dataset.sliderTarget), input.value);
   const readout = document.createElement("button");
@@ -6154,6 +6146,9 @@ function beginNodeSliderReadoutEdit(readout) {
 
 function attachNodeSliderReadoutEvents(readout) {
   readout.addEventListener("dblclick", () => beginNodeSliderReadoutEdit(readout));
+  readout.addEventListener("pointerdown", beginNodeSliderDrag);
+  readout.addEventListener("lostpointercapture", endNodeSliderDrag);
+  readout.addEventListener("mousedown", beginNodeSliderDrag);
 }
 
 function createNodeSliderReadout(slider) {
@@ -6172,6 +6167,7 @@ function createNodeSliderReadout(slider) {
   readout.className = "node-slider-readout";
   readout.dataset.sliderTarget = slider.id;
   readout.setAttribute("aria-label", `${slider.id} current value`);
+  readout.setAttribute("title", formatNodeSliderMetadataTooltip(slider));
   attachNodeSliderReadoutEvents(readout);
   label.append(readout);
   syncNodeSliderReadout(slider);
@@ -6944,10 +6940,6 @@ function initNodeGraphMvp() {
   ]) {
     const slider = document.getElementById(id);
     createNodeSliderReadout(slider);
-    const surface = createNodeSliderDragSurface(slider);
-    surface.addEventListener("pointerdown", beginNodeSliderDrag);
-    surface.addEventListener("lostpointercapture", endNodeSliderDrag);
-    surface.addEventListener("mousedown", beginNodeSliderDrag);
     slider.addEventListener("input", () => {
       syncNodeSliderReadout(slider);
       renderNodeGraphAudio();

@@ -263,24 +263,8 @@ audio {
   font-size: 0.78rem;
 }
 
-.node-slider-drag-surface {
-  width: 100%;
-  cursor: ew-resize;
-  touch-action: none;
-}
-
 .dsp-node input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent);
-  pointer-events: none;
-}
-
-.node-slider-drag-surface.value-dragging {
-  cursor: ew-resize;
-}
-
-.node-slider-drag-surface.value-dragging input[type="range"] {
-  accent-color: var(--accent-2);
+  display: none;
 }
 
 .node-slider-readout,
@@ -291,7 +275,14 @@ audio {
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  background: #111418;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 calc(var(--value-position, 0%) - 4px),
+      rgba(127, 199, 217, 0.42) calc(var(--value-position, 0%) - 4px) calc(var(--value-position, 0%) + 4px),
+      transparent calc(var(--value-position, 0%) + 4px) 100%
+    ),
+    #111418;
   color: var(--text);
   font-family: Consolas, "Courier New", monospace;
   font-size: 0.78rem;
@@ -299,7 +290,13 @@ audio {
 }
 
 .node-slider-readout {
-  cursor: text;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.node-slider-readout.value-dragging {
+  border-color: rgba(226, 168, 109, 0.62);
+  color: var(--accent-2);
 }
 
 .node-slider-readout:hover {
