@@ -219,6 +219,17 @@ function labelPrimaryAudioTitle(path, ok) {
   title.title = `Primary Audio title: ${pathText} / ${stateName}`;
 }
 
+function labelWaveformHeaderPill(element, label, value, ok) {
+  const valueText = String(value);
+  const stateName = ok ? "ok" : "check";
+  element.textContent = valueText;
+  element.dataset.waveformHeaderLabel = label;
+  element.dataset.waveformHeaderValue = valueText;
+  element.dataset.waveformHeaderState = stateName;
+  element.setAttribute("aria-label", `${label}: ${valueText}`);
+  element.title = `${label}: ${valueText} / ${stateName}`;
+}
+
 function labelInspectionCursorPill(element, label, value, stateName) {
   element.setAttribute("aria-label", `${label}: ${value}`);
   element.title = `${label}: ${value}`;
@@ -2208,27 +2219,51 @@ function renderCurrentParameters(region) {
     amplitudeValue,
   );
 
-  frequency.textContent =
+  const frequencyText =
     frequencyValue === null ? "freq" : `freq ${formatCompactNumber(frequencyValue)} Hz`;
-  amplitude.textContent =
+  const amplitudeText =
     amplitudeValue === null ? "amp" : `amp ${formatCompactNumber(amplitudeValue)}`;
-  measuredFrequency.textContent =
+  const measuredFrequencyText =
     measurement?.frequency === null || measurement?.frequency === undefined
       ? "measured freq"
       : `measured ${formatCompactNumber(measurement.frequency)} Hz`;
-  measuredPeak.textContent =
+  const measuredPeakText =
     measurement ? `peak ${formatCompactNumber(measurement.peak)}` : "peak";
-  measuredFrequencyDelta.textContent =
+  const measuredFrequencyDeltaText =
     frequencyDelta === null ? "freq delta" : `freq delta ${formatSignedNumber(frequencyDelta)}`;
-  measuredPeakDelta.textContent =
+  const measuredPeakDeltaText =
     peakDelta === null ? "peak delta" : `peak delta ${formatSignedNumber(peakDelta)}`;
-  measuredStatus.textContent = measurementOk
+  const measuredStatusText = measurementOk
     ? "measured ok"
     : measurement
       ? "measured mismatch"
       : "measured missing";
+  const statusText = ok ? `params ${region?.name || "synced"}` : "params missing";
+
+  labelWaveformHeaderPill(frequency, "current frequency", frequencyText, frequencyValue !== null);
+  labelWaveformHeaderPill(amplitude, "current amplitude", amplitudeText, amplitudeValue !== null);
+  labelWaveformHeaderPill(
+    measuredFrequency,
+    "current measured frequency",
+    measuredFrequencyText,
+    Boolean(measurement),
+  );
+  labelWaveformHeaderPill(measuredPeak, "current measured peak", measuredPeakText, Boolean(measurement));
+  labelWaveformHeaderPill(
+    measuredFrequencyDelta,
+    "current measured frequency delta",
+    measuredFrequencyDeltaText,
+    frequencyDelta !== null,
+  );
+  labelWaveformHeaderPill(
+    measuredPeakDelta,
+    "current measured peak delta",
+    measuredPeakDeltaText,
+    peakDelta !== null,
+  );
+  labelWaveformHeaderPill(measuredStatus, "current measured status", measuredStatusText, measurementOk);
   measuredStatus.className = `pill ${measurementOk ? "good" : "warn"}`;
-  status.textContent = ok ? `params ${region?.name || "synced"}` : "params missing";
+  labelWaveformHeaderPill(status, "current parameter status", statusText, ok);
   status.className = `pill ${ok ? "good" : "warn"}`;
 }
 
@@ -3814,6 +3849,30 @@ function reloadManifestControlLabeled() {
   );
 }
 
+function currentParameterPillsLabeled() {
+  const ids = [
+    "currentFrequency",
+    "currentAmplitude",
+    "currentMeasuredFrequency",
+    "currentMeasuredPeak",
+    "currentMeasuredFrequencyDelta",
+    "currentMeasuredPeakDelta",
+    "currentMeasuredStatus",
+    "currentParameterStatus",
+  ];
+  return ids.every((id) => {
+    const pill = document.getElementById(id);
+    const label = pill?.getAttribute("aria-label") || "";
+    return (
+      pill?.dataset.waveformHeaderLabel !== undefined &&
+      pill.dataset.waveformHeaderValue !== undefined &&
+      pill.dataset.waveformHeaderState === "ok" &&
+      label === `${pill.dataset.waveformHeaderLabel}: ${pill.dataset.waveformHeaderValue}` &&
+      pill.title === `${label} / ok`
+    );
+  });
+}
+
 function artifactRowsLabeled() {
   const rows = [...document.querySelectorAll("#artifactList .artifact-row")];
   return (
@@ -4165,6 +4224,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["probe frame labels", waveformReady && typeof formatProbeFrame === "function"],
     ["follow/free view", Boolean(document.getElementById("followAudioButton"))],
     ["current measured audio", waveformReady && Boolean(document.getElementById("currentMeasuredStatus"))],
+    ["current parameter labels", waveformReady && currentParameterPillsLabeled()],
     [
       "phase jump controls",
       Array.isArray(manifest?.phases) &&
