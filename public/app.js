@@ -207,6 +207,18 @@ function labelPrimaryAudio(path, ok) {
   audio.title = `Primary Audio: ${pathText} / ${stateName}`;
 }
 
+function labelPrimaryAudioTitle(path, ok) {
+  const title = document.getElementById("audioTitle");
+  const pathText = path || "unavailable";
+  const stateName = ok ? "ok" : "check";
+  title.textContent = pathText;
+  title.dataset.audioTitleLabel = "Primary Audio";
+  title.dataset.audioTitlePath = pathText;
+  title.dataset.audioTitleState = stateName;
+  title.setAttribute("aria-label", `Primary Audio title: ${pathText}`);
+  title.title = `Primary Audio title: ${pathText} / ${stateName}`;
+}
+
 function labelInspectionCursorPill(element, label, value, stateName) {
   element.setAttribute("aria-label", `${label}: ${value}`);
   element.title = `${label}: ${value}`;
@@ -3773,6 +3785,20 @@ function primaryAudioLabeled(manifest) {
   );
 }
 
+function primaryAudioTitleLabeled(manifest) {
+  const title = document.getElementById("audioTitle");
+  const path = manifest?.sandboxHandoff?.primaryAudioArtifact || "";
+  return (
+    Boolean(path) &&
+    title.dataset.audioTitleLabel === "Primary Audio" &&
+    title.dataset.audioTitlePath === path &&
+    title.dataset.audioTitleState === "ok" &&
+    title.getAttribute("aria-label") === `Primary Audio title: ${path}` &&
+    title.title === `Primary Audio title: ${path} / ok` &&
+    title.textContent === path
+  );
+}
+
 function reloadManifestControlLabeled() {
   const button = document.getElementById("refreshButton");
   const label = button?.getAttribute("aria-label") || "";
@@ -4111,6 +4137,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
         Boolean(manifest?.sandboxHandoff?.primaryAudioArtifact),
     ],
     ["primary audio labels", primaryAudioLabeled(manifest)],
+    ["primary audio title labels", primaryAudioTitleLabeled(manifest)],
     ["reload manifest labels", reloadManifestControlLabeled()],
     ["waveform play control", Boolean(document.getElementById("waveformPlayButton"))],
     ["waveform control labels", waveformControlsLabeled()],
@@ -4791,7 +4818,7 @@ function render(response) {
     checklist.accepted ? "Accepted" : "Check",
     checklist.accepted,
   );
-  setText("audioTitle", handoff.primaryAudioArtifact);
+  labelPrimaryAudioTitle(handoff.primaryAudioArtifact, true);
   renderSource(response);
   renderHandsOnReadiness(manifest, false);
 
@@ -5118,7 +5145,7 @@ function renderError(message, details = {}) {
   setStatus("reportStatus", "Check", false);
   setStatus("artifactStatus", "Check", false);
   setStatus("sourceStatus", "Check", false);
-  setText("audioTitle", "Unavailable");
+  labelPrimaryAudioTitle("", false);
   setSourceText(
     "manifestPath",
     "Manifest",
