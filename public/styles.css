@@ -164,7 +164,7 @@ audio {
 .node-hover-tooltip {
   flex: 1 1 180px;
   min-width: 140px;
-  min-height: 28px;
+  min-height: 44px;
   padding: 6px 10px;
   border: 1px solid rgba(243, 241, 236, 0.08);
   border-radius: 5px;
@@ -172,11 +172,10 @@ audio {
   color: var(--muted);
   font-family: Consolas, "Courier New", monospace;
   font-size: 0.72rem;
-  line-height: 1.25;
+  line-height: 1.35;
   overflow: hidden;
   text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-line;
 }
 
 .node-hover-tooltip:empty {
@@ -195,6 +194,7 @@ audio {
 .node-graph-workspace {
   --node-graph-zoom: 1;
   --node-grid-size: 28px;
+  --node-header-height: 42px;
   --node-module-grid-inset: 6px;
   position: relative;
   min-height: 560px;
@@ -352,7 +352,7 @@ audio {
   left: var(--node-x);
   top: var(--node-y);
   display: grid;
-  grid-template-rows: calc(var(--node-grid-size) * 2) minmax(0, 1fr);
+  grid-template-rows: var(--node-header-height) minmax(0, 1fr);
   gap: 0;
   width: calc((var(--node-grid-size) * var(--node-grid-width-units, 7)) - (var(--node-module-grid-inset) * 2));
   min-width: calc((var(--node-grid-size) * var(--node-grid-width-units, 7)) - (var(--node-module-grid-inset) * 2));
@@ -391,8 +391,8 @@ audio {
 
 .dsp-node-header {
   position: relative;
-  height: calc(var(--node-grid-size) * 2);
-  padding: 0 31px;
+  height: var(--node-header-height);
+  padding: 0 28px;
   border-bottom: 1px solid rgba(243, 241, 236, 0.08);
   background: rgba(243, 241, 236, 0.025);
 }
@@ -417,14 +417,16 @@ audio {
 }
 
 .node-drag-handle {
-  width: 25px;
-  height: 25px;
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
   padding: 0;
   border-color: rgba(243, 241, 236, 0.18);
   border-radius: 5px;
   color: var(--accent);
   cursor: move;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   line-height: 1;
 }
 

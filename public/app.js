@@ -8101,13 +8101,58 @@ function nodeHoverTooltipText(target) {
   if (!tooltipTarget) {
     return "";
   }
-  return (
+  const label = (
     tooltipTarget.dataset.hoverTooltip ||
     tooltipTarget.getAttribute("title") ||
     tooltipTarget.getAttribute("aria-label") ||
     tooltipTarget.textContent ||
     ""
   ).trim();
+  const mouseHint = nodeHoverTooltipMouseHint(tooltipTarget);
+  return [label, mouseHint].filter(Boolean).join("\n");
+}
+
+function nodeHoverTooltipMouseHint(element) {
+  if (element.classList.contains("node-drag-handle")) {
+    return "Mouse: drag to move module.";
+  }
+  if (element.classList.contains("node-slider-readout")) {
+    return "Mouse: drag adjusts, double-click types, right-click edits metadata.";
+  }
+  if (element.classList.contains("node-port")) {
+    return "Mouse: drag to connect signal wire.";
+  }
+  if (element.classList.contains("node-param-port")) {
+    return "Mouse: reserved modulation input.";
+  }
+  if (element.matches("input, textarea, select")) {
+    return "Mouse: click to edit, drag to select text.";
+  }
+  if (element.id === "nodeZoomOutButton" || element.id === "nodeZoomInButton") {
+    return "Mouse: click to zoom modular view.";
+  }
+  if (element.id === "nodeSettingsViewButton" || element.id === "nodeModularViewButton" || element.id === "nodeScriptViewButton") {
+    return "Mouse: click to switch view.";
+  }
+  if (element.id === "nodeUndoButton" || element.id === "nodeRedoButton") {
+    return "Mouse: click to step patch history.";
+  }
+  if (element.dataset.paletteNode) {
+    return "Mouse: click to add or show module.";
+  }
+  if (element.id === "nodeRenderButton") {
+    return "Mouse: click to render sample.";
+  }
+  if (element.id === "nodePlayButton") {
+    return "Mouse: click to play rendered sample.";
+  }
+  if (element.id === "nodeDeleteButton") {
+    return "Mouse: click to delete selected item.";
+  }
+  if (element.matches("button")) {
+    return "Mouse: click to activate.";
+  }
+  return "Mouse: hover or focus for details.";
 }
 
 function setNodeHoverTooltip(text = "") {
@@ -8370,6 +8415,7 @@ function initNodeGraphMvp() {
   nodePanel?.addEventListener("pointerout", clearNodeHoverTooltip);
   nodePanel?.addEventListener("mouseover", handleNodeHoverTooltip);
   nodePanel?.addEventListener("mouseout", clearNodeHoverTooltip);
+  nodePanel?.addEventListener("click", handleNodeHoverTooltip);
   nodePanel?.addEventListener("focusin", handleNodeHoverTooltip);
   nodePanel?.addEventListener("focusout", clearNodeHoverTooltip);
   document.getElementById("nodeHoverTooltip")?.setAttribute("data-ready", "true");
