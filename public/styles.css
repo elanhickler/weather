@@ -140,6 +140,10 @@ audio {
   border-color: rgba(127, 199, 217, 0.28);
 }
 
+.node-wiring-panel .audio-panel {
+  margin-top: 14px;
+}
+
 .compact-heading {
   margin-bottom: 10px;
 }

@@ -2889,6 +2889,14 @@ def require_node_graph_mvp_contract() -> None:
     ]:
         require(snippet in index_source, f"node graph shell missing {snippet}")
 
+    workspace_index = index_source.index("nodeGraphWorkspace")
+    audio_index = index_source.index("audioPlayer")
+    controls_index = index_source.index("nodeRenderButton")
+    require(
+        workspace_index < audio_index < controls_index,
+        "primary audio widget should sit below node workspace and above render controls",
+    )
+
     for snippet in [
         "const nodeGraphDefaultConnections",
         "const nodeGraphModuleDefinitions",
@@ -3065,6 +3073,7 @@ def require_node_graph_mvp_contract() -> None:
         "--node-graph-zoom: 1",
         ".node-graph-zoom-surface",
         "transform: scale(var(--node-graph-zoom));",
+        ".node-wiring-panel .audio-panel",
         ".node-wire-svg",
         ".node-wire-path",
         ".node-wire-path.selected",

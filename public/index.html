@@ -45,14 +45,6 @@
       </div>
     </section>
 
-    <section class="audio-panel" aria-label="Primary audio">
-      <div>
-        <p class="label">Primary Audio</p>
-        <h2 id="audioTitle">runtime_dsp_object_bound_wav_resync_demo.wav</h2>
-      </div>
-      <audio id="audioPlayer" controls preload="metadata"></audio>
-    </section>
-
     <section class="panel node-wiring-panel" aria-label="Node wiring MVP">
       <div class="panel-heading">
         <div>
@@ -192,6 +184,14 @@
         <button id="nodeSceneAddGain" type="button" role="menuitem" data-context-module="gain">Gain</button>
         <button id="nodeSceneAddBias" type="button" role="menuitem" data-context-module="bias">Bias</button>
       </div>
+
+      <section class="audio-panel" aria-label="Primary audio">
+        <div>
+          <p class="label">Primary Audio</p>
+          <h2 id="audioTitle">runtime_dsp_object_bound_wav_resync_demo.wav</h2>
+        </div>
+        <audio id="audioPlayer" controls preload="metadata"></audio>
+      </section>
 
       <div class="node-graph-controls">
         <div id="nodePalette" class="node-palette" aria-label="Node palette">
