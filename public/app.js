@@ -6013,6 +6013,7 @@ const nodeGraphMvp = {
     osc: 1,
   },
   rendered: null,
+  renderTimer: null,
   sceneContextPoint: null,
   selected: null,
   sampleRate: 44100,
@@ -6230,6 +6231,28 @@ function closeNodeSceneContextMenu() {
   nodeGraphMvp.sceneContextPoint = null;
 }
 
+function cancelScheduledNodeGraphRender() {
+  if (nodeGraphMvp.renderTimer) {
+    window.clearTimeout(nodeGraphMvp.renderTimer);
+    nodeGraphMvp.renderTimer = null;
+  }
+}
+
+function scheduleNodeGraphAudioRender(delay = 80) {
+  cancelScheduledNodeGraphRender();
+  document.getElementById("nodeGraphRenderStatus").textContent = "render pending";
+  document.getElementById("nodeGraphRenderStatus").className = "pill warn";
+  nodeGraphMvp.renderTimer = window.setTimeout(() => {
+    nodeGraphMvp.renderTimer = null;
+    renderNodeGraphAudio();
+  }, delay);
+}
+
+function flushNodeGraphAudioRender() {
+  cancelScheduledNodeGraphRender();
+  renderNodeGraphAudio();
+}
+
 function applyNodeMetadataPopover(event) {
   event.preventDefault();
   const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
@@ -6256,7 +6279,7 @@ function applyNodeMetadataPopover(event) {
   const kind = document.getElementById("metadataKindValue").value.trim() || "decimal";
   const display = document.getElementById("metadataDisplayValue").value.trim() || "decimal";
   setNodeSliderMetadata(slider, { min, mid, max, def, step, kind, display });
-  renderNodeGraphAudio();
+  flushNodeGraphAudioRender();
   closeNodeMetadataPopover();
 }
 
@@ -6295,15 +6318,19 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
   if (nodeGraphMvp.metadataEditorTarget === slider.id) {
     fillNodeMetadataPopover(slider);
   }
-  renderNodeGraphAudio();
+  flushNodeGraphAudioRender();
 }
 
-function setNodeSliderValue(slider, value) {
+function setNodeSliderValue(slider, value, options = {}) {
   slider.value = String(
     clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
   );
   syncNodeSliderReadout(slider);
-  renderNodeGraphAudio();
+  if (options.deferRender) {
+    scheduleNodeGraphAudioRender();
+  } else {
+    flushNodeGraphAudioRender();
+  }
 }
 
 function beginNodeSliderDrag(event) {
@@ -6350,6 +6377,7 @@ function dragNodeSlider(event) {
   setNodeSliderValue(
     drag.slider,
     quantizeNodeSliderDragValue(drag.slider, drag.startValue + valueDelta),
+    { deferRender: true },
   );
   event.preventDefault();
 }
@@ -6368,6 +6396,7 @@ function endNodeSliderDrag(event) {
     drag.surface.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.sliderDragging = null;
+  flushNodeGraphAudioRender();
 }
 
 function commitNodeSliderReadoutEdit(input) {
@@ -6466,7 +6495,7 @@ function attachNodeGraphNodeEvents(node) {
     createNodeSliderReadout(slider);
     slider.addEventListener("input", () => {
       syncNodeSliderReadout(slider);
-      renderNodeGraphAudio();
+      scheduleNodeGraphAudioRender();
     });
   }
 }
