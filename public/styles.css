@@ -309,7 +309,6 @@ audio {
   color: var(--accent);
   font-size: 0.68rem;
   text-align: left;
-  text-transform: uppercase;
 }
 
 .node-slider-readout-unit[hidden] {
