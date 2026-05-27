@@ -7295,7 +7295,6 @@ function openNodeSceneContextMenu(event) {
 
   event.preventDefault();
   event.stopPropagation();
-  closeNodeMetadataPopover();
   nodeGraphMvp.sceneContextPoint = nodeGraphClientPoint(event);
   positionNodeSceneContextMenu(
     document.getElementById("nodeSceneContextMenu"),
@@ -7472,10 +7471,6 @@ function deleteSelectedNodeGraphItem() {
 }
 
 function handleNodeGraphKeydown(event) {
-  if (event.key === "Escape" && nodeGraphMvp.metadataEditorTarget) {
-    closeNodeMetadataPopover();
-    return;
-  }
   if (event.key === "Escape" && nodeGraphMvp.sceneContextPoint) {
     closeNodeSceneContextMenu();
     return;
@@ -7733,14 +7728,6 @@ function initNodeGraphMvp() {
   document.addEventListener("pointercancel", endNodeMetadataPopoverDrag);
   document.addEventListener("keydown", handleNodeGraphKeydown);
   document.addEventListener("pointerdown", (event) => {
-    const popover = document.getElementById("nodeParameterMetadataPopover");
-    if (
-      nodeGraphMvp.metadataEditorTarget &&
-      !popover.contains(event.target) &&
-      !event.target.closest(".node-slider-readout")
-    ) {
-      closeNodeMetadataPopover();
-    }
     const menu = document.getElementById("nodeSceneContextMenu");
     if (nodeGraphMvp.sceneContextPoint && !menu.contains(event.target)) {
       closeNodeSceneContextMenu();

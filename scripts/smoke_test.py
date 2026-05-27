@@ -3035,6 +3035,13 @@ def require_node_graph_mvp_contract() -> None:
         require(snippet in app_source, f"node graph source missing {snippet}")
 
     for snippet in [
+        'if (event.key === "Escape" && nodeGraphMvp.metadataEditorTarget)',
+        "closeNodeMetadataPopover();\n  nodeGraphMvp.sceneContextPoint",
+        "!popover.contains(event.target)",
+    ]:
+        require(snippet not in app_source, f"metadata popover should not close implicitly via {snippet}")
+
+    for snippet in [
         ".node-graph-workspace",
         ".node-wire-svg",
         ".node-wire-path",
