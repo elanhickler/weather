@@ -626,10 +626,23 @@ function renderKeyValue(container, rows) {
   for (const [key, value, expected] of rows) {
     const dt = document.createElement("dt");
     const dd = document.createElement("dd");
+    const valueText = String(value);
     dt.textContent = key;
-    dd.textContent = value;
+    dd.textContent = valueText;
     const expectedText =
       typeof expected === "boolean" ? boolText(expected) : String(expected);
+    const stateName = expected !== undefined && value !== expectedText ? "check" : "ok";
+    dt.dataset.kvKey = key;
+    dt.title = key;
+    dd.dataset.kvKey = key;
+    dd.dataset.kvValue = valueText;
+    dd.dataset.kvExpected = expected === undefined ? "none" : expectedText;
+    dd.dataset.kvState = stateName;
+    dd.setAttribute("aria-label", `${key}: ${valueText}`);
+    dd.title =
+      expected === undefined
+        ? `${key}: ${valueText}`
+        : `${key}: ${valueText} / expected ${expectedText}`;
     if (expected !== undefined && value !== expectedText) {
       dd.className = "warn";
     }
@@ -3659,6 +3672,32 @@ function sandboxContractRowsLabeled() {
   );
 }
 
+function keyValueRowsLabeled(containerId, expectedRows) {
+  const container = document.getElementById(containerId);
+  const terms = [...(container?.querySelectorAll("dt") || [])];
+  const values = [...(container?.querySelectorAll("dd") || [])];
+  return (
+    terms.length === expectedRows &&
+    values.length === expectedRows &&
+    values.every((value, index) => {
+      const term = terms[index];
+      return (
+        term?.dataset.kvKey === value.dataset.kvKey &&
+        value.dataset.kvKey !== undefined &&
+        value.dataset.kvValue !== undefined &&
+        value.dataset.kvExpected !== undefined &&
+        value.dataset.kvState !== undefined &&
+        value.getAttribute("aria-label") === `${value.dataset.kvKey}: ${value.dataset.kvValue}` &&
+        Boolean(value.title)
+      );
+    })
+  );
+}
+
+function producerProofRowsLabeled() {
+  return keyValueRowsLabeled("producerProof", 8);
+}
+
 function signalPlotControlsLabeled() {
   const groups = [...document.querySelectorAll("#signalPlotControls .control-group")];
   const buttons = [...document.querySelectorAll("#signalPlotControls button")];
@@ -3845,6 +3884,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["waveform control labels", waveformControlsLabeled()],
     ["report control labels", reportControlsLabeled()],
     ["artifact row labels", artifactRowsLabeled()],
+    ["producer proof row labels", producerProofRowsLabeled()],
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
     ["waveform canvas labels", waveformReady && waveformCanvasLabeled()],
