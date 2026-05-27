@@ -72,13 +72,16 @@
           <article class="dsp-node" data-node="osc" data-node-type="osc" style="--node-x: 4%; --node-y: 24px;">
             <div class="dsp-node-title">
               <span>Osc</span>
+            </div>
+            <div class="node-port-rail output">
               <button
                 class="node-port output"
                 type="button"
                 data-node="osc"
                 data-port="Out"
                 data-io="output"
-                aria-label="Osc output port">Out</button>
+                aria-label="Osc output port Out"
+                title="Osc output port Out"></button>
             </div>
             <label>
               Frequency
@@ -93,13 +96,16 @@
           <article class="dsp-node" data-node="noise" data-node-type="noise" style="--node-x: 4%; --node-y: 330px;">
             <div class="dsp-node-title">
               <span>Noise</span>
+            </div>
+            <div class="node-port-rail output">
               <button
                 class="node-port output"
                 type="button"
                 data-node="noise"
                 data-port="Out"
                 data-io="output"
-                aria-label="Noise output port">Out</button>
+                aria-label="Noise output port Out"
+                title="Noise output port Out"></button>
             </div>
             <label>
               Level
@@ -109,21 +115,27 @@
 
           <article class="dsp-node" data-node="gain" data-node-type="gain" style="--node-x: 36%; --node-y: 205px;">
             <div class="dsp-node-title">
+              <span>Gain</span>
+            </div>
+            <div class="node-port-rail input">
               <button
                 class="node-port input"
                 type="button"
                 data-node="gain"
                 data-port="In"
                 data-io="input"
-                aria-label="Gain input port">In</button>
-              <span>Gain</span>
+                aria-label="Gain input port In"
+                title="Gain input port In"></button>
+            </div>
+            <div class="node-port-rail output">
               <button
                 class="node-port output"
                 type="button"
                 data-node="gain"
                 data-port="Out"
                 data-io="output"
-                aria-label="Gain output port">Out</button>
+                aria-label="Gain output port Out"
+                title="Gain output port Out"></button>
             </div>
             <label>
               Amount
@@ -133,21 +145,27 @@
 
           <article class="dsp-node" data-node="bias" data-node-type="bias" style="--node-x: 62%; --node-y: 205px;">
             <div class="dsp-node-title">
+              <span>Bias</span>
+            </div>
+            <div class="node-port-rail input">
               <button
                 class="node-port input"
                 type="button"
                 data-node="bias"
                 data-port="In"
                 data-io="input"
-                aria-label="Bias input port">In</button>
-              <span>Bias</span>
+                aria-label="Bias input port In"
+                title="Bias input port In"></button>
+            </div>
+            <div class="node-port-rail output">
               <button
                 class="node-port output"
                 type="button"
                 data-node="bias"
                 data-port="Out"
                 data-io="output"
-                aria-label="Bias output port">Out</button>
+                aria-label="Bias output port Out"
+                title="Bias output port Out"></button>
             </div>
             <label>
               Offset
@@ -157,14 +175,17 @@
 
           <article class="dsp-node output-node" data-node="output" data-node-type="output" style="--node-x: 84%; --node-y: 230px;">
             <div class="dsp-node-title">
+              <span>Output</span>
+            </div>
+            <div class="node-port-rail input">
               <button
                 class="node-port input"
                 type="button"
                 data-node="output"
                 data-port="In"
                 data-io="input"
-                aria-label="Output input port">In</button>
-              <span>Output</span>
+                aria-label="Output input port In"
+                title="Output input port In"></button>
             </div>
             <p id="nodeOutputSummary">waiting for render</p>
           </article>

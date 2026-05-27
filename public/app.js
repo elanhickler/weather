@@ -6894,9 +6894,23 @@ function createNodeGraphPort(node, type, port, io) {
   button.dataset.node = node;
   button.dataset.port = port;
   button.dataset.io = io;
-  button.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${io} port`);
-  button.textContent = port;
+  const label = `${nodeGraphNodeLabels[type]} ${io} port ${port}`;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
   return button;
+}
+
+function createNodeGraphPortRail(node, type, ports, io) {
+  if (!ports?.length) {
+    return null;
+  }
+
+  const rail = document.createElement("div");
+  rail.className = `node-port-rail ${io}`;
+  for (const port of ports) {
+    rail.append(createNodeGraphPort(node, type, port, io));
+  }
+  return rail;
 }
 
 function createNodeGraphParameter(node, type, parameter) {
@@ -6936,16 +6950,18 @@ function createNodeGraphModuleElement(type, node) {
   handle.setAttribute("title", "Move module");
   handle.innerHTML = "&#x2725;";
   title.append(handle);
-  for (const port of definition.inputs || []) {
-    title.append(createNodeGraphPort(node, type, port, "input"));
-  }
   const titleText = document.createElement("span");
   titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
   title.append(titleText);
-  for (const port of definition.outputs || []) {
-    title.append(createNodeGraphPort(node, type, port, "output"));
-  }
   article.append(title);
+  const inputRail = createNodeGraphPortRail(node, type, definition.inputs, "input");
+  const outputRail = createNodeGraphPortRail(node, type, definition.outputs, "output");
+  if (inputRail) {
+    article.append(inputRail);
+  }
+  if (outputRail) {
+    article.append(outputRail);
+  }
 
   for (const parameter of definition.parameters) {
     article.append(createNodeGraphParameter(node, type, parameter));
