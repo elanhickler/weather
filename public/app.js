@@ -5996,6 +5996,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
 });
 
 const nodeGraphOutputInputPorts = Object.freeze(["Left", "Right"]);
+const nodeGraphAudioBlockSize = 512;
 
 const nodeGraphGrid = Object.freeze({
   sizePx: 28,
@@ -6030,10 +6031,11 @@ const nodeGraphDefaultPatch = Object.freeze({
 });
 
 const fallbackNodeMetadataKindTemplates = Object.freeze({
-  decimal: { def: 0, label: "Decimal", max: 1, mid: 0.5, min: 0, step: 0.01, unit: "" },
+  decimal: { def: 0, label: "Decimal", linearSmoothing: true, max: 1, mid: 0.5, min: 0, step: 0.01, unit: "" },
   decimal_bipolar: {
     def: 0,
     label: "Decimal Bipolar",
+    linearSmoothing: true,
     max: 1,
     mid: 0,
     min: -1,
@@ -6041,20 +6043,22 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     step: 0.01,
     unit: "",
   },
-  amplitude: { def: 1, label: "Amplitude", max: 3, mid: 1, min: 0, step: 0.01, unit: "amp" },
+  amplitude: { def: 1, label: "Amplitude", linearSmoothing: true, max: 3, mid: 1, min: 0, step: 0.01, unit: "amp" },
   decibels: {
     def: 0,
     label: "Decibels",
+    linearSmoothing: true,
     max: 12,
     mid: 0,
     min: -60,
     step: 0.1,
     unit: "dB",
   },
-  frequency: { def: 1000, label: "Frequency", max: 20000, mid: 1000, min: 0, step: 1, unit: "Hz" },
+  frequency: { def: 1000, label: "Frequency", linearSmoothing: true, max: 20000, mid: 1000, min: 0, step: 1, unit: "Hz" },
   phase: {
     def: 0,
     label: "Phase",
+    linearSmoothing: true,
     max: 1,
     mid: 0.5,
     min: 0,
@@ -6065,18 +6069,20 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
   pitch: {
     def: 0,
     label: "Pitch",
+    linearSmoothing: true,
     max: 12,
     mid: 0,
     min: -12,
     step: 0.1,
     unit: "st",
   },
-  seconds: { def: 0, label: "Seconds", max: 5, mid: 2.5, min: 0, step: 0.01, unit: "s" },
-  sustain: { def: 1, label: "Sustain", max: 1, mid: 0.7, min: 0, step: 0.01, unit: "amp" },
-  descrete: { def: 0, label: "Descrete", max: 9, mid: 4, min: 0, step: 1, unit: "idx" },
+  seconds: { def: 0, label: "Seconds", linearSmoothing: true, max: 5, mid: 2.5, min: 0, step: 0.01, unit: "s" },
+  sustain: { def: 1, label: "Sustain", linearSmoothing: true, max: 1, mid: 0.7, min: 0, step: 0.01, unit: "amp" },
+  descrete: { def: 0, label: "Descrete", linearSmoothing: false, max: 9, mid: 4, min: 0, step: 1, unit: "idx" },
   integer_bipolar: {
     def: 0,
     label: "Integer Bipolar",
+    linearSmoothing: false,
     max: 9,
     mid: 0,
     min: -9,
@@ -6089,6 +6095,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     def: 0,
     displayChoices: true,
     label: "Waveform",
+    linearSmoothing: false,
     max: 9,
     mid: 4,
     min: 0,
@@ -6100,6 +6107,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     def: 0,
     displayChoices: true,
     label: "Bypass",
+    linearSmoothing: false,
     max: 1,
     mid: 0.5,
     min: 0,
@@ -6111,6 +6119,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     def: -1,
     displayChoices: true,
     label: "Plus Minus",
+    linearSmoothing: false,
     max: 1,
     mid: 0,
     min: -1,
@@ -6123,6 +6132,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     def: 1,
     displayChoices: true,
     label: "On Off",
+    linearSmoothing: false,
     max: 1,
     mid: 0.5,
     min: 0,
@@ -6134,6 +6144,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     def: 0,
     displayChoices: true,
     label: "Momentary",
+    linearSmoothing: false,
     max: 1,
     mid: 0.5,
     min: 0,
@@ -6599,6 +6610,32 @@ function nodeGraphParameterFallback(type, key) {
   return Number.isFinite(value) ? value : 0;
 }
 
+function nodeGraphReadNodeParameterMetadata(node, key) {
+  const input = nodeGraphNodeElement(node)?.querySelector(
+    `input[data-param="${CSS.escape(key)}"]`,
+  );
+  if (!input) {
+    const definition = nodeGraphModuleDefinitions[nodeGraphPatchNodeType(node)];
+    const parameter = definition?.parameters?.find((candidate) => candidate.key === key);
+    return {
+      linearSmoothing: parameter?.linearSmoothing !== false,
+      max: Number(parameter?.max ?? 1),
+      min: Number(parameter?.min ?? 0),
+      wraparound: Boolean(parameter?.wraparound),
+    };
+  }
+  return {
+    linearSmoothing: nodeSliderShouldUseLinearSmoothing(input),
+    max: Number(input.max),
+    min: Number(input.min),
+    wraparound: nodeSliderShouldWraparound(input),
+  };
+}
+
+function nodeGraphParameterKey(node, parameter) {
+  return `${node}.${parameter}`;
+}
+
 function formatNodeSliderNumber(value, options = {}) {
   const number = Number(value);
   const text = number.toFixed(6);
@@ -6618,6 +6655,10 @@ function nodeSliderShouldDisplayChoices(slider) {
 
 function nodeSliderShouldWraparound(slider) {
   return slider.dataset.wraparound === "true";
+}
+
+function nodeSliderShouldUseLinearSmoothing(slider) {
+  return slider.dataset.linearSmoothing !== "false";
 }
 
 function formatNodeSliderCompactNumber(value) {
@@ -6674,6 +6715,7 @@ function nodeSliderMetadata(slider) {
     cur,
     def,
     displayChoices: nodeSliderShouldDisplayChoices(slider),
+    linearSmoothing: nodeSliderShouldUseLinearSmoothing(slider),
     showSign: nodeSliderShouldShowSign(slider),
     wraparound: nodeSliderShouldWraparound(slider),
     unit: slider.dataset.unit ?? "",
@@ -6699,6 +6741,7 @@ function formatNodeSliderMetadataTooltip(slider) {
     `unit ${metadata.unit}`,
     `choices ${metadata.choices.length ? formatNodeMetadataChoices(metadata.choices) : "none"}`,
     `display choices ${metadata.displayChoices}`,
+    `linear smoothing ${metadata.linearSmoothing}`,
     `show sign ${metadata.showSign}`,
     `wraparound ${metadata.wraparound}`,
   ].join(" / ");
@@ -6721,6 +6764,72 @@ function wrapNodeSliderValue(value, min, max) {
     return min;
   }
   return min + ((((value - min) % range) + range) % range);
+}
+
+function shortestNodeGraphWrapDelta(from, to, min, max) {
+  const range = max - min;
+  if (!Number.isFinite(range) || range <= 0) {
+    return to - from;
+  }
+  let delta = to - from;
+  if (delta > range / 2) {
+    delta -= range;
+  } else if (delta < -range / 2) {
+    delta += range;
+  }
+  return delta;
+}
+
+function createNodeGraphParameterSmoother(initialValue, metadata = {}) {
+  const value = Number(initialValue);
+  const safeValue = Number.isFinite(value) ? value : 0;
+  return {
+    current: safeValue,
+    linearSmoothing: metadata.linearSmoothing !== false,
+    max: Number.isFinite(Number(metadata.max)) ? Number(metadata.max) : 1,
+    min: Number.isFinite(Number(metadata.min)) ? Number(metadata.min) : 0,
+    target: safeValue,
+    wraparound: Boolean(metadata.wraparound),
+  };
+}
+
+function updateNodeGraphParameterSmoother(smoother, targetValue, metadata = {}) {
+  const value = Number(targetValue);
+  smoother.target = Number.isFinite(value) ? value : smoother.target;
+  smoother.linearSmoothing = metadata.linearSmoothing !== false;
+  smoother.max = Number.isFinite(Number(metadata.max)) ? Number(metadata.max) : smoother.max;
+  smoother.min = Number.isFinite(Number(metadata.min)) ? Number(metadata.min) : smoother.min;
+  smoother.wraparound = Boolean(metadata.wraparound);
+  if (!smoother.linearSmoothing) {
+    smoother.current = smoother.target;
+  }
+}
+
+function readNodeGraphSmoothedParameter(smoother, frame, frames) {
+  if (!smoother || !smoother.linearSmoothing || frames <= 1) {
+    return smoother?.target ?? 0;
+  }
+  const progress = (frame + 1) / frames;
+  const delta = smoother.wraparound
+    ? shortestNodeGraphWrapDelta(
+      smoother.current,
+      smoother.target,
+      smoother.min,
+      smoother.max,
+    )
+    : smoother.target - smoother.current;
+  const value = smoother.current + delta * progress;
+  return smoother.wraparound
+    ? wrapNodeSliderValue(value, smoother.min, smoother.max)
+    : value;
+}
+
+function finishNodeGraphParameterSmoothing(smoothers) {
+  for (const smoother of smoothers.values()) {
+    smoother.current = smoother.wraparound
+      ? wrapNodeSliderValue(smoother.target, smoother.min, smoother.max)
+      : smoother.target;
+  }
 }
 
 function normalizeNodeSliderValue(slider, value, min = Number(slider.min), max = Number(slider.max)) {
@@ -6788,6 +6897,7 @@ function setNodeSliderMetadata(slider, metadata) {
   slider.dataset.unit = metadata.unit ?? "";
   slider.dataset.choices = formatNodeMetadataChoices(metadata.choices || []);
   slider.dataset.displayChoices = metadata.displayChoices ? "true" : "false";
+  slider.dataset.linearSmoothing = metadata.linearSmoothing ? "true" : "false";
   slider.dataset.showSign = metadata.showSign ? "true" : "false";
   slider.dataset.wraparound = metadata.wraparound ? "true" : "false";
   slider.value = String(normalizeNodeSliderValue(slider, Number(slider.value), metadata.min, metadata.max));
@@ -6996,6 +7106,7 @@ function fillNodeMetadataPopover(slider) {
   document.getElementById("metadataChoicesValue").value =
     formatNodeMetadataChoices(metadata.choices);
   document.getElementById("metadataDisplayChoicesValue").checked = metadata.displayChoices;
+  document.getElementById("metadataLinearSmoothingValue").checked = metadata.linearSmoothing;
   document.getElementById("metadataShowSignValue").checked = metadata.showSign;
   document.getElementById("metadataWraparoundValue").checked = metadata.wraparound;
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
@@ -7058,6 +7169,7 @@ function readNodeMetadataEditorValues(slider) {
     min,
     choices: parseNodeMetadataChoices(document.getElementById("metadataChoicesValue").value),
     displayChoices: document.getElementById("metadataDisplayChoicesValue").checked,
+    linearSmoothing: document.getElementById("metadataLinearSmoothingValue").checked,
     step: stepInput.toLowerCase() === "any"
       ? 0
       : Math.max(0, parseNodeMetadataNumber(stepInput, current.step)),
@@ -7099,6 +7211,7 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataUnitValue").value = template.unit;
   document.getElementById("metadataChoicesValue").value = formatNodeMetadataChoices(choices);
   document.getElementById("metadataDisplayChoicesValue").checked = Boolean(template.displayChoices);
+  document.getElementById("metadataLinearSmoothingValue").checked = template.linearSmoothing !== false;
   document.getElementById("metadataShowSignValue").checked = Boolean(template.showPlusMinus);
   document.getElementById("metadataWraparoundValue").checked = Boolean(template.wraparound);
   applyNodeMetadataEditor();
@@ -7299,6 +7412,7 @@ function createNodeSliderReadout(slider) {
   slider.dataset.unit ??= "";
   slider.dataset.choices ??= "";
   slider.dataset.displayChoices ??= "false";
+  slider.dataset.linearSmoothing ??= "true";
   slider.dataset.showSign ??= "false";
   slider.dataset.wraparound ??= "false";
 
@@ -7421,6 +7535,7 @@ function createNodeGraphParameter(node, type, parameter) {
   input.dataset.unit = parameter.unit ?? "";
   input.dataset.choices = formatNodeMetadataChoices(parameter.choices || []);
   input.dataset.displayChoices = parameter.displayChoices ? "true" : "false";
+  input.dataset.linearSmoothing = parameter.linearSmoothing === false ? "false" : "true";
   input.dataset.showSign = parameter.showSign ? "true" : "false";
   input.dataset.wraparound = parameter.wraparound ? "true" : "false";
   input.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${parameter.label}`);
@@ -8416,14 +8531,17 @@ function nodeGraphBuildLivePlan() {
     nodes: nodeGraphMvp.patch.nodes.map((node) => {
       const definition = nodeGraphModuleDefinitions[node.type];
       const params = {};
+      const paramMeta = {};
       for (const parameter of definition.parameters || []) {
         const value = nodeGraphReadNodeNumber(node.id, parameter.key);
         params[parameter.key] = Number.isFinite(value)
           ? value
           : nodeGraphParameterFallback(node.type, parameter.key);
+        paramMeta[parameter.key] = nodeGraphReadNodeParameterMetadata(node.id, parameter.key);
       }
       return {
         id: node.id,
+        paramMeta,
         params,
         type: node.type,
       };
@@ -8443,12 +8561,19 @@ function createNodeGraphLiveRuntime(plan) {
   }
   const phases = new Map();
   const noiseSeeds = new Map();
+  const smoothers = new Map();
   for (const node of plan.nodes || []) {
     if (node.type === "osc") {
-      phases.set(node.id, nodeGraphPhaseRadians(readNodeGraphLiveParam(node, "phase", 0)));
+      phases.set(node.id, 0);
     }
     if (node.type === "noise") {
       noiseSeeds.set(node.id, nodeGraphStableSeed(node.id));
+    }
+    for (const [key, value] of Object.entries(node.params || {})) {
+      smoothers.set(
+        nodeGraphParameterKey(node.id, key),
+        createNodeGraphParameterSmoother(value, node.paramMeta?.[key]),
+      );
     }
   }
   return {
@@ -8461,7 +8586,57 @@ function createNodeGraphLiveRuntime(plan) {
     noiseSeeds,
     outputNode: plan.outputNode || "output",
     phases,
+    smoothers,
   };
+}
+
+function updateNodeGraphLiveRuntimePlan(runtime, plan) {
+  runtime.nodes = new Map((plan.nodes || []).map((node) => [node.id, node]));
+  runtime.inputConnections = new Map();
+  for (const connection of plan.connections || []) {
+    const key = `${connection.destinationNode}.${connection.destinationPort}`;
+    const connections = runtime.inputConnections.get(key) || [];
+    connections.push(connection);
+    runtime.inputConnections.set(key, connections);
+  }
+  runtime.outputNode = plan.outputNode || "output";
+  const nodeIds = new Set(runtime.nodes.keys());
+  for (const node of plan.nodes || []) {
+    if (node.type === "osc" && !runtime.phases.has(node.id)) {
+      runtime.phases.set(node.id, 0);
+    }
+    if (node.type === "noise" && !runtime.noiseSeeds.has(node.id)) {
+      runtime.noiseSeeds.set(node.id, nodeGraphStableSeed(node.id));
+    }
+    for (const [key, value] of Object.entries(node.params || {})) {
+      const smootherKey = nodeGraphParameterKey(node.id, key);
+      const metadata = node.paramMeta?.[key];
+      if (!runtime.smoothers.has(smootherKey)) {
+        runtime.smoothers.set(
+          smootherKey,
+          createNodeGraphParameterSmoother(value, metadata),
+        );
+      } else {
+        updateNodeGraphParameterSmoother(runtime.smoothers.get(smootherKey), value, metadata);
+      }
+    }
+  }
+  for (const id of [...runtime.phases.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.phases.delete(id);
+    }
+  }
+  for (const id of [...runtime.noiseSeeds.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.noiseSeeds.delete(id);
+    }
+  }
+  for (const key of [...runtime.smoothers.keys()]) {
+    const [nodeId, parameter] = key.split(".");
+    if (!nodeIds.has(nodeId) || !runtime.nodes.get(nodeId)?.params || !(parameter in runtime.nodes.get(nodeId).params)) {
+      runtime.smoothers.delete(key);
+    }
+  }
 }
 
 function readNodeGraphLiveParam(node, key, fallback = 0) {
@@ -8469,11 +8644,19 @@ function readNodeGraphLiveParam(node, key, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function readNodeGraphLiveSmoothedParam(runtime, node, key, fallback, frame, frames) {
+  const smoother = runtime.smoothers.get(nodeGraphParameterKey(node?.id, key));
+  if (!smoother) {
+    return readNodeGraphLiveParam(node, key, fallback);
+  }
+  return readNodeGraphSmoothedParameter(smoother, frame, frames);
+}
+
 function nodeGraphPhaseRadians(value) {
   return wrapNodeSliderValue(Number(value) || 0, 0, 1) * Math.PI * 2;
 }
 
-function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampleRate) {
+function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampleRate, frame, frames) {
   if (frameValues.has(nodeId)) {
     return frameValues.get(nodeId);
   }
@@ -8492,14 +8675,19 @@ function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampl
         frameValues,
         visiting,
         sampleRate,
+        frame,
+        frames,
       ),
     0,
   );
 
   if (node?.type === "osc") {
     const phase = runtime.phases.get(nodeId) || 0;
-    const frequency = readNodeGraphLiveParam(node, "frequency", 220);
-    value = Math.sin(phase) * readNodeGraphLiveParam(node, "level", 0.35);
+    const phaseOffset = nodeGraphPhaseRadians(
+      readNodeGraphLiveSmoothedParam(runtime, node, "phase", 0, frame, frames),
+    );
+    const frequency = readNodeGraphLiveSmoothedParam(runtime, node, "frequency", 220, frame, frames);
+    value = Math.sin(phase + phaseOffset) * readNodeGraphLiveSmoothedParam(runtime, node, "level", 0.35, frame, frames);
     runtime.phases.set(
       nodeId,
       (phase + (Math.PI * 2 * frequency) / sampleRate) % (Math.PI * 2),
@@ -8507,11 +8695,11 @@ function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampl
   } else if (node?.type === "noise") {
     const seed = (Math.imul(1664525, runtime.noiseSeeds.get(nodeId) || 0x12345678) + 1013904223) >>> 0;
     runtime.noiseSeeds.set(nodeId, seed);
-    value = ((seed / 0xffffffff) * 2 - 1) * readNodeGraphLiveParam(node, "level", 0.12);
+    value = ((seed / 0xffffffff) * 2 - 1) * readNodeGraphLiveSmoothedParam(runtime, node, "level", 0.12, frame, frames);
   } else if (node?.type === "gain") {
-    value = mixInput() * readNodeGraphLiveParam(node, "amount", 1);
+    value = mixInput() * readNodeGraphLiveSmoothedParam(runtime, node, "amount", 1, frame, frames);
   } else if (node?.type === "bias") {
-    value = mixInput() + readNodeGraphLiveParam(node, "offset", 0);
+    value = mixInput() + readNodeGraphLiveSmoothedParam(runtime, node, "offset", 0, frame, frames);
   } else if (node?.type === "output") {
     const left = mixInput("Left");
     const right = mixInput("Right");
@@ -8523,7 +8711,7 @@ function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampl
   return value;
 }
 
-function evaluateNodeGraphLiveOutputPort(runtime, port, frameValues, sampleRate) {
+function evaluateNodeGraphLiveOutputPort(runtime, port, frameValues, sampleRate, frame, frames) {
   const connections = runtime.inputConnections.get(`output.${port}`) || [];
   return connections.reduce(
     (sum, connection) =>
@@ -8533,6 +8721,8 @@ function evaluateNodeGraphLiveOutputPort(runtime, port, frameValues, sampleRate)
         frameValues,
         new Set(),
         sampleRate,
+        frame,
+        frames,
       ),
     0,
   );
@@ -8557,14 +8747,14 @@ function renderNodeGraphLiveScriptBlock(event) {
       -0.95,
       Math.min(
         0.95,
-        evaluateNodeGraphLiveOutputPort(runtime, "Left", frameValues, sampleRate),
+        evaluateNodeGraphLiveOutputPort(runtime, "Left", frameValues, sampleRate, frame, frames),
       ),
     );
     const right = Math.max(
       -0.95,
       Math.min(
         0.95,
-        evaluateNodeGraphLiveOutputPort(runtime, "Right", frameValues, sampleRate),
+        evaluateNodeGraphLiveOutputPort(runtime, "Right", frameValues, sampleRate, frame, frames),
       ),
     );
     const value = Math.max(Math.abs(left), Math.abs(right));
@@ -8575,6 +8765,7 @@ function renderNodeGraphLiveScriptBlock(event) {
       output.getChannelData(channel)[frame] = channel === 0 ? left : right;
     }
   }
+  finishNodeGraphParameterSmoothing(runtime.smoothers);
   runtime.meterCounter += frames;
   if (runtime.meterCounter >= sampleRate / 10) {
     setNodeGraphLiveMeter(
@@ -8595,7 +8786,11 @@ function sendNodeGraphLivePlan() {
 
   try {
     const plan = nodeGraphBuildLivePlan();
-    nodeGraphMvp.live.runtime = createNodeGraphLiveRuntime(plan);
+    if (nodeGraphMvp.live.runtime) {
+      updateNodeGraphLiveRuntimePlan(nodeGraphMvp.live.runtime, plan);
+    } else {
+      nodeGraphMvp.live.runtime = createNodeGraphLiveRuntime(plan);
+    }
     nodeGraphMvp.live.node?.port?.postMessage({
       plan,
       type: "setPlan",
@@ -8686,7 +8881,7 @@ async function startNodeGraphLiveAudio() {
     }
     const outputGain = context.createGain();
     outputGain.gain.value = 1;
-    const scriptNode = context.createScriptProcessor(512, 0, 2);
+    const scriptNode = context.createScriptProcessor(nodeGraphAudioBlockSize, 0, 2);
     scriptNode.onaudioprocess = renderNodeGraphLiveScriptBlock;
     nodeGraphMvp.live.context = context;
     nodeGraphMvp.live.meterGain = null;
@@ -8728,12 +8923,14 @@ function renderNodeGraphAudio() {
   const samples = new Float32Array(frames);
   const leftSamples = new Float32Array(frames);
   const rightSamples = new Float32Array(frames);
+  const plan = nodeGraphBuildLivePlan();
+  const runtime = createNodeGraphLiveRuntime(plan);
   const phases = new Map();
   const noiseSeeds = new Map();
   for (const node of nodeGraphMvp.activeNodes) {
     const type = nodeGraphNodeType(node);
     if (type === "osc") {
-      phases.set(node, nodeGraphPhaseRadians(nodeGraphReadNodeNumber(node, "phase")));
+      phases.set(node, 0);
     }
     if (type === "noise") {
       noiseSeeds.set(node, nodeGraphStableSeed(node));
@@ -8742,58 +8939,75 @@ function renderNodeGraphAudio() {
   let peak = 0;
   let squareSum = 0;
 
-  for (let frame = 0; frame < frames; frame += 1) {
-    const frameValues = new Map();
+  for (let blockStart = 0; blockStart < frames; blockStart += nodeGraphAudioBlockSize) {
+    const blockFrames = Math.min(nodeGraphAudioBlockSize, frames - blockStart);
+    for (let blockFrame = 0; blockFrame < blockFrames; blockFrame += 1) {
+      const frameValues = new Map();
+      const frame = blockStart + blockFrame;
 
-    function mixNodeInput(node, port = "In") {
-      return nodeGraphFindInputConnections(node, port).reduce(
-        (sum, connection) => sum + evaluateNode(connection.sourceNode),
-        0,
-      );
-    }
-
-    function evaluateNode(node) {
-      if (frameValues.has(node)) {
-        return frameValues.get(node);
-      }
-
-      const type = nodeGraphNodeType(node);
-      let value = 0;
-      if (type === "osc") {
-        const phase = phases.get(node) || 0;
-        const frequency = nodeGraphReadNodeNumber(node, "frequency");
-        value = Math.sin(phase) * nodeGraphReadNodeNumber(node, "level");
-        phases.set(
-          node,
-          (phase + (Math.PI * 2 * frequency) / nodeGraphMvp.sampleRate) % (Math.PI * 2),
+      function mixNodeInput(node, port = "In") {
+        return nodeGraphFindInputConnections(node, port).reduce(
+          (sum, connection) => sum + evaluateNode(connection.sourceNode),
+          0,
         );
       }
-      if (type === "noise") {
-        const seed = (Math.imul(1664525, noiseSeeds.get(node) || 0x12345678) + 1013904223) >>> 0;
-        noiseSeeds.set(node, seed);
-        value = ((seed / 0xffffffff) * 2 - 1) * nodeGraphReadNodeNumber(node, "level");
-      }
-      if (type === "gain") {
-        value = mixNodeInput(node) * nodeGraphReadNodeNumber(node, "amount");
-      }
-      if (type === "bias") {
-        value = mixNodeInput(node) + nodeGraphReadNodeNumber(node, "offset");
-      }
-      if (type === "output") {
-        value = (mixNodeInput(node, "Left") + mixNodeInput(node, "Right")) * 0.5;
-      }
-      frameValues.set(node, value);
-      return value;
-    }
 
-    const left = Math.max(-0.95, Math.min(0.95, mixNodeInput("output", "Left")));
-    const right = Math.max(-0.95, Math.min(0.95, mixNodeInput("output", "Right")));
-    const output = (left + right) * 0.5;
-    leftSamples[frame] = left;
-    rightSamples[frame] = right;
-    samples[frame] = output;
-    peak = Math.max(peak, Math.abs(left), Math.abs(right));
-    squareSum += (left * left + right * right) * 0.5;
+      function smoothedParam(node, key, fallback = 0) {
+        return readNodeGraphLiveSmoothedParam(
+          runtime,
+          runtime.nodes.get(node),
+          key,
+          fallback,
+          blockFrame,
+          blockFrames,
+        );
+      }
+
+      function evaluateNode(node) {
+        if (frameValues.has(node)) {
+          return frameValues.get(node);
+        }
+
+        const type = nodeGraphNodeType(node);
+        let value = 0;
+        if (type === "osc") {
+          const phase = phases.get(node) || 0;
+          const frequency = smoothedParam(node, "frequency", 220);
+          const phaseOffset = nodeGraphPhaseRadians(smoothedParam(node, "phase", 0));
+          value = Math.sin(phase + phaseOffset) * smoothedParam(node, "level", 0.35);
+          phases.set(
+            node,
+            (phase + (Math.PI * 2 * frequency) / nodeGraphMvp.sampleRate) % (Math.PI * 2),
+          );
+        }
+        if (type === "noise") {
+          const seed = (Math.imul(1664525, noiseSeeds.get(node) || 0x12345678) + 1013904223) >>> 0;
+          noiseSeeds.set(node, seed);
+          value = ((seed / 0xffffffff) * 2 - 1) * smoothedParam(node, "level", 0.12);
+        }
+        if (type === "gain") {
+          value = mixNodeInput(node) * smoothedParam(node, "amount", 1);
+        }
+        if (type === "bias") {
+          value = mixNodeInput(node) + smoothedParam(node, "offset", 0);
+        }
+        if (type === "output") {
+          value = (mixNodeInput(node, "Left") + mixNodeInput(node, "Right")) * 0.5;
+        }
+        frameValues.set(node, value);
+        return value;
+      }
+
+      const left = Math.max(-0.95, Math.min(0.95, mixNodeInput("output", "Left")));
+      const right = Math.max(-0.95, Math.min(0.95, mixNodeInput("output", "Right")));
+      const output = (left + right) * 0.5;
+      leftSamples[frame] = left;
+      rightSamples[frame] = right;
+      samples[frame] = output;
+      peak = Math.max(peak, Math.abs(left), Math.abs(right));
+      squareSum += (left * left + right * right) * 0.5;
+    }
+    finishNodeGraphParameterSmoothing(runtime.smoothers);
   }
 
   const rms = Math.sqrt(squareSum / frames);

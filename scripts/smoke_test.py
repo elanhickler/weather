@@ -236,6 +236,7 @@ REQUIRED_SHELL_IDS = {
     "metadataDefaultValue",
     "metadataDisplayChoicesValue",
     "metadataKindValue",
+    "metadataLinearSmoothingValue",
     "metadataChoicesValue",
     "metadataMaxValue",
     "metadataMidValue",
@@ -2950,6 +2951,8 @@ def require_node_graph_mvp_contract() -> None:
         "Always show +/-",
         "metadataWraparoundValue",
         "Wraparound",
+        "metadataLinearSmoothingValue",
+        "Linear smoothing",
         "metadataPopoverDragHandle",
         "Set Defaults from Kind",
     ]:
@@ -2985,6 +2988,7 @@ def require_node_graph_mvp_contract() -> None:
 
     for snippet in [
         "const nodeGraphDefaultConnections",
+        "const nodeGraphAudioBlockSize = 512",
         "const nodeGraphModuleDefinitions",
         "const nodeGraphOutputInputPorts",
         'inputs: ["Left", "Right"]',
@@ -3033,6 +3037,7 @@ def require_node_graph_mvp_contract() -> None:
         "function parseNodeMetadataChoices(value)",
         "function formatNodeMetadataChoices(choices)",
         "function nodeSliderShouldDisplayChoices(slider)",
+        "function nodeSliderShouldUseLinearSmoothing(slider)",
         "function nodeSliderShouldWraparound(slider)",
         "function nodeSliderChoiceLabel(slider)",
         "function nodeSliderShouldShowSign(slider)",
@@ -3040,6 +3045,7 @@ def require_node_graph_mvp_contract() -> None:
         "function formatNodeSliderMetadataTooltip(slider)",
         "reserveSignSpace",
         "showPlusMinus",
+        "linearSmoothing",
         "wraparound",
         "function syncNodeSliderMetadataTooltip(slider)",
         "function nodeSliderDebugPath(slider)",
@@ -3101,6 +3107,11 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeSliderValueFromTravel(slider, travel)",
         "function nodeSliderTravelFromValue(slider, value)",
         "function wrapNodeSliderValue(value, min, max)",
+        "function shortestNodeGraphWrapDelta(from, to, min, max)",
+        "function createNodeGraphParameterSmoother(initialValue",
+        "function updateNodeGraphParameterSmoother(smoother",
+        "function readNodeGraphSmoothedParameter(smoother, frame, frames)",
+        "function finishNodeGraphParameterSmoothing(smoothers)",
         "function normalizeNodeSliderValue(slider, value",
         "function openNodeMetadataPopover(event, readout)",
         "function beginNodeMetadataPopoverDrag(event)",
@@ -3140,6 +3151,7 @@ def require_node_graph_mvp_contract() -> None:
         "slider.dataset.unit",
         "slider.dataset.choices",
         "slider.dataset.displayChoices",
+        "slider.dataset.linearSmoothing",
         "slider.dataset.showSign",
         "slider.dataset.wraparound",
         "function beginNodeSliderReadoutEdit(readout)",
@@ -3177,13 +3189,15 @@ def require_node_graph_mvp_contract() -> None:
         'document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio)',
         "function nodeGraphBuildLivePlan()",
         "function createNodeGraphLiveRuntime(plan)",
+        "function updateNodeGraphLiveRuntimePlan(runtime, plan)",
         "function evaluateNodeGraphLiveNode(",
         "function renderNodeGraphLiveScriptBlock(event)",
         "function nodeGraphPhaseRadians(value)",
-        'nodeGraphReadNodeNumber(node, "phase")',
+        "function readNodeGraphLiveSmoothedParam(runtime, node, key, fallback, frame, frames)",
+        'smoothedParam(node, "phase", 0)',
         "function setNodeGraphLiveMeter(",
         "function setNodeGraphLiveRouteStatus(",
-        "createScriptProcessor(512, 0, 2)",
+        "createScriptProcessor(nodeGraphAudioBlockSize, 0, 2)",
         "route output",
         "function startNodeGraphLiveAudio()",
         "function stopNodeGraphLiveAudio()",
@@ -3240,9 +3254,9 @@ def require_node_graph_mvp_contract() -> None:
         "evaluateNodeGraphLiveOutputPort(runtime, \"Left\"",
         "evaluateNodeGraphLiveOutputPort(runtime, \"Right\"",
         'if (type === "gain")',
-        'value = mixNodeInput(node) * nodeGraphReadNodeNumber(node, "amount")',
+        'value = mixNodeInput(node) * smoothedParam(node, "amount", 1)',
         'if (type === "bias")',
-        'value = mixNodeInput(node) + nodeGraphReadNodeNumber(node, "offset")',
+        'value = mixNodeInput(node) + smoothedParam(node, "offset", 0)',
         "disconnect-wire-button",
         "new AudioContext({ sampleRate: nodeGraphMvp.sampleRate })",
         "initNodeGraphMvp();",
@@ -3419,28 +3433,35 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(isinstance(momentary, dict), "momentary metadata kind missing")
     require(amplitude.get("label") == "Amplitude", "amplitude metadata label mismatch")
     require(amplitude.get("unit") == "amp", "amplitude metadata unit mismatch")
+    require(amplitude.get("linearSmoothing") is True, "amplitude linearSmoothing mismatch")
     require(decibels.get("label") == "Decibels", "decibels metadata label mismatch")
     require(decibels.get("unit") == "dB", "decibels metadata unit mismatch")
     require(decimal_bipolar.get("unit") == "", "decimal_bipolar metadata unit mismatch")
     require(decimal_bipolar.get("showPlusMinus") is True, "decimal_bipolar showPlusMinus mismatch")
     require("showPlusMinus" not in decibels, "decibels should not default showPlusMinus")
     require(frequency.get("unit") == "Hz", "frequency metadata unit mismatch")
+    require(frequency.get("linearSmoothing") is True, "frequency linearSmoothing mismatch")
     require(phase.get("unit") == "cycle", "phase metadata unit mismatch")
     require(phase.get("wraparound") is True, "phase wraparound mismatch")
+    require(phase.get("linearSmoothing") is True, "phase linearSmoothing mismatch")
     require("showPlusMinus" not in templates.get("pitch", {}), "pitch should not default showPlusMinus")
     require(descrete.get("unit") == "idx", "descrete metadata unit mismatch")
+    require(descrete.get("linearSmoothing") is False, "descrete linearSmoothing mismatch")
     require(integer_bipolar.get("label") == "Integer Bipolar", "integer_bipolar metadata label mismatch")
     require(integer_bipolar.get("unit") == "idx", "integer_bipolar metadata unit mismatch")
     require(integer_bipolar.get("min") == -9, "integer_bipolar metadata min mismatch")
     require(integer_bipolar.get("max") == 9, "integer_bipolar metadata max mismatch")
     require(integer_bipolar.get("showPlusMinus") is True, "integer_bipolar showPlusMinus mismatch")
+    require(integer_bipolar.get("linearSmoothing") is False, "integer_bipolar linearSmoothing mismatch")
     require(
         waveform.get("choices") == ["Saw", "Square", "Triangle", "Sine", "Noise"],
         "waveform choices mismatch",
     )
     require(waveform.get("displayChoices") is True, "waveform displayChoices mismatch")
+    require(waveform.get("linearSmoothing") is False, "waveform linearSmoothing mismatch")
     require(bypass.get("choices") == ["active", "BYPASSED"], "bypass choices mismatch")
     require(bypass.get("displayChoices") is True, "bypass displayChoices mismatch")
+    require(bypass.get("linearSmoothing") is False, "bypass linearSmoothing mismatch")
     require(plusminus.get("choices") == ["-", "+"], "plusminus choices mismatch")
     require(plusminus.get("displayChoices") is True, "plusminus displayChoices mismatch")
     require(plusminus.get("showPlusMinus") is True, "plusminus showPlusMinus mismatch")

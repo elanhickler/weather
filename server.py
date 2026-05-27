@@ -25,6 +25,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "decimal": {
         "def": 0,
         "label": "Decimal",
+        "linearSmoothing": True,
         "max": 1,
         "mid": 0.5,
         "min": 0,
@@ -34,6 +35,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "decimal_bipolar": {
         "def": 0,
         "label": "Decimal Bipolar",
+        "linearSmoothing": True,
         "max": 1,
         "mid": 0,
         "min": -1,
@@ -44,6 +46,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "amplitude": {
         "def": 1,
         "label": "Amplitude",
+        "linearSmoothing": True,
         "max": 3,
         "mid": 1,
         "min": 0,
@@ -53,6 +56,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "decibels": {
         "def": 0,
         "label": "Decibels",
+        "linearSmoothing": True,
         "max": 12,
         "mid": 0,
         "min": -60,
@@ -62,6 +66,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "frequency": {
         "def": 1000,
         "label": "Frequency",
+        "linearSmoothing": True,
         "max": 20000,
         "mid": 1000,
         "min": 0,
@@ -71,6 +76,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "phase": {
         "def": 0,
         "label": "Phase",
+        "linearSmoothing": True,
         "max": 1,
         "mid": 0.5,
         "min": 0,
@@ -81,6 +87,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "pitch": {
         "def": 0,
         "label": "Pitch",
+        "linearSmoothing": True,
         "max": 12,
         "mid": 0,
         "min": -12,
@@ -90,6 +97,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "seconds": {
         "def": 0,
         "label": "Seconds",
+        "linearSmoothing": True,
         "max": 5,
         "mid": 2.5,
         "min": 0,
@@ -99,6 +107,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "sustain": {
         "def": 1,
         "label": "Sustain",
+        "linearSmoothing": True,
         "max": 1,
         "mid": 0.7,
         "min": 0,
@@ -108,6 +117,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "descrete": {
         "def": 0,
         "label": "Descrete",
+        "linearSmoothing": False,
         "max": 9,
         "mid": 4,
         "min": 0,
@@ -117,6 +127,7 @@ NODE_METADATA_KIND_TEMPLATES = {
     "integer_bipolar": {
         "def": 0,
         "label": "Integer Bipolar",
+        "linearSmoothing": False,
         "max": 9,
         "mid": 0,
         "min": -9,
@@ -129,6 +140,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "def": 0,
         "displayChoices": True,
         "label": "Waveform",
+        "linearSmoothing": False,
         "max": 9,
         "mid": 4,
         "min": 0,
@@ -140,6 +152,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "def": 0,
         "displayChoices": True,
         "label": "Bypass",
+        "linearSmoothing": False,
         "max": 1,
         "mid": 0.5,
         "min": 0,
@@ -151,6 +164,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "def": -1,
         "displayChoices": True,
         "label": "Plus Minus",
+        "linearSmoothing": False,
         "max": 1,
         "mid": 0,
         "min": -1,
@@ -163,6 +177,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "def": 1,
         "displayChoices": True,
         "label": "On Off",
+        "linearSmoothing": False,
         "max": 1,
         "mid": 0.5,
         "min": 0,
@@ -174,6 +189,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "def": 0,
         "displayChoices": True,
         "label": "Momentary",
+        "linearSmoothing": False,
         "max": 1,
         "mid": 0.5,
         "min": 0,
