@@ -6125,7 +6125,7 @@ function beginNodeSliderReadoutEdit(readout) {
   const input = document.createElement("input");
   input.type = "number";
   input.className = "node-slider-readout-input";
-  input.step = slider.step || "any";
+  input.step = "any";
   input.inputMode = "decimal";
   input.value = formatNodeSliderNumber(slider.value);
   input.dataset.sliderTarget = slider.id;
