@@ -139,6 +139,22 @@ function setText(id, value) {
   document.getElementById(id).textContent = value;
 }
 
+function setSourceText(id, key, value, expected = "present", ok = true) {
+  const element = document.getElementById(id);
+  const valueText = String(value);
+  const expectedText = String(expected);
+  element.textContent = valueText;
+  element.dataset.sourceKey = key;
+  element.dataset.sourceValue = valueText;
+  element.dataset.sourceExpected = expectedText;
+  element.dataset.sourceState = ok ? "ok" : "check";
+  element.setAttribute("aria-label", `${key}: ${valueText}`);
+  element.title =
+    expected === "none" || expected === "present"
+      ? `${key}: ${valueText}`
+      : `${key}: ${valueText} / expected ${expectedText}`;
+}
+
 function clearElement(id) {
   document.getElementById(id).replaceChildren();
 }
@@ -3710,6 +3726,34 @@ function artifactCoverageRowsLabeled() {
   return keyValueRowsLabeled("artifactCoverage", 12);
 }
 
+function sourceRowsLabeled() {
+  const ids = [
+    "manifestPath",
+    "sourceError",
+    "sourceDetail",
+    "manifestHttpStatus",
+    "manifestBytes",
+    "manifestModified",
+    "manifestLoadedAt",
+    "manifestCacheControl",
+    "manifestPragma",
+    "manifestExpires",
+    "artifactRoot",
+  ];
+  return ids.every((id) => {
+    const value = document.getElementById(id);
+    return (
+      value &&
+      value.dataset.sourceKey !== undefined &&
+      value.dataset.sourceValue !== undefined &&
+      value.dataset.sourceExpected !== undefined &&
+      value.dataset.sourceState === "ok" &&
+      value.getAttribute("aria-label") === `${value.dataset.sourceKey}: ${value.dataset.sourceValue}` &&
+      Boolean(value.title)
+    );
+  });
+}
+
 function signalPlotControlsLabeled() {
   const groups = [...document.querySelectorAll("#signalPlotControls .control-group")];
   const buttons = [...document.querySelectorAll("#signalPlotControls button")];
@@ -3897,6 +3941,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["report control labels", reportControlsLabeled()],
     ["artifact row labels", artifactRowsLabeled()],
     ["artifact coverage row labels", artifactCoverageRowsLabeled()],
+    ["source row labels", sourceRowsLabeled()],
     ["producer proof row labels", producerProofRowsLabeled()],
     ["boundary flag row labels", boundaryFlagRowsLabeled()],
     ["decoded waveform", waveformReady],
@@ -4162,22 +4207,21 @@ function renderSource(response) {
     pragma === "no-cache" &&
     expires === "0";
   const ok = hasPath && hasRoot && hasBytes && hasModified && cacheOk;
+  const httpStatus = formatHttpStatus(response.responseStatus, response.responseStatusText);
+  const loadedAt = formatTimestamp(new Date().toISOString());
 
   setStatus("sourceStatus", ok ? "Loaded" : "Check", ok);
-  setText("manifestPath", response.manifestPath || "missing");
-  setText("sourceError", "none");
-  setText("sourceDetail", "none");
-  setText(
-    "manifestHttpStatus",
-    formatHttpStatus(response.responseStatus, response.responseStatusText),
-  );
-  setText("artifactRoot", response.artifactRoot || "missing");
-  setText("manifestBytes", hasBytes ? formatBytes(bytes) : "missing");
-  setText("manifestModified", modified);
-  setText("manifestLoadedAt", formatTimestamp(new Date().toISOString()));
-  setText("manifestCacheControl", cacheControl);
-  setText("manifestPragma", pragma);
-  setText("manifestExpires", expires);
+  setSourceText("manifestPath", "Manifest", response.manifestPath || "missing", "present", hasPath);
+  setSourceText("sourceError", "Source Error", "none", "none", true);
+  setSourceText("sourceDetail", "Source Detail", "none", "none", true);
+  setSourceText("manifestHttpStatus", "HTTP Status", httpStatus, "200 OK", response.responseStatus === 200);
+  setSourceText("artifactRoot", "Artifact Root", response.artifactRoot || "missing", "present", hasRoot);
+  setSourceText("manifestBytes", "Manifest Bytes", hasBytes ? formatBytes(bytes) : "missing", "positive", hasBytes);
+  setSourceText("manifestModified", "Manifest Modified", modified, "valid timestamp", hasModified);
+  setSourceText("manifestLoadedAt", "Response Loaded", loadedAt, "valid timestamp", loadedAt !== "missing" && loadedAt !== "invalid");
+  setSourceText("manifestCacheControl", "Cache Control", cacheControl, "no-store", cacheControl.includes("no-store"));
+  setSourceText("manifestPragma", "Pragma", pragma, "no-cache", pragma === "no-cache");
+  setSourceText("manifestExpires", "Expires", expires, "0", expires === "0");
 }
 
 function renderArtifacts(links) {
@@ -4894,20 +4938,35 @@ function renderError(message, details = {}) {
   setStatus("artifactStatus", "Check", false);
   setStatus("sourceStatus", "Check", false);
   setText("audioTitle", "Unavailable");
-  setText("manifestPath", details.path || details.manifestPath || "Unavailable");
-  setText("sourceError", message || details.message || "Unavailable");
-  setText("sourceDetail", details.message || "none");
-  setText(
-    "manifestHttpStatus",
-    formatHttpStatus(details.responseStatus, details.responseStatusText),
+  setSourceText(
+    "manifestPath",
+    "Manifest",
+    details.path || details.manifestPath || "Unavailable",
+    "present",
+    false,
   );
-  setText("manifestBytes", "Unavailable");
-  setText("manifestModified", "Unavailable");
-  setText("manifestLoadedAt", "Unavailable");
-  setText("manifestCacheControl", "Unavailable");
-  setText("manifestPragma", "Unavailable");
-  setText("manifestExpires", "Unavailable");
-  setText("artifactRoot", details.artifactRoot || "Unavailable");
+  setSourceText(
+    "sourceError",
+    "Source Error",
+    message || details.message || "Unavailable",
+    "none",
+    false,
+  );
+  setSourceText("sourceDetail", "Source Detail", details.message || "none", "none", false);
+  setSourceText(
+    "manifestHttpStatus",
+    "HTTP Status",
+    formatHttpStatus(details.responseStatus, details.responseStatusText),
+    "200 OK",
+    false,
+  );
+  setSourceText("manifestBytes", "Manifest Bytes", "Unavailable", "positive", false);
+  setSourceText("manifestModified", "Manifest Modified", "Unavailable", "valid timestamp", false);
+  setSourceText("manifestLoadedAt", "Response Loaded", "Unavailable", "valid timestamp", false);
+  setSourceText("manifestCacheControl", "Cache Control", "Unavailable", "no-store", false);
+  setSourceText("manifestPragma", "Pragma", "Unavailable", "no-cache", false);
+  setSourceText("manifestExpires", "Expires", "Unavailable", "0", false);
+  setSourceText("artifactRoot", "Artifact Root", details.artifactRoot || "Unavailable", "present", false);
 
   const audio = document.getElementById("audioPlayer");
   audio.removeAttribute("src");
