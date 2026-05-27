@@ -5987,6 +5987,17 @@ function clampNodeSliderValue(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function quantizeNodeSliderDragValue(slider, value) {
+  const step = Number(slider.step);
+  if (!Number.isFinite(step) || step <= 0) {
+    return value;
+  }
+
+  const min = Number(slider.min);
+  const origin = Number.isFinite(min) ? min : 0;
+  return origin + Math.round((value - origin) / step) * step;
+}
+
 function syncNodeSliderReadout(slider) {
   const readout = slider.closest("label")?.querySelector(".node-slider-readout");
   if (!readout) {
@@ -6072,7 +6083,10 @@ function dragNodeSlider(event) {
   const horizontalDelta = event.clientX - drag.startX;
   const verticalDelta = drag.startY - event.clientY;
   const valueDelta = ((horizontalDelta + verticalDelta) / drag.width) * range;
-  setNodeSliderValue(drag.slider, drag.startValue + valueDelta);
+  setNodeSliderValue(
+    drag.slider,
+    quantizeNodeSliderDragValue(drag.slider, drag.startValue + valueDelta),
+  );
   event.preventDefault();
 }
 

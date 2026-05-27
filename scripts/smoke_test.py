@@ -2827,6 +2827,7 @@ def require_node_graph_mvp_contract() -> None:
         "function beginNodeSliderReadoutEdit(readout)",
         "function commitNodeSliderReadoutEdit(input)",
         'input.step = "any"',
+        "function quantizeNodeSliderDragValue(slider, value)",
         "function beginNodeSliderDrag(event)",
         "function dragNodeSlider(event)",
         "function endNodeSliderDrag(event)",
