@@ -3060,6 +3060,7 @@ def require_node_graph_mvp_contract() -> None:
         ".node-slider-readout",
         ".node-slider-readout.value-dragging",
         ".node-slider-readout-value",
+        "white-space: pre;",
         ".node-slider-readout-unit",
         ".node-slider-readout-unit.is-empty",
         ".node-slider-readout-input",
