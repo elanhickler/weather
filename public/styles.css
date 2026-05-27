@@ -290,7 +290,7 @@ audio {
 
 .node-slider-readout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   cursor: ew-resize;
@@ -308,7 +308,7 @@ audio {
   min-width: 1.75em;
   color: var(--accent);
   font-size: 0.68rem;
-  text-align: right;
+  text-align: left;
   text-transform: uppercase;
 }
 

@@ -6440,7 +6440,7 @@ function populateNodeSliderReadoutShell(readout) {
   valueText.className = "node-slider-readout-value";
   const unitText = document.createElement("span");
   unitText.className = "node-slider-readout-unit";
-  readout.append(valueText, unitText);
+  readout.append(unitText, valueText);
 }
 
 function commitNodeSliderReadoutEdit(input) {
