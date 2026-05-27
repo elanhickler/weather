@@ -6627,15 +6627,20 @@ function setNodeMetadataDefaultsFromKind() {
   }
   const kind = normalizeNodeMetadataKind(document.getElementById("metadataKindValue").value);
   const template = nodeMetadataKindTemplates[kind] || nodeMetadataKindTemplates.decimal;
-  document.getElementById("metadataMinValue").value = formatNodeSliderCompactNumber(template.min);
-  document.getElementById("metadataMidValue").value = formatNodeSliderCompactNumber(template.mid);
-  document.getElementById("metadataMaxValue").value = formatNodeSliderCompactNumber(template.max);
+  const choices = template.choices || [];
+  const hasChoices = choices.length > 0;
+  const min = hasChoices ? 0 : template.min;
+  const max = hasChoices ? choices.length - 1 : template.max;
+  const mid = hasChoices ? (min + max) / 2 : template.mid;
+  const def = clampNodeSliderValue(template.def, min, max);
+  document.getElementById("metadataMinValue").value = formatNodeSliderCompactNumber(min);
+  document.getElementById("metadataMidValue").value = formatNodeSliderCompactNumber(mid);
+  document.getElementById("metadataMaxValue").value = formatNodeSliderCompactNumber(max);
   document.getElementById("metadataDefaultValue").value =
-    formatNodeSliderCompactNumber(template.def);
+    formatNodeSliderCompactNumber(def);
   document.getElementById("metadataStepValue").value = formatNodeMetadataStep(template.step);
   document.getElementById("metadataUnitValue").value = template.unit;
-  document.getElementById("metadataChoicesValue").value =
-    formatNodeMetadataChoices(template.choices || []);
+  document.getElementById("metadataChoicesValue").value = formatNodeMetadataChoices(choices);
   document.getElementById("metadataDisplayChoicesValue").checked = Boolean(template.displayChoices);
   document.getElementById("metadataShowSignValue").checked = Boolean(template.showPlusMinus);
   applyNodeMetadataEditor();
