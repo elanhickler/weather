@@ -2805,6 +2805,7 @@ def require_node_graph_mvp_contract() -> None:
         "function dragNodeGraphWire(event)",
         "function endNodeGraphWireDrag(event)",
         "function connectNodeGraphPorts(",
+        "function disconnectNodeGraphConnection(index)",
         "function nodeGraphValidate()",
         "function beginNodeGraphNodeDrag(event)",
         "function dragNodeGraphNode(event)",
@@ -2817,6 +2818,7 @@ def require_node_graph_mvp_contract() -> None:
         "async function playNodeGraphAudio()",
         "sourceNode === \"noise\" ? noise * noiseLevel : osc",
         "sourceSample * gainAmount + biasAmount",
+        "disconnect-wire-button",
         "new AudioContext({ sampleRate: nodeGraphMvp.sampleRate })",
         "initNodeGraphMvp();",
     ]:
@@ -2831,6 +2833,7 @@ def require_node_graph_mvp_contract() -> None:
         ".dsp-node.dragging",
         ".node-port.output",
         ".node-port.input",
+        ".disconnect-wire-button",
         ".node-graph-output",
         ".node-waveform",
         ".node-signal-plot",

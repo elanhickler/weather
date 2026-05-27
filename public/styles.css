@@ -300,6 +300,10 @@ audio {
 }
 
 .node-connection-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -309,8 +313,22 @@ audio {
   font-size: 0.82rem;
 }
 
+.node-connection-list li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .node-connection-list li.warn-row {
   background: var(--bad-bg);
+}
+
+.disconnect-wire-button {
+  min-height: 30px;
+  padding: 0 10px;
+  border-color: rgba(226, 168, 109, 0.48);
+  border-radius: 999px;
+  color: var(--accent-2);
+  font-size: 0.72rem;
 }
 
 .node-waveform,

@@ -6062,12 +6062,21 @@ function renderNodeGraphConnectionList() {
   const validationPill = document.getElementById("nodeGraphValidation");
 
   list.replaceChildren();
-  for (const connection of nodeGraphMvp.connections) {
+  for (const [index, connection] of nodeGraphMvp.connections.entries()) {
     const item = document.createElement("li");
-    item.textContent = `${nodeGraphLabel(connection.sourceNode, connection.sourcePort)} -> ${nodeGraphLabel(
+    const label = document.createElement("span");
+    label.textContent = `${nodeGraphLabel(connection.sourceNode, connection.sourcePort)} -> ${nodeGraphLabel(
       connection.destinationNode,
       connection.destinationPort,
     )}`;
+    const button = document.createElement("button");
+    button.className = "disconnect-wire-button";
+    button.type = "button";
+    button.textContent = "Disconnect";
+    button.dataset.connectionIndex = String(index);
+    button.setAttribute("aria-label", `Disconnect ${label.textContent}`);
+    button.addEventListener("click", () => disconnectNodeGraphConnection(index));
+    item.append(label, button);
     list.append(item);
   }
 
@@ -6090,6 +6099,14 @@ function renderNodeGraphConnectionList() {
 
   document.getElementById("nodeRenderButton").disabled = !validation.valid;
   drawNodeGraphWires();
+}
+
+function disconnectNodeGraphConnection(index) {
+  nodeGraphMvp.connections = nodeGraphMvp.connections.filter(
+    (_connection, connectionIndex) => connectionIndex !== index,
+  );
+  renderNodeGraphConnectionList();
+  renderNodeGraphAudio();
 }
 
 function connectNodeGraphPorts(sourceNode, sourcePort, destinationNode, destinationPort) {
