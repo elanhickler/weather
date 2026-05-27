@@ -3669,6 +3669,7 @@ function validateConsumerChecklist(manifest) {
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
   const phaseReportIssue = phaseReportCoverageIssue(manifest);
   const parameterResyncIssue = parameterResyncContractIssue(manifest);
+  const callerProcessingIssue = callerProcessingOrderIssue(manifest);
   const entryPointPath = findArtifactPath(links, "entry-point");
   const primaryAudioPath = findArtifactPath(links, "audio");
   const checks = [
@@ -3690,6 +3691,7 @@ function validateConsumerChecklist(manifest) {
     ["phase report coverage", phaseReportIssue === ""],
     ["parameter resync", parameterResyncIssue === ""],
     ["phase audio measurements", phaseAudioIssues.length === 0],
+    ["caller processing order", callerProcessingIssue === ""],
   ];
 
   return {
@@ -4043,7 +4045,7 @@ function keyValueRowsLabeled(containerId, expectedRows) {
 }
 
 function producerProofRowsLabeled() {
-  return keyValueRowsLabeled("producerProof", 8);
+  return keyValueRowsLabeled("producerProof", 9);
 }
 
 function boundaryFlagRowsLabeled() {
@@ -4132,7 +4134,7 @@ function checkRowsHaveUniqueLabels(rows) {
 }
 
 function consumerChecklistRowsLabeled() {
-  return checkRowsLabeled("checklist", 21);
+  return checkRowsLabeled("checklist", 22);
 }
 
 function signalPlotControlsLabeled() {
@@ -4485,6 +4487,7 @@ function renderProducerProof(manifest) {
   const status = document.getElementById("producerStatus");
   const setters = manifest.parameterSetters || {};
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
+  const callerProcessingIssue = callerProcessingOrderIssue(manifest);
   const rows = [
     ["demo", manifest.demo || "missing"],
     ["kind", manifest.kind || "missing"],
@@ -4494,6 +4497,7 @@ function renderProducerProof(manifest) {
     ["frequency setter", boolText(Boolean(setters.frequency)), true],
     ["amplitude setter", boolText(Boolean(setters.amplitude)), true],
     ["phase measurements", boolText(phaseAudioIssues.length === 0), true],
+    ["caller processing order", boolText(callerProcessingIssue === ""), true],
   ];
   const ok = rows.every(([, value, expected]) => {
     if (expected === undefined) {
@@ -4513,6 +4517,7 @@ function renderUnavailableProducerProof() {
     ["scheduler", "unavailable", boolText(false)],
     ["audio engine", "unavailable", boolText(false)],
     ["phase measurements", "unavailable", boolText(true)],
+    ["caller processing order", "unavailable", boolText(true)],
   ]);
 }
 
@@ -5178,6 +5183,85 @@ function manifestShapeError(payload) {
   const phaseAudioIssues = phaseAudioMeasurementIssues(manifest);
   if (phaseAudioIssues.length) {
     return phaseAudioIssues[0];
+  }
+
+  const callerProcessingIssue = callerProcessingOrderIssue(manifest);
+  if (callerProcessingIssue) {
+    return callerProcessingIssue;
+  }
+
+  return "";
+}
+
+function callerProcessingOrderIssue(manifest) {
+  if (manifest?.demo !== "runtime_dsp_object_circuit_connected_wav_demo") {
+    return "";
+  }
+
+  const connections = manifest.circuitConnections;
+  if (!connections || typeof connections !== "object") {
+    return "circuit connections missing";
+  }
+  if (Number(connections.count) !== 2) {
+    return "circuit connection count mismatch";
+  }
+  if (connections.describesProcessingChain !== true) {
+    return "circuit connection chain flag missing";
+  }
+
+  const proof = manifest.callerProcessingOrderProof;
+  if (!proof || typeof proof !== "object") {
+    return "caller processing proof missing";
+  }
+  if (proof.matchesCircuitConnections !== true) {
+    return "caller processing order mismatch";
+  }
+
+  const order = manifest.callerProcessingOrder;
+  if (!order || typeof order !== "object") {
+    return "caller processing order missing";
+  }
+  if (order.matchesCircuitConnections !== true) {
+    return "caller processing order match flag missing";
+  }
+  if (order.callerOwnsProcessingOrder !== true) {
+    return "caller processing ownership missing";
+  }
+
+  const expectedSteps = [
+    {
+      sourceNode: "Tiny Oscillator",
+      sourcePort: "Out",
+      destinationNode: "Tiny Gain",
+      destinationPort: "A",
+      callerStep: "oscillator.processSample -> gain.processSample",
+    },
+    {
+      sourceNode: "Tiny Gain",
+      sourcePort: "Out",
+      destinationNode: "Audio Out",
+      destinationPort: "In",
+      callerStep: "gain.processSample -> output sample",
+    },
+  ];
+  const steps = order.steps;
+  if (!Array.isArray(steps) || steps.length !== expectedSteps.length) {
+    return "caller processing step count mismatch";
+  }
+
+  for (const [index, expected] of expectedSteps.entries()) {
+    const step = steps[index];
+    if (!step || typeof step !== "object") {
+      return "caller processing step invalid";
+    }
+    if (Number(step.index) !== index) {
+      return "caller processing step index mismatch";
+    }
+    for (const key of ["sourceNode", "sourcePort", "destinationNode", "destinationPort", "callerStep"]) {
+      if (step[key] !== expected[key]) {
+        return "caller processing step mismatch";
+      }
+    }
   }
 
   return "";

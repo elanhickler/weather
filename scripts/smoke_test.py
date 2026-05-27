@@ -48,6 +48,24 @@ EXPECTED_DEMOS = {
     "runtime_dsp_object_circuit_connected_wav_demo":
         "demo-local-circuit-connected-wav-artifacts",
 }
+EXPECTED_CALLER_PROCESSING_STEPS = [
+    {
+        "index": 0,
+        "sourceNode": "Tiny Oscillator",
+        "sourcePort": "Out",
+        "destinationNode": "Tiny Gain",
+        "destinationPort": "A",
+        "callerStep": "oscillator.processSample -> gain.processSample",
+    },
+    {
+        "index": 1,
+        "sourceNode": "Tiny Gain",
+        "sourcePort": "Out",
+        "destinationNode": "Audio Out",
+        "destinationPort": "In",
+        "callerStep": "gain.processSample -> output sample",
+    },
+]
 REPORT_ARTIFACT_KINDS = {
     "manifest",
     "text-summary",
@@ -982,6 +1000,146 @@ def require_parameter_resync_contract_negative_cases() -> None:
             {"second": 0.1},
         ),
         "amplitude did not resync upward",
+    )
+
+
+def caller_processing_order_contract_fixture() -> dict[str, object]:
+    return {
+        "manifest": {
+            "demo": "runtime_dsp_object_circuit_connected_wav_demo",
+            "circuitConnections": {
+                "count": 2,
+                "describesProcessingChain": True,
+            },
+            "callerProcessingOrderProof": {
+                "matchesCircuitConnections": True,
+            },
+            "callerProcessingOrder": {
+                "matchesCircuitConnections": True,
+                "callerOwnsProcessingOrder": True,
+                "steps": json.loads(json.dumps(EXPECTED_CALLER_PROCESSING_STEPS)),
+            },
+        },
+    }
+
+
+def require_caller_processing_order_contract(payload: dict[str, object]) -> None:
+    manifest = payload.get("manifest")
+    require(isinstance(manifest, dict), "manifest object missing")
+    if manifest.get("demo") != "runtime_dsp_object_circuit_connected_wav_demo":
+        return
+
+    connections = manifest.get("circuitConnections")
+    require(isinstance(connections, dict), "circuit connections missing")
+    require(int(connections.get("count", 0)) == 2, "circuit connection count mismatch")
+    require(
+        connections.get("describesProcessingChain") is True,
+        "circuit connection chain flag missing",
+    )
+
+    proof = manifest.get("callerProcessingOrderProof")
+    require(isinstance(proof, dict), "caller processing proof missing")
+    require(
+        proof.get("matchesCircuitConnections") is True,
+        "caller processing order mismatch",
+    )
+
+    order = manifest.get("callerProcessingOrder")
+    require(isinstance(order, dict), "caller processing order missing")
+    require(
+        order.get("matchesCircuitConnections") is True,
+        "caller processing order match flag missing",
+    )
+    require(
+        order.get("callerOwnsProcessingOrder") is True,
+        "caller processing ownership missing",
+    )
+
+    steps = order.get("steps")
+    require(isinstance(steps, list), "caller processing steps missing")
+    require(
+        len(steps) == len(EXPECTED_CALLER_PROCESSING_STEPS),
+        "caller processing step count mismatch",
+    )
+    for index, expected in enumerate(EXPECTED_CALLER_PROCESSING_STEPS):
+        step = steps[index]
+        require(isinstance(step, dict), "caller processing step invalid")
+        for key, expected_value in expected.items():
+            require(
+                step.get(key) == expected_value,
+                f"caller processing step {index} {key} mismatch",
+            )
+
+
+def require_caller_processing_order_contract_failure(
+  label: str,
+  mutate: Callable[[dict[str, object]], None],
+  expected: str,
+) -> None:
+    payload = json.loads(json.dumps(caller_processing_order_contract_fixture()))
+    manifest = payload["manifest"]
+    require(isinstance(manifest, dict), f"{label} fixture manifest missing")
+    mutate(manifest)
+    try:
+        require_caller_processing_order_contract(payload)
+    except AssertionError as error:
+        require(expected in str(error), f"{label} produced {error}, expected {expected}")
+        return
+
+    raise AssertionError(f"{label} did not fail")
+
+
+def require_caller_processing_order_contract_negative_cases() -> None:
+    require_caller_processing_order_contract(caller_processing_order_contract_fixture())
+    require_caller_processing_order_contract_failure(
+        "missing circuit connections",
+        lambda manifest: manifest.pop("circuitConnections"),
+        "circuit connections missing",
+    )
+    require_caller_processing_order_contract_failure(
+        "wrong circuit connection count",
+        lambda manifest: manifest["circuitConnections"].update({"count": 1}),
+        "circuit connection count mismatch",
+    )
+    require_caller_processing_order_contract_failure(
+        "chain flag false",
+        lambda manifest: manifest["circuitConnections"].update(
+            {"describesProcessingChain": False},
+        ),
+        "circuit connection chain flag missing",
+    )
+    require_caller_processing_order_contract_failure(
+        "proof false",
+        lambda manifest: manifest["callerProcessingOrderProof"].update(
+            {"matchesCircuitConnections": False},
+        ),
+        "caller processing order mismatch",
+    )
+    require_caller_processing_order_contract_failure(
+        "order flag false",
+        lambda manifest: manifest["callerProcessingOrder"].update(
+            {"matchesCircuitConnections": False},
+        ),
+        "caller processing order match flag missing",
+    )
+    require_caller_processing_order_contract_failure(
+        "ownership false",
+        lambda manifest: manifest["callerProcessingOrder"].update(
+            {"callerOwnsProcessingOrder": False},
+        ),
+        "caller processing ownership missing",
+    )
+    require_caller_processing_order_contract_failure(
+        "step count mismatch",
+        lambda manifest: manifest["callerProcessingOrder"]["steps"].pop(),
+        "caller processing step count mismatch",
+    )
+    require_caller_processing_order_contract_failure(
+        "step mismatch",
+        lambda manifest: manifest["callerProcessingOrder"]["steps"][0].update(
+            {"destinationNode": "Audio Out"},
+        ),
+        "caller processing step 0 destinationNode mismatch",
     )
 
 
@@ -2001,6 +2159,7 @@ def require_waveform_seek_source_contract() -> None:
         "function checkRowsHaveUniqueLabels(rows)",
         "new Set(labels).size === labels.length",
         "function consumerChecklistRowsLabeled()",
+        'return checkRowsLabeled("checklist", 22)',
         "function setSourceText(id, key, value, expected = \"present\", ok = true)",
         "element.dataset.sourceKey = key",
         "element.dataset.sourceValue = valueText",
@@ -2017,6 +2176,7 @@ def require_waveform_seek_source_contract() -> None:
         "dd.setAttribute(\"aria-label\", `${key}: ${valueText}`)",
         "function keyValueRowsLabeled(containerId, expectedRows)",
         "function producerProofRowsLabeled()",
+        'return keyValueRowsLabeled("producerProof", 9)',
         "function boundaryFlagRowsLabeled()",
         "function phaseCoverageRowsLabeled()",
         "function artifactCoverageRowsLabeled()",
@@ -2128,6 +2288,12 @@ def require_waveform_seek_source_contract() -> None:
         '["parameter summary card labels", parameterResyncContractIssue(manifest) === "" && parameterSummaryCardsLabeled()]',
         '["phase preview target", waveformReady && phasePreviewTargetAvailable()]',
         '["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0]',
+        "function callerProcessingOrderIssue(manifest)",
+        'manifest?.demo !== "runtime_dsp_object_circuit_connected_wav_demo"',
+        "callerProcessingOrderProof",
+        "matchesCircuitConnections",
+        '["caller processing order", callerProcessingIssue === ""]',
+        '["caller processing order", boolText(callerProcessingIssue === ""), true]',
         '["phase audio stats probe", waveformReady && phaseAudioStatsProbeLabeled()]',
         '["phase audio stats probe labels", waveformReady && phaseAudioStatsProbeLabeled()]',
         '["phase audio stats item labels", waveformReady && phaseAudioStatsItemsLabeled()]',
@@ -2512,6 +2678,7 @@ def require_manifest_contracts(payload: dict[str, object]) -> None:
     require_artifact_contract(payload)
     require_phase_contract(payload)
     require_parameter_resync_contract(payload)
+    require_caller_processing_order_contract(payload)
 
 
 def require_artifact_report_and_audio_contracts(
@@ -2671,6 +2838,10 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         run_step(
             "parameter resync contract negative cases",
             require_parameter_resync_contract_negative_cases,
+        )
+        run_step(
+            "caller processing order negative cases",
+            require_caller_processing_order_contract_negative_cases,
         )
         run_step(
             "artifact reports and audio",
