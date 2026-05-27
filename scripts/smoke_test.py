@@ -42,8 +42,12 @@ REQUIRED_ARTIFACT_KINDS = {
     "text-summary",
     "wav-report",
 }
-EXPECTED_DEMO = "runtime_dsp_object_bound_wav_resync_demo"
-EXPECTED_KIND = "demo-local-bound-wav-resync-artifacts"
+EXPECTED_DEMOS = {
+    "runtime_dsp_object_bound_wav_resync_demo":
+        "demo-local-bound-wav-resync-artifacts",
+    "runtime_dsp_object_circuit_connected_wav_demo":
+        "demo-local-circuit-connected-wav-artifacts",
+}
 REPORT_ARTIFACT_KINDS = {
     "manifest",
     "text-summary",
@@ -501,8 +505,9 @@ def require_handoff_contract(payload: dict[str, object]) -> None:
 def require_producer_proof(payload: dict[str, object]) -> None:
     manifest = payload.get("manifest")
     require(isinstance(manifest, dict), "manifest object missing")
-    require(manifest.get("demo") == EXPECTED_DEMO, "demo name mismatch")
-    require(manifest.get("kind") == EXPECTED_KIND, "artifact kind mismatch")
+    demo = manifest.get("demo")
+    require(demo in EXPECTED_DEMOS, "demo name mismatch")
+    require(manifest.get("kind") == EXPECTED_DEMOS[demo], "artifact kind mismatch")
     require(manifest.get("runtimeApi") is False, "runtime API flag mismatch")
     require(manifest.get("scheduler") is False, "scheduler flag mismatch")
     require(manifest.get("audioEngine") is False, "audio engine flag mismatch")
