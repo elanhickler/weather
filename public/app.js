@@ -5977,11 +5977,13 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   output: {
-    inputs: ["In"],
+    inputs: ["Left", "Right"],
     output: true,
     parameters: [],
   },
 });
+
+const nodeGraphOutputInputPorts = Object.freeze(["Left", "Right"]);
 
 const nodeGraphGrid = Object.freeze({
   sizePx: 28,
@@ -5998,7 +6000,8 @@ const nodeGraphDefaultNodeConfigs = Object.freeze([
 const nodeGraphDefaultConnections = Object.freeze([
   { sourceNode: "osc", sourcePort: "Out", destinationNode: "gain", destinationPort: "In" },
   { sourceNode: "gain", sourcePort: "Out", destinationNode: "bias", destinationPort: "In" },
-  { sourceNode: "bias", sourcePort: "Out", destinationNode: "output", destinationPort: "In" },
+  { sourceNode: "bias", sourcePort: "Out", destinationNode: "output", destinationPort: "Left" },
+  { sourceNode: "bias", sourcePort: "Out", destinationNode: "output", destinationPort: "Right" },
 ]);
 
 const nodeGraphDefaultPatch = Object.freeze({
@@ -6309,7 +6312,7 @@ function validateNodeGraphPatch(patch) {
     const sourceNode = String(connection.sourceNode || "").trim();
     const sourcePort = String(connection.sourcePort || "").trim();
     const destinationNode = String(connection.destinationNode || "").trim();
-    const destinationPort = String(connection.destinationPort || "").trim();
+    let destinationPort = String(connection.destinationPort || "").trim();
     const sourceType = nodes.find((node) => node.id === sourceNode)?.type;
     const destinationType = nodes.find((node) => node.id === destinationNode)?.type;
     if (!sourceType || !destinationType) {
@@ -6317,6 +6320,9 @@ function validateNodeGraphPatch(patch) {
     }
     if (!(nodeGraphModuleDefinitions[sourceType].outputs || []).includes(sourcePort)) {
       throw new Error(`connection source port invalid: ${sourceNode}.${sourcePort}`);
+    }
+    if (destinationType === "output" && destinationPort === "In") {
+      destinationPort = "Left";
     }
     if (!(nodeGraphModuleDefinitions[destinationType].inputs || []).includes(destinationPort)) {
       throw new Error(`connection destination port invalid: ${destinationNode}.${destinationPort}`);
@@ -7449,6 +7455,10 @@ function nodeGraphValidate() {
     return nodeGraphFindInputConnections(node, port);
   }
 
+  function hasAnyOutputInputConnection() {
+    return nodeGraphOutputInputPorts.some((port) => inputConnections("output", port).length > 0);
+  }
+
   function resolveInput(node, port) {
     const connections = inputConnections(node, port);
     if (connections.length === 0) {
@@ -7488,7 +7498,22 @@ function nodeGraphValidate() {
     }
 
     visiting.add(node);
-    const resolved = resolveInput(node, "In");
+    let resolved = true;
+    if (type === "output") {
+      if (!hasAnyOutputInputConnection()) {
+        issues.push("missing Output speaker input");
+        resolved = false;
+      } else {
+        for (const port of nodeGraphOutputInputPorts) {
+          const connections = inputConnections(node, port);
+          for (const connection of connections) {
+            resolved = resolveNode(connection.sourceNode) && resolved;
+          }
+        }
+      }
+    } else {
+      resolved = resolveInput(node, "In");
+    }
     visiting.delete(node);
     visited.add(node);
     if (!resolved) {
@@ -8398,7 +8423,7 @@ function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampl
 
   const node = runtime.nodes.get(nodeId);
   let value = 0;
-  const mixInput = () => (runtime.inputConnections.get(`${nodeId}.In`) || []).reduce(
+  const mixInput = (port = "In") => (runtime.inputConnections.get(`${nodeId}.${port}`) || []).reduce(
     (sum, connection) =>
       sum + evaluateNodeGraphLiveNode(
         runtime,
@@ -8427,12 +8452,29 @@ function evaluateNodeGraphLiveNode(runtime, nodeId, frameValues, visiting, sampl
   } else if (node?.type === "bias") {
     value = mixInput() + readNodeGraphLiveParam(node, "offset", 0);
   } else if (node?.type === "output") {
-    value = mixInput();
+    const left = mixInput("Left");
+    const right = mixInput("Right");
+    value = (left + right) * 0.5;
   }
 
   visiting.delete(nodeId);
   frameValues.set(nodeId, value);
   return value;
+}
+
+function evaluateNodeGraphLiveOutputPort(runtime, port, frameValues, sampleRate) {
+  const connections = runtime.inputConnections.get(`output.${port}`) || [];
+  return connections.reduce(
+    (sum, connection) =>
+      sum + evaluateNodeGraphLiveNode(
+        runtime,
+        connection.sourceNode,
+        frameValues,
+        new Set(),
+        sampleRate,
+      ),
+    0,
+  );
 }
 
 function renderNodeGraphLiveScriptBlock(event) {
@@ -8446,18 +8488,27 @@ function renderNodeGraphLiveScriptBlock(event) {
     ? output.sampleRate
     : nodeGraphMvp.live.context?.sampleRate || nodeGraphMvp.sampleRate;
   for (let frame = 0; frame < frames; frame += 1) {
-    const value = Math.max(
+    const frameValues = new Map();
+    const left = Math.max(
       -0.95,
       Math.min(
         0.95,
-        evaluateNodeGraphLiveNode(runtime, runtime.outputNode, new Map(), new Set(), sampleRate),
+        evaluateNodeGraphLiveOutputPort(runtime, "Left", frameValues, sampleRate),
       ),
     );
+    const right = Math.max(
+      -0.95,
+      Math.min(
+        0.95,
+        evaluateNodeGraphLiveOutputPort(runtime, "Right", frameValues, sampleRate),
+      ),
+    );
+    const value = Math.max(Math.abs(left), Math.abs(right));
     runtime.meterPeak = Math.max(runtime.meterPeak, Math.abs(value));
-    runtime.meterSquareSum += value * value;
+    runtime.meterSquareSum += (left * left + right * right) * 0.5;
     runtime.meterSamples += 1;
     for (let channel = 0; channel < output.numberOfChannels; channel += 1) {
-      output.getChannelData(channel)[frame] = value;
+      output.getChannelData(channel)[frame] = channel === 0 ? left : right;
     }
   }
   runtime.meterCounter += frames;
@@ -8608,6 +8659,8 @@ function renderNodeGraphAudio() {
 
   const frames = Math.floor(nodeGraphMvp.sampleRate * nodeGraphMvp.seconds);
   const samples = new Float32Array(frames);
+  const leftSamples = new Float32Array(frames);
+  const rightSamples = new Float32Array(frames);
   const phases = new Map();
   const noiseSeeds = new Map();
   for (const node of nodeGraphMvp.activeNodes) {
@@ -8625,8 +8678,8 @@ function renderNodeGraphAudio() {
   for (let frame = 0; frame < frames; frame += 1) {
     const frameValues = new Map();
 
-    function mixNodeInput(node) {
-      return nodeGraphFindInputConnections(node, "In").reduce(
+    function mixNodeInput(node, port = "In") {
+      return nodeGraphFindInputConnections(node, port).reduce(
         (sum, connection) => sum + evaluateNode(connection.sourceNode),
         0,
       );
@@ -8660,22 +8713,27 @@ function renderNodeGraphAudio() {
         value = mixNodeInput(node) + nodeGraphReadNodeNumber(node, "offset");
       }
       if (type === "output") {
-        value = mixNodeInput(node);
+        value = (mixNodeInput(node, "Left") + mixNodeInput(node, "Right")) * 0.5;
       }
       frameValues.set(node, value);
       return value;
     }
 
-    let output = evaluateNode("output");
-    output = Math.max(-0.95, Math.min(0.95, output));
+    const left = Math.max(-0.95, Math.min(0.95, mixNodeInput("output", "Left")));
+    const right = Math.max(-0.95, Math.min(0.95, mixNodeInput("output", "Right")));
+    const output = (left + right) * 0.5;
+    leftSamples[frame] = left;
+    rightSamples[frame] = right;
     samples[frame] = output;
-    peak = Math.max(peak, Math.abs(output));
-    squareSum += output * output;
+    peak = Math.max(peak, Math.abs(left), Math.abs(right));
+    squareSum += (left * left + right * right) * 0.5;
   }
 
   const rms = Math.sqrt(squareSum / frames);
   nodeGraphMvp.rendered = {
     peak,
+    leftSamples,
+    rightSamples,
     rms,
     samples,
     sourceNodes: validation.sourceNodes,
@@ -8783,12 +8841,16 @@ async function playNodeGraphAudio() {
     nodeGraphMvp.bufferSource.disconnect();
   }
 
+  const channelCount = nodeGraphMvp.rendered.leftSamples?.length ? 2 : 1;
   const buffer = nodeGraphMvp.audioContext.createBuffer(
-    1,
+    channelCount,
     nodeGraphMvp.rendered.samples.length,
     nodeGraphMvp.sampleRate,
   );
-  buffer.copyToChannel(nodeGraphMvp.rendered.samples, 0);
+  buffer.copyToChannel(nodeGraphMvp.rendered.leftSamples || nodeGraphMvp.rendered.samples, 0);
+  if (channelCount > 1) {
+    buffer.copyToChannel(nodeGraphMvp.rendered.rightSamples || nodeGraphMvp.rendered.samples, 1);
+  }
   const source = nodeGraphMvp.audioContext.createBufferSource();
   source.buffer = buffer;
   source.connect(nodeGraphMvp.audioContext.destination);

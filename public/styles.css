@@ -768,6 +768,15 @@ audio {
   pointer-events: auto;
 }
 
+.dsp-node.output-node .node-port-rail {
+  gap: 4px;
+}
+
+.dsp-node.output-node .node-port {
+  height: 16px;
+  min-height: 16px;
+}
+
 .node-port.output {
   border-color: rgba(226, 168, 109, 0.56);
   border-right-width: 0;
