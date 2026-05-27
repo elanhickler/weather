@@ -3642,6 +3642,23 @@ function artifactRowsLabeled() {
   );
 }
 
+function sandboxContractRowsLabeled() {
+  const rows = [...document.querySelectorAll("#sandboxContract .contract-row")];
+  return (
+    rows.length === 9 &&
+    rows.every(
+      (row) =>
+        row.dataset.contractKind !== undefined &&
+        row.dataset.contractLabel !== undefined &&
+        row.dataset.contractState === "ok" &&
+        row.getAttribute("role") === "group" &&
+        row.getAttribute("aria-label") ===
+          `${row.dataset.contractKind}: ${row.dataset.contractLabel} / ok` &&
+        row.title === row.getAttribute("aria-label"),
+    )
+  );
+}
+
 function signalPlotControlsLabeled() {
   const groups = [...document.querySelectorAll("#signalPlotControls .control-group")];
   const buttons = [...document.querySelectorAll("#signalPlotControls button")];
@@ -3889,6 +3906,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
       waveformReady && document.getElementById("inspectionCursor")?.textContent.includes("hover delta"),
     ],
     ["read-only boundary", validateConsumerChecklist(manifest).accepted],
+    ["sandbox contract row labels", validateConsumerChecklist(manifest).accepted && sandboxContractRowsLabeled()],
   ];
   const ok = rows.every(([_label, rowOk]) => rowOk);
 
@@ -3960,6 +3978,12 @@ function renderSandboxContract(manifest) {
   for (const [kind, label, rowOk] of rows) {
     const item = document.createElement("div");
     item.className = rowOk ? "contract-row" : "contract-row warn-row";
+    item.dataset.contractKind = kind;
+    item.dataset.contractLabel = label;
+    item.dataset.contractState = rowOk ? "ok" : "check";
+    item.setAttribute("role", "group");
+    item.setAttribute("aria-label", `${kind}: ${label} / ${item.dataset.contractState}`);
+    item.title = `${kind}: ${label} / ${item.dataset.contractState}`;
 
     const marker = document.createElement("strong");
     marker.textContent = rowOk ? kind : "check";
@@ -3986,6 +4010,12 @@ function renderUnavailableSandboxContract() {
   for (const [kind, label] of rows) {
     const item = document.createElement("div");
     item.className = "contract-row warn-row";
+    item.dataset.contractKind = kind;
+    item.dataset.contractLabel = label;
+    item.dataset.contractState = "unavailable";
+    item.setAttribute("role", "group");
+    item.setAttribute("aria-label", `${kind}: ${label} / unavailable`);
+    item.title = `${kind}: ${label} / unavailable`;
 
     const marker = document.createElement("strong");
     marker.textContent = kind;
