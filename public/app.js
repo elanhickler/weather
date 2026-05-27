@@ -8091,6 +8091,53 @@ function handleNodeGraphKeydown(event) {
   deleteSelectedNodeGraphItem();
 }
 
+function nodeHoverTooltipText(target) {
+  if (!(target instanceof Element)) {
+    return "";
+  }
+  const tooltipTarget = target.closest(
+    "[data-hover-tooltip], button, input, textarea, select, .node-slider-readout, .node-port, .node-param-port",
+  );
+  if (!tooltipTarget) {
+    return "";
+  }
+  return (
+    tooltipTarget.dataset.hoverTooltip ||
+    tooltipTarget.getAttribute("title") ||
+    tooltipTarget.getAttribute("aria-label") ||
+    tooltipTarget.textContent ||
+    ""
+  ).trim();
+}
+
+function setNodeHoverTooltip(text = "") {
+  const tooltip = document.getElementById("nodeHoverTooltip");
+  if (tooltip) {
+    tooltip.textContent = text;
+  }
+}
+
+function handleNodeHoverTooltip(event) {
+  setNodeHoverTooltip(nodeHoverTooltipText(event.target));
+}
+
+function clearNodeHoverTooltip(event) {
+  if (event.relatedTarget && event.currentTarget?.contains?.(event.relatedTarget)) {
+    return;
+  }
+  setNodeHoverTooltip("");
+}
+
+function attachNodeHoverTooltipTarget(element) {
+  element.dataset.hoverReady = "true";
+  const showTooltip = () => setNodeHoverTooltip(nodeHoverTooltipText(element));
+  element.addEventListener("mouseenter", showTooltip);
+  element.addEventListener("click", showTooltip);
+  element.addEventListener("mouseleave", () => setNodeHoverTooltip(""));
+  element.addEventListener("focus", showTooltip);
+  element.addEventListener("blur", () => setNodeHoverTooltip(""));
+}
+
 function toggleDebugSections() {
   const collapsed = !document.body.classList.contains("debug-collapsed");
   document.body.classList.toggle("debug-collapsed", collapsed);
@@ -8318,6 +8365,19 @@ async function playNodeGraphAudio() {
 }
 
 function initNodeGraphMvp() {
+  const nodePanel = document.querySelector(".node-wiring-panel");
+  nodePanel?.addEventListener("pointerover", handleNodeHoverTooltip);
+  nodePanel?.addEventListener("pointerout", clearNodeHoverTooltip);
+  nodePanel?.addEventListener("mouseover", handleNodeHoverTooltip);
+  nodePanel?.addEventListener("mouseout", clearNodeHoverTooltip);
+  nodePanel?.addEventListener("focusin", handleNodeHoverTooltip);
+  nodePanel?.addEventListener("focusout", clearNodeHoverTooltip);
+  document.getElementById("nodeHoverTooltip")?.setAttribute("data-ready", "true");
+  for (const element of document.querySelectorAll(
+    ".node-view-toolbar button, .node-graph-controls button, .node-slider-readout",
+  )) {
+    attachNodeHoverTooltipTarget(element);
+  }
   for (const button of document.querySelectorAll("[data-palette-node]")) {
     button.addEventListener("click", () => showPaletteNode(button.dataset.paletteNode));
   }

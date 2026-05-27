@@ -161,6 +161,28 @@ audio {
   gap: 8px;
 }
 
+.node-hover-tooltip {
+  flex: 1 1 180px;
+  min-width: 140px;
+  min-height: 28px;
+  padding: 6px 10px;
+  border: 1px solid rgba(243, 241, 236, 0.08);
+  border-radius: 5px;
+  background: rgba(17, 20, 24, 0.62);
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-hover-tooltip:empty {
+  color: transparent;
+}
+
 .node-view-tabs button.active {
   border-color: rgba(127, 199, 217, 0.58);
   color: var(--accent);
