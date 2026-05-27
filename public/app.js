@@ -6013,7 +6013,6 @@ const nodeGraphMvp = {
     osc: 1,
   },
   rendered: null,
-  renderTimer: null,
   sceneContextPoint: null,
   selected: null,
   sampleRate: 44100,
@@ -6231,26 +6230,11 @@ function closeNodeSceneContextMenu() {
   nodeGraphMvp.sceneContextPoint = null;
 }
 
-function cancelScheduledNodeGraphRender() {
-  if (nodeGraphMvp.renderTimer) {
-    window.clearTimeout(nodeGraphMvp.renderTimer);
-    nodeGraphMvp.renderTimer = null;
-  }
-}
-
-function scheduleNodeGraphAudioRender(delay = 80) {
-  cancelScheduledNodeGraphRender();
+function markNodeGraphRenderPending() {
+  nodeGraphMvp.rendered = null;
+  document.getElementById("nodePlayButton").disabled = true;
   document.getElementById("nodeGraphRenderStatus").textContent = "render pending";
   document.getElementById("nodeGraphRenderStatus").className = "pill warn";
-  nodeGraphMvp.renderTimer = window.setTimeout(() => {
-    nodeGraphMvp.renderTimer = null;
-    renderNodeGraphAudio();
-  }, delay);
-}
-
-function flushNodeGraphAudioRender() {
-  cancelScheduledNodeGraphRender();
-  renderNodeGraphAudio();
 }
 
 function applyNodeMetadataPopover(event) {
@@ -6279,7 +6263,7 @@ function applyNodeMetadataPopover(event) {
   const kind = document.getElementById("metadataKindValue").value.trim() || "decimal";
   const display = document.getElementById("metadataDisplayValue").value.trim() || "decimal";
   setNodeSliderMetadata(slider, { min, mid, max, def, step, kind, display });
-  flushNodeGraphAudioRender();
+  markNodeGraphRenderPending();
   closeNodeMetadataPopover();
 }
 
@@ -6318,19 +6302,15 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
   if (nodeGraphMvp.metadataEditorTarget === slider.id) {
     fillNodeMetadataPopover(slider);
   }
-  flushNodeGraphAudioRender();
+  markNodeGraphRenderPending();
 }
 
-function setNodeSliderValue(slider, value, options = {}) {
+function setNodeSliderValue(slider, value) {
   slider.value = String(
     clampNodeSliderValue(value, Number(slider.min), Number(slider.max)),
   );
   syncNodeSliderReadout(slider);
-  if (options.deferRender) {
-    scheduleNodeGraphAudioRender();
-  } else {
-    flushNodeGraphAudioRender();
-  }
+  markNodeGraphRenderPending();
 }
 
 function beginNodeSliderDrag(event) {
@@ -6377,7 +6357,6 @@ function dragNodeSlider(event) {
   setNodeSliderValue(
     drag.slider,
     quantizeNodeSliderDragValue(drag.slider, drag.startValue + valueDelta),
-    { deferRender: true },
   );
   event.preventDefault();
 }
@@ -6396,7 +6375,6 @@ function endNodeSliderDrag(event) {
     drag.surface.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.sliderDragging = null;
-  flushNodeGraphAudioRender();
 }
 
 function commitNodeSliderReadoutEdit(input) {
@@ -6495,7 +6473,7 @@ function attachNodeGraphNodeEvents(node) {
     createNodeSliderReadout(slider);
     slider.addEventListener("input", () => {
       syncNodeSliderReadout(slider);
-      scheduleNodeGraphAudioRender();
+      markNodeGraphRenderPending();
     });
   }
 }
@@ -6866,7 +6844,7 @@ function disconnectNodeGraphConnection(index) {
     setNodeGraphSelection(null);
   }
   renderNodeGraphConnectionList();
-  renderNodeGraphAudio();
+  markNodeGraphRenderPending();
 }
 
 function connectNodeGraphPorts(sourceNode, sourcePort, destinationNode, destinationPort) {
@@ -6896,7 +6874,7 @@ function connectNodeGraphPorts(sourceNode, sourcePort, destinationNode, destinat
     destinationPort,
   });
   renderNodeGraphConnectionList();
-  renderNodeGraphAudio();
+  markNodeGraphRenderPending();
   return true;
 }
 
@@ -7079,7 +7057,7 @@ function restoreDefaultNodeGraph() {
   renderNodePalette();
   renderNodeVisibility();
   renderNodeGraphConnectionList();
-  renderNodeGraphAudio();
+  markNodeGraphRenderPending();
 }
 
 function clearNodeGraphWires() {
@@ -7133,7 +7111,7 @@ function showNodeGraphModule(node, point = null) {
   positionNodeGraphNode(element, point || defaultNodeGraphModulePoint(type));
   setNodeGraphSelection({ type: "node", id });
   renderNodeGraphConnectionList();
-  renderNodeGraphAudio();
+  markNodeGraphRenderPending();
 }
 
 function showPaletteNode(node) {
@@ -7167,7 +7145,7 @@ function deleteSelectedNodeGraphItem() {
     renderNodePalette();
     renderNodeVisibility();
     renderNodeGraphConnectionList();
-    renderNodeGraphAudio();
+    markNodeGraphRenderPending();
   }
 }
 
@@ -7386,9 +7364,6 @@ function drawNodeRenderedSignalPlot() {
 
 async function playNodeGraphAudio() {
   if (!nodeGraphMvp.rendered?.samples?.length) {
-    renderNodeGraphAudio();
-  }
-  if (!nodeGraphMvp.rendered?.samples?.length) {
     return;
   }
 
@@ -7480,7 +7455,7 @@ function initNodeGraphMvp() {
   renderNodePalette();
   renderNodeVisibility();
   renderNodeGraphConnectionList();
-  renderNodeGraphAudio();
+  markNodeGraphRenderPending();
 }
 
 loadSignalPlotSettings();
