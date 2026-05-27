@@ -110,6 +110,21 @@
       </div>
 
       <div id="nodeSettingsView" class="node-settings-view" hidden>
+        <div class="node-settings-actions" aria-label="Patch script actions">
+          <button
+            id="loadNodeGraphScriptButton"
+            type="button"
+            title="Load patch script">Load Script</button>
+          <button
+            id="saveNodeGraphScriptButton"
+            type="button"
+            title="Save patch script">Save Script</button>
+          <input
+            id="nodePatchScriptFileInput"
+            type="file"
+            accept="application/json,.json"
+            hidden>
+        </div>
         <div class="node-settings-grid">
           <label>Patch Name
             <input id="patchNameValue" type="text" autocomplete="off" data-patch-info-field>

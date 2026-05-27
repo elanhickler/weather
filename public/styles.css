@@ -227,6 +227,14 @@ audio {
   display: none;
 }
 
+.node-settings-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .node-settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

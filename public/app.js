@@ -8040,6 +8040,59 @@ function handleNodePatchScriptInput(event) {
   commitNodeGraphScript(event.currentTarget.value);
 }
 
+function nodeGraphPatchFileName() {
+  const info = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch.info);
+  const baseName = info.name || "soemdsp-patch";
+  const safeName = baseName
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${safeName || "soemdsp-patch"}.json`;
+}
+
+function saveNodeGraphScript() {
+  const blob = new Blob([`${serializeNodeGraphPatch()}\n`], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nodeGraphPatchFileName();
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  setNodeGraphScriptStatus("script saved", true);
+}
+
+function loadNodeGraphScript() {
+  document.getElementById("nodePatchScriptFileInput")?.click();
+}
+
+function handleNodeGraphScriptFileLoad(event) {
+  const [file] = event.currentTarget.files || [];
+  if (!file) {
+    return;
+  }
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      commitNodeGraphPatch(loadNodeGraphPatchFromScript(String(reader.result || "")), {
+        status: "script loaded",
+      });
+    } catch (error) {
+      setNodeGraphScriptStatus(error.message, false);
+    } finally {
+      event.currentTarget.value = "";
+    }
+  });
+  reader.addEventListener("error", () => {
+    setNodeGraphScriptStatus("script file read failed", false);
+    event.currentTarget.value = "";
+  });
+  reader.readAsText(file);
+}
+
 function deleteSelectedNodeGraphItem() {
   const selection = nodeGraphMvp.selected;
   if (!selection) {
@@ -8466,6 +8519,11 @@ function initNodeGraphMvp() {
     .getElementById("nodeScriptViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("script"));
   document.getElementById("nodePatchScript").addEventListener("input", handleNodePatchScriptInput);
+  document.getElementById("loadNodeGraphScriptButton").addEventListener("click", loadNodeGraphScript);
+  document.getElementById("saveNodeGraphScriptButton").addEventListener("click", saveNodeGraphScript);
+  document
+    .getElementById("nodePatchScriptFileInput")
+    .addEventListener("change", handleNodeGraphScriptFileLoad);
   for (const field of document.querySelectorAll("[data-patch-info-field]")) {
     field.addEventListener("input", handleNodeGraphSettingsInput);
   }
