@@ -272,10 +272,10 @@ audio {
   left: var(--node-x);
   top: var(--node-y);
   display: grid;
-  gap: 12px;
+  gap: 0;
   width: min(190px, 27vw);
   min-width: 150px;
-  padding: 13px;
+  padding: 0;
   border: 1px solid rgba(243, 241, 236, 0.18);
   border-radius: 8px;
   background: rgba(27, 30, 34, 0.96);
@@ -306,13 +306,25 @@ audio {
   width: min(170px, 24vw);
 }
 
+.dsp-node-header {
+  position: relative;
+  min-height: 52px;
+  padding: 13px 31px;
+  border-bottom: 1px solid rgba(243, 241, 236, 0.08);
+  background: rgba(243, 241, 236, 0.025);
+}
+
+.dsp-node-body {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+}
+
 .dsp-node-title {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  min-height: 30px;
-  padding: 0 18px;
 }
 
 .dsp-node-title span {
@@ -337,11 +349,20 @@ audio {
   color: var(--accent-2);
 }
 
-.dsp-node label {
+.dsp-node label,
+.node-parameter-control {
   display: grid;
   gap: 5px;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.node-parameter-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: end;
+  gap: 7px;
 }
 
 .dsp-node input[type="range"] {
@@ -610,14 +631,14 @@ audio {
 
 .node-port-rail {
   position: absolute;
-  top: 44px;
-  bottom: 13px;
+  top: 50%;
   z-index: 3;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 8px;
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .node-port-rail.input {
@@ -633,17 +654,41 @@ audio {
 }
 
 .node-port.output {
-  border-color: rgba(127, 199, 217, 0.48);
+  border-color: rgba(226, 168, 109, 0.56);
   border-right-width: 0;
   border-radius: 999px 0 0 999px;
-  background: rgba(127, 199, 217, 0.13);
+  background: rgba(226, 168, 109, 0.15);
 }
 
 .node-port.input {
-  border-color: rgba(226, 168, 109, 0.48);
+  border-color: rgba(127, 199, 217, 0.56);
   border-left-width: 0;
   border-radius: 0 999px 999px 0;
-  background: rgba(226, 168, 109, 0.11);
+  background: rgba(127, 199, 217, 0.15);
+}
+
+.node-param-port {
+  display: block;
+  width: 13px;
+  min-width: 13px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 999px 0 0 999px;
+  color: transparent;
+  cursor: crosshair;
+  overflow: hidden;
+  text-indent: -999px;
+}
+
+.node-param-port.modulation-input {
+  border-color: rgba(177, 132, 255, 0.62);
+  border-right-width: 0;
+  background: rgba(177, 132, 255, 0.16);
+}
+
+.node-param-port:hover {
+  filter: brightness(1.25);
 }
 
 .node-port:hover {

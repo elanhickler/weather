@@ -6006,6 +6006,7 @@ const nodeGraphDefaultPatch = Object.freeze({
   grid: { ...nodeGraphGrid },
   nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node })),
   connections: nodeGraphDefaultConnections.map((connection) => ({ ...connection })),
+  modulations: [],
 });
 
 const fallbackNodeMetadataKindTemplates = Object.freeze({
@@ -6120,6 +6121,7 @@ function cloneNodeGraphPatch(patch) {
   return {
     connections: (patch.connections || []).map((connection) => ({ ...connection })),
     grid: { sizePx: Number(patch.grid?.sizePx) || nodeGraphGrid.sizePx },
+    modulations: (patch.modulations || []).map((modulation) => ({ ...modulation })),
     nodes: (patch.nodes || []).map((node) => ({ ...node })),
   };
 }
@@ -6218,6 +6220,7 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
     {
       connections: patch.connections,
       grid: patch.grid,
+      modulations: patch.modulations || [],
       nodes: patch.nodes,
     },
     null,
@@ -6284,9 +6287,32 @@ function validateNodeGraphPatch(patch) {
     return { destinationNode, destinationPort, sourceNode, sourcePort };
   }) : [];
 
+  const modulations = Array.isArray(patch.modulations) ? patch.modulations.map((modulation) => {
+    const sourceNode = String(modulation.sourceNode || "").trim();
+    const sourcePort = String(modulation.sourcePort || "").trim();
+    const destinationNode = String(modulation.destinationNode || "").trim();
+    const destinationParam = String(modulation.destinationParam || "").trim();
+    if (!sourceNode || !sourcePort || !destinationNode || !destinationParam) {
+      throw new Error("modulation entries require sourceNode, sourcePort, destinationNode, destinationParam");
+    }
+    const sourceType = nodes.find((node) => node.id === sourceNode)?.type;
+    const destinationType = nodes.find((node) => node.id === destinationNode)?.type;
+    if (!sourceType || !destinationType) {
+      throw new Error("modulation references missing node");
+    }
+    if (!(nodeGraphModuleDefinitions[sourceType].outputs || []).includes(sourcePort)) {
+      throw new Error(`modulation source port invalid: ${sourceNode}.${sourcePort}`);
+    }
+    if (!(nodeGraphModuleDefinitions[destinationType].parameters || []).some((parameter) => parameter.key === destinationParam)) {
+      throw new Error(`modulation destination parameter invalid: ${destinationNode}.${destinationParam}`);
+    }
+    return { destinationNode, destinationParam, sourceNode, sourcePort };
+  }) : [];
+
   return {
     connections,
     grid: { sizePx: gridSize },
+    modulations,
     nodes,
   };
 }
@@ -7200,8 +7226,28 @@ function createNodeGraphPortRail(node, type, ports, io) {
   return rail;
 }
 
+function createNodeParameterModulationPort(node, type, parameter) {
+  const button = document.createElement("button");
+  button.className = "node-param-port modulation-input";
+  button.type = "button";
+  button.dataset.node = node;
+  button.dataset.param = parameter.key;
+  button.dataset.port = parameter.key;
+  button.dataset.io = "modulation";
+  const label = `${nodeGraphNodeLabels[type]} ${parameter.label} modulation input`;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
+  return button;
+}
+
 function createNodeGraphParameter(node, type, parameter) {
+  const row = document.createElement("div");
+  row.className = "node-parameter-row";
+  row.dataset.param = parameter.key;
+  row.append(createNodeParameterModulationPort(node, type, parameter));
+
   const label = document.createElement("label");
+  label.className = "node-parameter-control";
   label.append(document.createTextNode(parameter.label));
   const input = document.createElement("input");
   const legacyIds = {
@@ -7225,7 +7271,8 @@ function createNodeGraphParameter(node, type, parameter) {
   input.dataset.unit = "";
   input.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${parameter.label}`);
   label.append(input);
-  return label;
+  row.append(label);
+  return row;
 }
 
 function createNodeGraphModuleElement(type, node) {
@@ -7235,37 +7282,41 @@ function createNodeGraphModuleElement(type, node) {
   article.dataset.node = node;
   article.dataset.nodeType = type;
 
-  const title = document.createElement("div");
-  title.className = "dsp-node-title";
+  const header = document.createElement("div");
+  header.className = "dsp-node-header dsp-node-title";
   const handle = document.createElement("button");
   handle.className = "node-drag-handle";
   handle.type = "button";
   handle.setAttribute("aria-label", `Move ${nodeGraphNodeLabels[type]} module`);
   handle.setAttribute("title", "Move module");
   handle.innerHTML = "&#x2725;";
-  title.append(handle);
+  header.append(handle);
   const titleText = document.createElement("span");
   titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
-  title.append(titleText);
-  article.append(title);
+  header.append(titleText);
   const inputRail = createNodeGraphPortRail(node, type, definition.inputs, "input");
   const outputRail = createNodeGraphPortRail(node, type, definition.outputs, "output");
   if (inputRail) {
-    article.append(inputRail);
+    header.append(inputRail);
   }
   if (outputRail) {
-    article.append(outputRail);
+    header.append(outputRail);
   }
+  article.append(header);
+
+  const body = document.createElement("div");
+  body.className = "dsp-node-body";
 
   for (const parameter of definition.parameters) {
-    article.append(createNodeGraphParameter(node, type, parameter));
+    body.append(createNodeGraphParameter(node, type, parameter));
   }
   if (definition.output) {
     const summary = document.createElement("p");
     summary.id = "nodeOutputSummary";
     summary.textContent = "waiting for render";
-    article.append(summary);
+    body.append(summary);
   }
+  article.append(body);
 
   attachNodeGraphNodeEvents(article);
   return article;
