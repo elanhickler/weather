@@ -3288,8 +3288,7 @@ function renderParameterSummaryCards(pairs) {
     item.title = `${label}: ${valueText} / ${stateName}`;
 
     const title = document.createElement("span");
-    title.className = "label";
-    title.textContent = label;
+    title.textContent = label.toUpperCase();
 
     const body = document.createElement("strong");
     body.textContent = valueText;

@@ -41,16 +41,21 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
-.eyebrow,
-.label {
+.status-strip span,
+.audio-panel p,
+.summary-card > span:first-child,
+#nodePatchNameHeader {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: none;
+}
+
+.eyebrow {
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
   text-transform: uppercase;
-}
-
-#nodePatchNameHeader {
-  text-transform: none;
 }
 
 h1,
