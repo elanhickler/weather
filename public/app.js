@@ -7457,6 +7457,14 @@ function applyNodeGraphZoom() {
   }
   workspace.style.setProperty("--node-graph-zoom", String(nodeGraphZoom()));
   workspace.dataset.zoom = nodeGraphZoom().toFixed(2);
+  const zoomOutButton = document.getElementById("nodeZoomOutButton");
+  const zoomInButton = document.getElementById("nodeZoomInButton");
+  if (zoomOutButton) {
+    zoomOutButton.disabled = nodeGraphZoom() <= nodeGraphZoomLimits.min + 0.001;
+  }
+  if (zoomInButton) {
+    zoomInButton.disabled = nodeGraphZoom() >= nodeGraphZoomLimits.max - 0.001;
+  }
   drawNodeGraphWires();
 }
 
@@ -7472,14 +7480,8 @@ function setNodeGraphZoom(nextZoom) {
   applyNodeGraphZoom();
 }
 
-function zoomNodeGraphAt(event) {
-  if (event.target.closest(".node-scene-context-menu, .node-parameter-metadata-popover")) {
-    return;
-  }
-
-  event.preventDefault();
-  const direction = event.deltaY < 0 ? 1 : -1;
-  setNodeGraphZoom(nodeGraphZoom() + direction * nodeGraphZoomLimits.step);
+function zoomNodeGraphBy(delta) {
+  setNodeGraphZoom(nodeGraphZoom() + delta);
 }
 
 function nodeGraphPortCenter(node, port, io) {
@@ -8255,9 +8257,6 @@ function initNodeGraphMvp() {
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("contextmenu", openNodeSceneContextMenu);
-  document
-    .getElementById("nodeGraphWorkspace")
-    .addEventListener("wheel", zoomNodeGraphAt, { passive: false });
 
   document.addEventListener("pointermove", dragNodeGraphWire);
   document.addEventListener("pointerup", endNodeGraphWireDrag);
@@ -8278,6 +8277,12 @@ function initNodeGraphMvp() {
   document.getElementById("nodeDeleteButton").addEventListener("click", deleteSelectedNodeGraphItem);
   document.getElementById("nodeUndoButton").addEventListener("click", undoNodeGraphPatch);
   document.getElementById("nodeRedoButton").addEventListener("click", redoNodeGraphPatch);
+  document
+    .getElementById("nodeZoomOutButton")
+    .addEventListener("click", () => zoomNodeGraphBy(-nodeGraphZoomLimits.step));
+  document
+    .getElementById("nodeZoomInButton")
+    .addEventListener("click", () => zoomNodeGraphBy(nodeGraphZoomLimits.step));
   document
     .getElementById("nodeModularViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("modular"));

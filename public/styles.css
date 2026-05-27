@@ -153,6 +153,7 @@ audio {
 }
 
 .node-view-tabs,
+.node-zoom-controls,
 .node-history-controls {
   display: inline-flex;
   align-items: center;

@@ -194,6 +194,8 @@ REQUIRED_SHELL_IDS = {
     "nodeGraphValidation",
     "nodeGraphWorkspace",
     "nodeGraphZoomSurface",
+    "nodeZoomInButton",
+    "nodeZoomOutButton",
     "nodeModularViewButton",
     "nodeParameterMetadataPopover",
     "nodePalette",
@@ -2848,6 +2850,8 @@ def require_node_graph_mvp_contract() -> None:
         "Script View",
         "nodeModularViewButton",
         "nodeScriptViewButton",
+        "nodeZoomOutButton",
+        "nodeZoomInButton",
         "nodeUndoButton",
         "nodeRedoButton",
         "nodeScriptStatus",
@@ -2947,7 +2951,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphGraphRect()",
         "function applyNodeGraphZoom()",
         "function setNodeGraphZoom(nextZoom)",
-        "function zoomNodeGraphAt(event)",
+        "function zoomNodeGraphBy(delta)",
         "const nodeGraphGrid",
         "const nodeGraphDefaultPatch",
         "function cloneNodeGraphPatch(patch)",
@@ -3065,7 +3069,8 @@ def require_node_graph_mvp_contract() -> None:
         "function deleteSelectedNodeGraphItem()",
         "function showPaletteNode(node)",
         'addEventListener("contextmenu", openNodeSceneContextMenu)',
-        'addEventListener("wheel", zoomNodeGraphAt, { passive: false })',
+        'addEventListener("click", () => zoomNodeGraphBy(-nodeGraphZoomLimits.step))',
+        'addEventListener("click", () => zoomNodeGraphBy(nodeGraphZoomLimits.step))',
         "[data-context-module]",
         "function toggleDebugSections()",
         "document.addEventListener(\"keydown\", handleNodeGraphKeydown)",
@@ -3084,6 +3089,12 @@ def require_node_graph_mvp_contract() -> None:
         "initNodeGraphMvp();",
     ]:
         require(snippet in app_source, f"node graph source missing {snippet}")
+
+    for snippet in [
+        "zoomNodeGraphAt",
+        'addEventListener("wheel"',
+    ]:
+        require(snippet not in app_source, f"node graph wheel zoom should be absent: {snippet}")
 
     require(
         'node.addEventListener("pointerdown", beginNodeGraphNodeDrag)' not in app_source,
