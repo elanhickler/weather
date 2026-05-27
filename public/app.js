@@ -2698,7 +2698,13 @@ function renderAudioPosition() {
   const position = document.getElementById("audioPosition");
   const time = Number(audio.currentTime);
   const duration = Number(audio.duration);
-  position.textContent = `audio ${formatSeconds(Number.isFinite(time) ? time : 0)} / ${formatAudioDuration(duration)}`;
+  const positionText = `audio ${formatSeconds(Number.isFinite(time) ? time : 0)} / ${formatAudioDuration(duration)}`;
+  labelWaveformHeaderPill(
+    position,
+    "primary audio position",
+    positionText,
+    Boolean(audio.getAttribute("src")),
+  );
   setInspectionCursorAudio(time, duration);
   setInspectionCursorPlayback(audio);
   renderWaveformPlayControl(audio);
@@ -3865,6 +3871,10 @@ function primaryAudioTitleLabeled(manifest) {
   );
 }
 
+function primaryAudioPositionLabeled() {
+  return waveformHeaderPillsLabeled(["audioPosition"]);
+}
+
 function reloadManifestControlLabeled() {
   const button = document.getElementById("refreshButton");
   const label = button?.getAttribute("aria-label") || "";
@@ -4244,6 +4254,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ],
     ["primary audio labels", primaryAudioLabeled(manifest)],
     ["primary audio title labels", primaryAudioTitleLabeled(manifest)],
+    ["primary audio position labels", primaryAudioPositionLabeled()],
     ["reload manifest labels", reloadManifestControlLabeled()],
     ["waveform play control", Boolean(document.getElementById("waveformPlayButton"))],
     ["waveform control labels", waveformControlsLabeled()],
