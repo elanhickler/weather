@@ -3056,18 +3056,27 @@ function renderParameterSummaryCards(pairs) {
   ];
 
   for (const [label, value, kind, ok] of values) {
+    const valueText = value || "missing";
+    const stateName = ok === true ? "ok" : "check";
     const item = document.createElement("div");
     item.className = "summary-card";
     if (kind === "comparison") {
       item.classList.add("comparison");
     }
+    item.dataset.summaryLabel = label;
+    item.dataset.summaryValue = valueText;
+    item.dataset.summaryKind = kind || "value";
+    item.dataset.summaryState = stateName;
+    item.setAttribute("role", "group");
+    item.setAttribute("aria-label", `${label}: ${valueText}`);
+    item.title = `${label}: ${valueText} / ${stateName}`;
 
     const title = document.createElement("span");
     title.className = "label";
     title.textContent = label;
 
     const body = document.createElement("strong");
-    body.textContent = value || "missing";
+    body.textContent = valueText;
     if (!value || ok !== true) {
       body.className = "warn";
     }
@@ -3754,6 +3763,25 @@ function sourceRowsLabeled() {
   });
 }
 
+function parameterSummaryCardsLabeled() {
+  const cards = [...document.querySelectorAll("#parameterSummary .summary-card")];
+  return (
+    cards.length === 6 &&
+    cards.every((card) => {
+      const label = card.getAttribute("aria-label") || "";
+      return (
+        card.dataset.summaryLabel !== undefined &&
+        card.dataset.summaryValue !== undefined &&
+        card.dataset.summaryKind !== undefined &&
+        card.dataset.summaryState === "ok" &&
+        card.getAttribute("role") === "group" &&
+        label === `${card.dataset.summaryLabel}: ${card.dataset.summaryValue}` &&
+        card.title === `${label} / ok`
+      );
+    })
+  );
+}
+
 function signalPlotControlsLabeled() {
   const groups = [...document.querySelectorAll("#signalPlotControls .control-group")];
   const buttons = [...document.querySelectorAll("#signalPlotControls button")];
@@ -3975,6 +4003,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["phase list item labels", waveformReady && phaseListItemsLabeled()],
     ["phase preview target", waveformReady && Boolean(document.querySelector(".phase"))],
     ["phase parameter readout", parameterResyncContractIssue(manifest) === ""],
+    ["parameter summary card labels", parameterResyncContractIssue(manifest) === "" && parameterSummaryCardsLabeled()],
     ["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0],
     ["phase audio stats probe", waveformReady && Boolean(document.getElementById("phaseAudioStatsProbe"))],
     ["phase audio stats probe labels", waveformReady && phaseAudioStatsProbeLabeled()],
