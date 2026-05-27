@@ -3205,7 +3205,10 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(integer_bipolar.get("min") == -9, "integer_bipolar metadata min mismatch")
     require(integer_bipolar.get("max") == 9, "integer_bipolar metadata max mismatch")
     require(integer_bipolar.get("showPlusMinus") is True, "integer_bipolar showPlusMinus mismatch")
-    require(waveform.get("choices") == ["Sine", "Saw", "Square", "Noise"], "waveform choices mismatch")
+    require(
+        waveform.get("choices") == ["Saw", "Square", "Triangle", "Sine", "Noise"],
+        "waveform choices mismatch",
+    )
     require(waveform.get("displayChoices") is True, "waveform displayChoices mismatch")
     require(bypass.get("choices") == ["active", "BYPASSED"], "bypass choices mismatch")
     require(bypass.get("displayChoices") is True, "bypass displayChoices mismatch")

@@ -6044,7 +6044,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     unit: "idx",
   },
   waveform: {
-    choices: ["Sine", "Saw", "Square", "Noise"],
+    choices: ["Saw", "Square", "Triangle", "Sine", "Noise"],
     def: 0,
     displayChoices: true,
     label: "Waveform",

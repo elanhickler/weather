@@ -115,7 +115,7 @@ NODE_METADATA_KIND_TEMPLATES = {
         "unit": "idx",
     },
     "waveform": {
-        "choices": ["Sine", "Saw", "Square", "Noise"],
+        "choices": ["Saw", "Square", "Triangle", "Sine", "Noise"],
         "def": 0,
         "displayChoices": True,
         "label": "Waveform",
