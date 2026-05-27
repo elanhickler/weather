@@ -6006,13 +6006,32 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     max: 1,
     mid: 0,
     min: -1,
+    showPlusMinus: true,
     step: 0.01,
     unit: "lin",
   },
   amplitude: { def: 1, label: "Amplitude", max: 3, mid: 1, min: 0, step: 0.01, unit: "amp" },
-  decibels: { def: 0, label: "Decibels", max: 12, mid: 0, min: -60, step: 0.1, unit: "dB" },
+  decibels: {
+    def: 0,
+    label: "Decibels",
+    max: 12,
+    mid: 0,
+    min: -60,
+    showPlusMinus: true,
+    step: 0.1,
+    unit: "dB",
+  },
   frequency: { def: 1000, label: "Frequency", max: 20000, mid: 1000, min: 0, step: 1, unit: "Hz" },
-  pitch: { def: 0, label: "Pitch", max: 12, mid: 0, min: -12, step: 0.1, unit: "st" },
+  pitch: {
+    def: 0,
+    label: "Pitch",
+    max: 12,
+    mid: 0,
+    min: -12,
+    showPlusMinus: true,
+    step: 0.1,
+    unit: "st",
+  },
   seconds: { def: 0, label: "Seconds", max: 5, mid: 2.5, min: 0, step: 0.01, unit: "s" },
   sustain: { def: 1, label: "Sustain", max: 1, mid: 0.7, min: 0, step: 0.01, unit: "amp" },
   descrete: { def: 0, label: "Descrete", max: 9, mid: 4, min: 0, step: 1, unit: "idx" },
@@ -6043,6 +6062,7 @@ const fallbackNodeMetadataKindTemplates = Object.freeze({
     max: 1,
     mid: 0,
     min: -1,
+    showPlusMinus: true,
     step: 1,
     unit: "plusminus",
   },
@@ -6579,6 +6599,7 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataUnitValue").value = template.unit;
   document.getElementById("metadataChoicesValue").value =
     formatNodeMetadataChoices(template.choices || []);
+  document.getElementById("metadataShowSignValue").checked = Boolean(template.showPlusMinus);
   applyNodeMetadataEditor();
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }

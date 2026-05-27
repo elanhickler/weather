@@ -2910,7 +2910,7 @@ def require_node_graph_mvp_contract() -> None:
         "const fallbackNodeMetadataKindTemplates",
         "let nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates",
         'amplitude: { def: 1, label: "Amplitude"',
-        'decibels: { def: 0, label: "Decibels"',
+        'label: "Decibels"',
         'decimal_bipolar: {',
         'frequency: { def: 1000, label: "Frequency"',
         'descrete: { def: 0, label: "Descrete"',
@@ -2939,6 +2939,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeSliderMetadata(slider)",
         "function formatNodeSliderMetadataTooltip(slider)",
         "reserveSignSpace",
+        "showPlusMinus",
         "function syncNodeSliderMetadataTooltip(slider)",
         "function nodeSliderDebugPath(slider)",
         "function nodeGraphNodeType(node)",
@@ -3180,11 +3181,15 @@ def require_node_metadata_kinds_transport(base_url: str) -> None:
     require(decibels.get("label") == "Decibels", "decibels metadata label mismatch")
     require(decibels.get("unit") == "dB", "decibels metadata unit mismatch")
     require(decimal_bipolar.get("unit") == "lin", "decimal_bipolar metadata unit mismatch")
+    require(decimal_bipolar.get("showPlusMinus") is True, "decimal_bipolar showPlusMinus mismatch")
+    require(decibels.get("showPlusMinus") is True, "decibels showPlusMinus mismatch")
     require(frequency.get("unit") == "Hz", "frequency metadata unit mismatch")
+    require(templates.get("pitch", {}).get("showPlusMinus") is True, "pitch showPlusMinus mismatch")
     require(descrete.get("unit") == "idx", "descrete metadata unit mismatch")
     require(waveform.get("choices") == ["Sine", "Saw", "Square", "Noise"], "waveform choices mismatch")
     require(bypass.get("choices") == ["active", "BYPASSED"], "bypass choices mismatch")
     require(plusminus.get("choices") == ["-", "+"], "plusminus choices mismatch")
+    require(plusminus.get("showPlusMinus") is True, "plusminus showPlusMinus mismatch")
     require(onoff.get("choices") == ["off", "on"], "onoff choices mismatch")
     require(momentary.get("choices") == ["idle", "on"], "momentary choices mismatch")
 
