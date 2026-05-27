@@ -4134,32 +4134,35 @@ function signalPlotCanvasLabeled() {
   );
 }
 
+const inspectionCursorPillIds = [
+  "inspectionCursorSource",
+  "inspectionCursorDelta",
+  "inspectionCursorAudio",
+  "inspectionCursorPlayback",
+  "inspectionCursorView",
+  "inspectionCursorPreview",
+  "inspectionCursorSeek",
+  "inspectionCursorSeekTarget",
+  "inspectionCursorSeekSync",
+  "inspectionCursorTransport",
+  "inspectionCursorTarget",
+  "inspectionCursorDivergence",
+];
+
+function inspectionCursorPillLabeled(id) {
+  const pill = document.getElementById(id);
+  return (
+    pill &&
+    pill.dataset.inspectionPill !== undefined &&
+    pill.dataset.inspectionValue !== undefined &&
+    pill.dataset.inspectionState !== undefined &&
+    pill.getAttribute("aria-label")?.startsWith(`${pill.dataset.inspectionPill}: `) &&
+    pill.title === pill.getAttribute("aria-label")
+  );
+}
+
 function inspectionCursorPillsLabeled() {
-  const ids = [
-    "inspectionCursorSource",
-    "inspectionCursorDelta",
-    "inspectionCursorAudio",
-    "inspectionCursorPlayback",
-    "inspectionCursorView",
-    "inspectionCursorPreview",
-    "inspectionCursorSeek",
-    "inspectionCursorSeekTarget",
-    "inspectionCursorSeekSync",
-    "inspectionCursorTransport",
-    "inspectionCursorTarget",
-    "inspectionCursorDivergence",
-  ];
-  return ids.every((id) => {
-    const pill = document.getElementById(id);
-    return (
-      pill &&
-      pill.dataset.inspectionPill !== undefined &&
-      pill.dataset.inspectionValue !== undefined &&
-      pill.dataset.inspectionState !== undefined &&
-      pill.getAttribute("aria-label")?.startsWith(`${pill.dataset.inspectionPill}: `) &&
-      pill.title === pill.getAttribute("aria-label")
-    );
-  });
+  return inspectionCursorPillIds.every((id) => inspectionCursorPillLabeled(id));
 }
 
 function inspectionCursorLabeled() {
@@ -4364,18 +4367,18 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["waveform-to-signal probe", waveformReady && Boolean(signalPlotProbeAtFrame(0))],
     ["signal-to-waveform probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["inspection cursor", waveformReady && inspectionCursorLabeled()],
-    ["inspection source pill", waveformReady && Boolean(document.getElementById("inspectionCursorSource"))],
-    ["inspection delta pill", waveformReady && Boolean(document.getElementById("inspectionCursorDelta"))],
-    ["inspection audio pill", waveformReady && Boolean(document.getElementById("inspectionCursorAudio"))],
-    ["inspection playback pill", waveformReady && Boolean(document.getElementById("inspectionCursorPlayback"))],
-    ["inspection view pill", waveformReady && Boolean(document.getElementById("inspectionCursorView"))],
-    ["inspection preview pill", waveformReady && Boolean(document.getElementById("inspectionCursorPreview"))],
-    ["inspection seek pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeek"))],
-    ["inspection seek target pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeekTarget"))],
-    ["inspection seek sync pill", waveformReady && Boolean(document.getElementById("inspectionCursorSeekSync"))],
-    ["inspection transport pill", waveformReady && Boolean(document.getElementById("inspectionCursorTransport"))],
-    ["inspection target pill", waveformReady && Boolean(document.getElementById("inspectionCursorTarget"))],
-    ["inspection divergence pill", waveformReady && Boolean(document.getElementById("inspectionCursorDivergence"))],
+    ["inspection source pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorSource")],
+    ["inspection delta pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorDelta")],
+    ["inspection audio pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorAudio")],
+    ["inspection playback pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorPlayback")],
+    ["inspection view pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorView")],
+    ["inspection preview pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorPreview")],
+    ["inspection seek pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorSeek")],
+    ["inspection seek target pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorSeekTarget")],
+    ["inspection seek sync pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorSeekSync")],
+    ["inspection transport pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorTransport")],
+    ["inspection target pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorTarget")],
+    ["inspection divergence pill", waveformReady && inspectionCursorPillLabeled("inspectionCursorDivergence")],
     ["inspection pill labels", waveformReady && inspectionCursorPillsLabeled()],
     [
       "inspection hover delta",
