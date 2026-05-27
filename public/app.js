@@ -3859,8 +3859,22 @@ function reloadManifestControlLabeled() {
   );
 }
 
+function waveformHeaderPillsLabeled(ids) {
+  return ids.every((id) => {
+    const pill = document.getElementById(id);
+    const label = pill?.getAttribute("aria-label") || "";
+    return (
+      pill?.dataset.waveformHeaderLabel !== undefined &&
+      pill.dataset.waveformHeaderValue !== undefined &&
+      pill.dataset.waveformHeaderState === "ok" &&
+      label === `${pill.dataset.waveformHeaderLabel}: ${pill.dataset.waveformHeaderValue}` &&
+      pill.title === `${label} / ok`
+    );
+  });
+}
+
 function currentParameterPillsLabeled() {
-  const ids = [
+  return waveformHeaderPillsLabeled([
     "currentFrequency",
     "currentAmplitude",
     "currentMeasuredFrequency",
@@ -3869,45 +3883,20 @@ function currentParameterPillsLabeled() {
     "currentMeasuredPeakDelta",
     "currentMeasuredStatus",
     "currentParameterStatus",
-  ];
-  return ids.every((id) => {
-    const pill = document.getElementById(id);
-    const label = pill?.getAttribute("aria-label") || "";
-    return (
-      pill?.dataset.waveformHeaderLabel !== undefined &&
-      pill.dataset.waveformHeaderValue !== undefined &&
-      pill.dataset.waveformHeaderState === "ok" &&
-      label === `${pill.dataset.waveformHeaderLabel}: ${pill.dataset.waveformHeaderValue}` &&
-      pill.title === `${label} / ok`
-    );
-  });
+  ]);
 }
 
 function waveformTransportPillsLabeled() {
-  const ids = ["waveformPosition", "waveformSample", "waveformPhase", "waveformPhaseRange"];
-  return ids.every((id) => {
-    const pill = document.getElementById(id);
-    const label = pill?.getAttribute("aria-label") || "";
-    return (
-      pill?.dataset.waveformHeaderLabel !== undefined &&
-      pill.dataset.waveformHeaderValue !== undefined &&
-      pill.dataset.waveformHeaderState === "ok" &&
-      label === `${pill.dataset.waveformHeaderLabel}: ${pill.dataset.waveformHeaderValue}` &&
-      pill.title === `${label} / ok`
-    );
-  });
+  return waveformHeaderPillsLabeled([
+    "waveformPosition",
+    "waveformSample",
+    "waveformPhase",
+    "waveformPhaseRange",
+  ]);
 }
 
 function phaseJumpTargetLabeled() {
-  const target = document.getElementById("waveformPhaseJumpTarget");
-  const label = target?.getAttribute("aria-label") || "";
-  return (
-    target?.dataset.waveformHeaderLabel === "phase jump target" &&
-    target.dataset.waveformHeaderValue !== undefined &&
-    target.dataset.waveformHeaderState === "ok" &&
-    label === `phase jump target: ${target.dataset.waveformHeaderValue}` &&
-    target.title === `${label} / ok`
-  );
+  return waveformHeaderPillsLabeled(["waveformPhaseJumpTarget"]);
 }
 
 function artifactRowsLabeled() {
