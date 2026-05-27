@@ -3547,8 +3547,14 @@ function renderUnavailableChecklist() {
 function renderCheckRows(container, rows) {
   container.replaceChildren();
   for (const [label, ok] of rows) {
+    const stateName = ok ? "ok" : "check";
     const item = document.createElement("div");
     item.className = ok ? "check-row" : "check-row warn-row";
+    item.dataset.checkLabel = label;
+    item.dataset.checkState = stateName;
+    item.setAttribute("role", "group");
+    item.setAttribute("aria-label", `${label}: ${stateName}`);
+    item.title = `${label}: ${stateName}`;
 
     const marker = document.createElement("strong");
     marker.textContent = ok ? "OK" : "Check";
@@ -3780,6 +3786,27 @@ function parameterSummaryCardsLabeled() {
       );
     })
   );
+}
+
+function checkRowsLabeled(containerId, expectedRows) {
+  const rows = [...document.querySelectorAll(`#${containerId} .check-row`)];
+  return (
+    rows.length === expectedRows &&
+    rows.every((row) => {
+      const label = row.getAttribute("aria-label") || "";
+      return (
+        row.dataset.checkLabel !== undefined &&
+        row.dataset.checkState === "ok" &&
+        row.getAttribute("role") === "group" &&
+        label === `${row.dataset.checkLabel}: ok` &&
+        row.title === label
+      );
+    })
+  );
+}
+
+function consumerChecklistRowsLabeled() {
+  return checkRowsLabeled("checklist", 21);
 }
 
 function signalPlotControlsLabeled() {
@@ -4035,6 +4062,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
       waveformReady && document.getElementById("inspectionCursor")?.textContent.includes("hover delta"),
     ],
     ["read-only boundary", validateConsumerChecklist(manifest).accepted],
+    ["consumer checklist row labels", validateConsumerChecklist(manifest).accepted && consumerChecklistRowsLabeled()],
     ["sandbox contract row labels", validateConsumerChecklist(manifest).accepted && sandboxContractRowsLabeled()],
   ];
   const ok = rows.every(([_label, rowOk]) => rowOk);
