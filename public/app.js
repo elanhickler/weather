@@ -3706,6 +3706,10 @@ function phaseCoverageRowsLabeled() {
   return keyValueRowsLabeled("phaseCoverage", 5);
 }
 
+function artifactCoverageRowsLabeled() {
+  return keyValueRowsLabeled("artifactCoverage", 12);
+}
+
 function signalPlotControlsLabeled() {
   const groups = [...document.querySelectorAll("#signalPlotControls .control-group")];
   const buttons = [...document.querySelectorAll("#signalPlotControls button")];
@@ -3892,6 +3896,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["waveform control labels", waveformControlsLabeled()],
     ["report control labels", reportControlsLabeled()],
     ["artifact row labels", artifactRowsLabeled()],
+    ["artifact coverage row labels", artifactCoverageRowsLabeled()],
     ["producer proof row labels", producerProofRowsLabeled()],
     ["boundary flag row labels", boundaryFlagRowsLabeled()],
     ["decoded waveform", waveformReady],
