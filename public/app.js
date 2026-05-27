@@ -4283,6 +4283,14 @@ function phaseListProbeLabeled() {
   return probePillLabeled("phaseProbe");
 }
 
+function signalPlotPointProbeLabeled() {
+  return probePillLabeled("signalPlotProbe");
+}
+
+function signalPlotSourceProbeLabeled() {
+  return probePillLabeled("signalPlotProbeSource");
+}
+
 function signalPlotProbeLabeled() {
   return probePillsLabeled(["signalPlotProbe", "signalPlotProbeSource"]);
 }
@@ -4313,12 +4321,12 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["waveform transport labels", waveformReady && waveformTransportPillsLabeled()],
     ["waveform canvas labels", waveformReady && waveformCanvasLabeled()],
     ["waveform scrubber labels", waveformReady && waveformScrubberLabeled()],
-    ["waveform hover probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
+    ["waveform hover probe", waveformReady && waveformProbeLabeled()],
     ["waveform probe labels", waveformReady && waveformProbeLabeled()],
-    ["level envelope probe", waveformReady && Boolean(document.getElementById("levelEnvelopeProbe"))],
+    ["level envelope probe", waveformReady && levelEnvelopeProbeLabeled()],
     ["level envelope probe labels", waveformReady && levelEnvelopeProbeLabeled()],
     ["level envelope canvas labels", waveformReady && levelEnvelopeCanvasLabeled()],
-    ["parameter timeline probe", waveformReady && Boolean(document.getElementById("parameterTimelineProbe"))],
+    ["parameter timeline probe", waveformReady && parameterTimelineProbeLabeled()],
     ["parameter timeline probe labels", waveformReady && parameterTimelineProbeLabeled()],
     ["parameter timeline segment labels", waveformReady && parameterTimelineSegmentsLabeled()],
     ["parameter timeline preview", waveformReady && Boolean(document.querySelector(".parameter-segment"))],
@@ -4337,19 +4345,19 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["phase jump labels", waveformReady && phaseJumpButtonsLabeled(manifest)],
     ["phase jump target", waveformReady && Boolean(document.getElementById("waveformPhaseJumpTarget"))],
     ["phase jump target labels", waveformReady && phaseJumpTargetLabeled()],
-    ["phase list probe", waveformReady && Boolean(document.getElementById("phaseProbe"))],
+    ["phase list probe", waveformReady && phaseListProbeLabeled()],
     ["phase list probe labels", waveformReady && phaseListProbeLabeled()],
     ["phase list item labels", waveformReady && phaseListItemsLabeled()],
     ["phase preview target", waveformReady && Boolean(document.querySelector(".phase"))],
     ["phase parameter readout", parameterResyncContractIssue(manifest) === ""],
     ["parameter summary card labels", parameterResyncContractIssue(manifest) === "" && parameterSummaryCardsLabeled()],
     ["producer measurement compare", phaseAudioMeasurementIssues(manifest).length === 0],
-    ["phase audio stats probe", waveformReady && Boolean(document.getElementById("phaseAudioStatsProbe"))],
+    ["phase audio stats probe", waveformReady && phaseAudioStatsProbeLabeled()],
     ["phase audio stats probe labels", waveformReady && phaseAudioStatsProbeLabeled()],
     ["phase audio stats item labels", waveformReady && phaseAudioStatsItemsLabeled()],
     ["signal inspection", waveformReady && signalPlotCanvasLabeled()],
-    ["signal plot probe", waveformReady && Boolean(document.getElementById("signalPlotProbe"))],
-    ["signal plot source probe", waveformReady && Boolean(document.getElementById("signalPlotProbeSource"))],
+    ["signal plot probe", waveformReady && signalPlotPointProbeLabeled()],
+    ["signal plot source probe", waveformReady && signalPlotSourceProbeLabeled()],
     ["signal plot probe labels", waveformReady && signalPlotProbeLabeled()],
     ["signal plot control labels", waveformReady && signalPlotControlsLabeled()],
     ["signal plot canvas labels", waveformReady && signalPlotCanvasLabeled()],
