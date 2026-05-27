@@ -6192,6 +6192,12 @@ function nodeSliderLabelText(slider) {
   return slider.id;
 }
 
+function nodeSliderDebugPath(slider) {
+  const node = slider.closest(".dsp-node");
+  const nodeName = node ? nodeGraphNodeDisplayName(node.dataset.node) : "Node";
+  return `${nodeName} : ${nodeSliderLabelText(slider)} : Metadata`;
+}
+
 function positionNodeMetadataPopover(popover, x, y) {
   const margin = 12;
   popover.hidden = false;
@@ -6218,8 +6224,7 @@ function populateNodeMetadataKindChoices() {
 function fillNodeMetadataPopover(slider) {
   populateNodeMetadataKindChoices();
   const metadata = nodeSliderMetadata(slider);
-  document.getElementById("metadataPopoverTitle").textContent =
-    `${nodeSliderLabelText(slider)} Metadata`;
+  document.getElementById("metadataPopoverTitle").textContent = nodeSliderDebugPath(slider);
   document.getElementById("metadataMinValue").value = formatNodeSliderCompactNumber(metadata.min);
   document.getElementById("metadataMidValue").value = formatNodeSliderCompactNumber(metadata.mid);
   document.getElementById("metadataMaxValue").value = formatNodeSliderCompactNumber(metadata.max);
@@ -6228,6 +6233,7 @@ function fillNodeMetadataPopover(slider) {
   document.getElementById("metadataStepValue").value = formatNodeMetadataStep(metadata.step);
   document.getElementById("metadataKindValue").value = metadata.kind;
   document.getElementById("metadataUnitValue").value = metadata.unit;
+  document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
 
 function openNodeMetadataPopover(event, readout) {
@@ -6312,10 +6318,12 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataStepValue").value = formatNodeMetadataStep(template.step);
   document.getElementById("metadataUnitValue").value = template.unit;
   applyNodeMetadataEditor();
+  document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
 
 function handleNodeMetadataKindChange() {
-  setNodeMetadataDefaultsFromKind();
+  applyNodeMetadataEditor();
+  document.getElementById("metadataSetDefaultButton").classList.add("armed");
 }
 
 function handleNodeMetadataEditorInput() {
