@@ -6026,7 +6026,8 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
     return;
   }
 
-  const value = Number(rawValue);
+  const normalizedValue = String(rawValue).trim();
+  const value = Number(normalizedValue);
   if (!Number.isFinite(value)) {
     syncNodeSliderReadout(slider);
     return;
@@ -6140,9 +6141,8 @@ function beginNodeSliderReadoutEdit(readout) {
   }
 
   const input = document.createElement("input");
-  input.type = "number";
+  input.type = "text";
   input.className = "node-slider-readout-input";
-  input.step = "any";
   input.inputMode = "decimal";
   input.value = formatNodeSliderNumber(slider.value);
   input.dataset.sliderTarget = slider.id;
