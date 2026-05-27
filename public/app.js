@@ -7820,7 +7820,6 @@ function initNodeGraphMvp() {
   document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio);
   document.getElementById("nodePlayButton").addEventListener("click", playNodeGraphAudio);
   document.getElementById("nodeDefaultButton").addEventListener("click", restoreDefaultNodeGraph);
-  document.getElementById("nodeClearButton").addEventListener("click", clearNodeGraphWires);
   document.getElementById("nodeDeleteButton").addEventListener("click", deleteSelectedNodeGraphItem);
   document.getElementById("toggleDebugButton").addEventListener("click", toggleDebugSections);
   document

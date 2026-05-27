@@ -184,7 +184,6 @@ REQUIRED_SHELL_IDS = {
     "manifestStatus",
     "nodeAudioStats",
     "nodeBiasAmount",
-    "nodeClearButton",
     "nodeConnectionList",
     "nodeDefaultButton",
     "nodeDeleteButton",
@@ -2888,6 +2887,12 @@ def require_node_graph_mvp_contract() -> None:
         "Set Defaults from Kind",
     ]:
         require(snippet in index_source, f"node graph shell missing {snippet}")
+
+    for snippet in [
+        "nodeClearButton",
+        "Clear Wires",
+    ]:
+        require(snippet not in index_source, f"dangerous clear wires control should be absent: {snippet}")
 
     workspace_index = index_source.index("nodeGraphWorkspace")
     audio_index = index_source.index("audioPlayer")
