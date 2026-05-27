@@ -2114,6 +2114,7 @@ function setPlayheadFrame(frame) {
 async function renderWaveform(path) {
   const status = document.getElementById("waveformStatus");
   const meta = document.getElementById("waveformMeta");
+  const canvas = document.getElementById("waveformCanvas");
   status.textContent = "Loading";
   status.className = "pill";
 
@@ -2140,6 +2141,18 @@ async function renderWaveform(path) {
     renderHandsOnReadiness(state.response?.manifest, true);
     const wav = state.response?.manifest?.wav || {};
     const stats = state.waveform.stats;
+    canvas.dataset.waveformSource = "decoded primary WAV";
+    canvas.dataset.waveformSampleRate = String(state.waveform.sampleRate);
+    canvas.dataset.waveformChannels = String(state.waveform.channels);
+    canvas.dataset.waveformBitDepth = String(state.waveform.bitsPerSample);
+    canvas.dataset.waveformFrames = String(state.waveform.frames);
+    canvas.dataset.waveformDataBytes = String(state.waveform.dataBytes);
+    canvas.dataset.waveformFileBytes = String(state.waveform.fileBytes);
+    canvas.dataset.waveformPeak = formatCompactNumber(stats.peak);
+    canvas.dataset.waveformRms = formatCompactNumber(stats.rms);
+    canvas.title =
+      `Primary WAV waveform / ${state.waveform.frames} frames / ` +
+      `${state.waveform.sampleRate} Hz / peak ${formatCompactNumber(stats.peak)} / rms ${formatCompactNumber(stats.rms)}`;
     renderKeyValue(meta, [
       ["sample rate", String(state.waveform.sampleRate), manifestNumberText(wav.sampleRate)],
       ["channels", String(state.waveform.channels), manifestNumberText(wav.channels)],
@@ -2161,6 +2174,16 @@ async function renderWaveform(path) {
     state.waveform = null;
     resetWaveformTransientState();
     state.playheadFrame = 0;
+    canvas.dataset.waveformSource = "unavailable";
+    canvas.dataset.waveformSampleRate = "unavailable";
+    canvas.dataset.waveformChannels = "unavailable";
+    canvas.dataset.waveformBitDepth = "unavailable";
+    canvas.dataset.waveformFrames = "unavailable";
+    canvas.dataset.waveformDataBytes = "unavailable";
+    canvas.dataset.waveformFileBytes = "unavailable";
+    canvas.dataset.waveformPeak = "unavailable";
+    canvas.dataset.waveformRms = "unavailable";
+    canvas.title = "Primary WAV waveform unavailable";
     renderUnavailableWaveformMeta();
     renderWaveformPhaseControls();
     renderLevelEnvelope();
@@ -3471,6 +3494,23 @@ function waveformScrubberLabeled() {
   );
 }
 
+function waveformCanvasLabeled() {
+  const canvas = document.getElementById("waveformCanvas");
+  return (
+    canvas?.getAttribute("aria-label") === "Primary WAV waveform" &&
+    canvas.dataset.waveformSource === "decoded primary WAV" &&
+    canvas.dataset.waveformSampleRate !== undefined &&
+    canvas.dataset.waveformChannels !== undefined &&
+    canvas.dataset.waveformBitDepth !== undefined &&
+    canvas.dataset.waveformFrames !== undefined &&
+    canvas.dataset.waveformDataBytes !== undefined &&
+    canvas.dataset.waveformFileBytes !== undefined &&
+    canvas.dataset.waveformPeak !== undefined &&
+    canvas.dataset.waveformRms !== undefined &&
+    Boolean(canvas.title)
+  );
+}
+
 function levelEnvelopeCanvasLabeled() {
   const canvas = document.getElementById("levelEnvelopeCanvas");
   return (
@@ -3662,6 +3702,7 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["artifact row labels", artifactRowsLabeled()],
     ["decoded waveform", waveformReady],
     ["waveform seek", waveformReady && Number(manifest?.wav?.frames) > 0],
+    ["waveform canvas labels", waveformReady && waveformCanvasLabeled()],
     ["waveform scrubber labels", waveformReady && waveformScrubberLabeled()],
     ["waveform hover probe", waveformReady && Boolean(document.getElementById("waveformProbe"))],
     ["waveform probe labels", waveformReady && waveformProbeLabeled()],
