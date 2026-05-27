@@ -6549,9 +6549,13 @@ function nodeGraphNodeDisplayName(node) {
 }
 
 function nodeGraphReadNodeNumber(node, key) {
-  const input = nodeGraphNodeElement(node)?.querySelector(`[data-param="${key}"]`);
+  const input = nodeGraphNodeElement(node)?.querySelector(
+    `input[data-param="${CSS.escape(key)}"]`,
+  );
   const value = Number(input?.value);
-  return Number.isFinite(value) ? value : 0;
+  return Number.isFinite(value)
+    ? value
+    : nodeGraphParameterFallback(nodeGraphNodeType(node), key);
 }
 
 function nodeGraphParameterFallback(type, key) {
@@ -8265,6 +8269,15 @@ function setNodeGraphLiveStatus(text, state = "") {
   status.className = `pill ${state}`.trim();
 }
 
+function setNodeGraphLiveMeter(peak = 0, rms = 0) {
+  const meter = document.getElementById("nodeLiveMeter");
+  if (!meter) {
+    return;
+  }
+  meter.textContent = `live peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
+  meter.className = `pill ${peak > 0.001 ? "good" : ""}`.trim();
+}
+
 function renderNodeGraphLiveControls(running = Boolean(nodeGraphMvp.live.node)) {
   const starting = document.getElementById("nodeLiveStatus")?.textContent === "starting";
   document.getElementById("nodeStartLiveButton").disabled = running || starting;
@@ -8358,6 +8371,7 @@ async function stopNodeGraphLiveAudio() {
     await liveContext.close();
   }
   setNodeGraphLiveStatus("stopped");
+  setNodeGraphLiveMeter();
   document.getElementById("nodeLiveStatus").removeAttribute("title");
   renderNodeGraphLiveControls(false);
 }
@@ -8391,6 +8405,9 @@ async function startNodeGraphLiveAudio() {
       if (event.data?.type === "error") {
         setNodeGraphLiveStatus("error", "warn");
         document.getElementById("nodeLiveStatus").title = event.data.message || "live audio error";
+      }
+      if (event.data?.type === "meter") {
+        setNodeGraphLiveMeter(Number(event.data.peak) || 0, Number(event.data.rms) || 0);
       }
     };
 

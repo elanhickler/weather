@@ -3,6 +3,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     super();
     this.connections = [];
     this.inputConnections = new Map();
+    this.meterCounter = 0;
+    this.meterPeak = 0;
+    this.meterSamples = 0;
+    this.meterSquareSum = 0;
     this.nodes = new Map();
     this.noiseSeeds = new Map();
     this.outputNode = "output";
@@ -122,9 +126,24 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         -0.95,
         Math.min(0.95, this.evaluateNode(this.outputNode, new Map(), new Set())),
       );
+      this.meterPeak = Math.max(this.meterPeak, Math.abs(value));
+      this.meterSquareSum += value * value;
+      this.meterSamples += 1;
       for (const channel of output) {
         channel[frame] = value;
       }
+    }
+    this.meterCounter += frames;
+    if (this.meterCounter >= sampleRate / 10) {
+      this.port.postMessage({
+        peak: this.meterPeak,
+        rms: Math.sqrt(this.meterSquareSum / Math.max(1, this.meterSamples)),
+        type: "meter",
+      });
+      this.meterCounter = 0;
+      this.meterPeak = 0;
+      this.meterSamples = 0;
+      this.meterSquareSum = 0;
     }
     return true;
   }
