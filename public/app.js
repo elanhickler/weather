@@ -4107,6 +4107,15 @@ function checkRowsLabeled(containerId, expectedRows) {
   );
 }
 
+function checkRowsHaveUniqueLabels(rows) {
+  const labels = rows.map(([label]) => label);
+  return (
+    labels.length > 0 &&
+    labels.every((label) => typeof label === "string" && label.trim().length > 0) &&
+    new Set(labels).size === labels.length
+  );
+}
+
 function consumerChecklistRowsLabeled() {
   return checkRowsLabeled("checklist", 21);
 }
@@ -4425,6 +4434,10 @@ function renderHandsOnReadiness(manifest, waveformReady = Boolean(state.waveform
     ["consumer checklist row labels", validateConsumerChecklist(manifest).accepted && consumerChecklistRowsLabeled()],
     ["sandbox contract row labels", validateConsumerChecklist(manifest).accepted && sandboxContractRowsLabeled()],
   ];
+  rows.push([
+    "readiness row labels",
+    checkRowsHaveUniqueLabels([...rows, ["readiness row labels", true]]),
+  ]);
   const ok = rows.every(([_label, rowOk]) => rowOk);
 
   setStatus("handsOnReadinessStatus", ok ? "Ready" : "Check", ok);
