@@ -6781,8 +6781,24 @@ function createNodeSliderReadout(slider) {
   syncNodeSliderReadout(slider);
 }
 
+function ensureNodeGraphDragHandle(node) {
+  const title = node.querySelector(".dsp-node-title");
+  if (!title || title.querySelector(".node-drag-handle")) {
+    return;
+  }
+
+  const handle = document.createElement("button");
+  handle.className = "node-drag-handle";
+  handle.type = "button";
+  handle.setAttribute("aria-label", `Move ${nodeGraphNodeDisplayName(node.dataset.node)} module`);
+  handle.setAttribute("title", "Move module");
+  handle.innerHTML = "&#x2725;";
+  title.prepend(handle);
+}
+
 function attachNodeGraphNodeEvents(node) {
-  node.addEventListener("pointerdown", beginNodeGraphNodeDrag);
+  ensureNodeGraphDragHandle(node);
+  node.querySelector(".node-drag-handle")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
   node.addEventListener("pointermove", dragNodeGraphNode);
   node.addEventListener("pointerup", endNodeGraphNodeDrag);
   node.addEventListener("pointercancel", endNodeGraphNodeDrag);
@@ -6841,6 +6857,13 @@ function createNodeGraphModuleElement(type, node) {
 
   const title = document.createElement("div");
   title.className = "dsp-node-title";
+  const handle = document.createElement("button");
+  handle.className = "node-drag-handle";
+  handle.type = "button";
+  handle.setAttribute("aria-label", `Move ${nodeGraphNodeLabels[type]} module`);
+  handle.setAttribute("title", "Move module");
+  handle.innerHTML = "&#x2725;";
+  title.append(handle);
   for (const port of definition.inputs || []) {
     title.append(createNodeGraphPort(node, type, port, "input"));
   }
@@ -7304,23 +7327,31 @@ function openNodeSceneContextMenu(event) {
 }
 
 function beginNodeGraphNodeDrag(event) {
-  if (event.target.closest(".node-port, input, button, label")) {
+  const handle = event.currentTarget.closest(".node-drag-handle");
+  if (!handle) {
     return;
   }
 
-  const node = event.currentTarget;
+  const node = handle.closest(".dsp-node");
+  if (!node) {
+    return;
+  }
   setNodeGraphSelection({ type: "node", id: node.dataset.node });
   const workspace = document.getElementById("nodeGraphWorkspace");
   const nodeRect = node.getBoundingClientRect();
   const workspaceRect = workspace.getBoundingClientRect();
   const point = nodeGraphClientPoint(event);
   nodeGraphMvp.nodeDragging = {
+    handle,
     node,
     offsetX: point.x - (nodeRect.left - workspaceRect.left),
     offsetY: point.y - (nodeRect.top - workspaceRect.top),
   };
   node.classList.add("dragging");
-  node.setPointerCapture(event.pointerId);
+  handle.classList.add("dragging");
+  handle.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 function dragNodeGraphNode(event) {
@@ -7342,10 +7373,11 @@ function endNodeGraphNodeDrag(event) {
     return;
   }
 
-  const { node } = nodeGraphMvp.nodeDragging;
+  const { handle, node } = nodeGraphMvp.nodeDragging;
   node.classList.remove("dragging");
-  if (node.hasPointerCapture?.(event.pointerId)) {
-    node.releasePointerCapture(event.pointerId);
+  handle.classList.remove("dragging");
+  if (handle.hasPointerCapture?.(event.pointerId)) {
+    handle.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.nodeDragging = null;
   drawNodeGraphWires();

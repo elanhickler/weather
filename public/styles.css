@@ -217,7 +217,7 @@ audio {
   border-radius: 8px;
   background: rgba(27, 30, 34, 0.96);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
-  cursor: grab;
+  cursor: default;
   pointer-events: auto;
 }
 
@@ -227,7 +227,6 @@ audio {
 
 .dsp-node.dragging {
   border-color: rgba(226, 168, 109, 0.62);
-  cursor: grabbing;
 }
 
 .dsp-node.selected {
@@ -254,6 +253,23 @@ audio {
 .dsp-node-title span {
   overflow-wrap: anywhere;
   font-weight: 650;
+}
+
+.node-drag-handle {
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border-color: rgba(243, 241, 236, 0.18);
+  border-radius: 5px;
+  color: var(--accent);
+  cursor: move;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.node-drag-handle:active,
+.node-drag-handle.dragging {
+  color: var(--accent-2);
 }
 
 .dsp-node label {

@@ -2927,6 +2927,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeSliderDebugPath(slider)",
         "function nodeGraphNodeType(node)",
         "function nodeGraphReadNodeNumber(node, key)",
+        "function ensureNodeGraphDragHandle(node)",
         "function attachNodeGraphNodeEvents(node)",
         "function createNodeGraphModuleElement(type, node)",
         "function registerExistingNodeGraphNodes()",
@@ -2997,6 +2998,9 @@ def require_node_graph_mvp_contract() -> None:
         "unitText.classList.toggle(\"is-empty\", !unit)",
         "function nodeGraphValidate()",
         "function beginNodeGraphNodeDrag(event)",
+        "node.querySelector(\".node-drag-handle\")?.addEventListener(\"pointerdown\", beginNodeGraphNodeDrag)",
+        "handle.setPointerCapture(event.pointerId)",
+        "handle.classList.add(\"dragging\")",
         "function dragNodeGraphNode(event)",
         "function endNodeGraphNodeDrag(event)",
         "node.style.setProperty(\"--node-x\"",
@@ -3034,6 +3038,11 @@ def require_node_graph_mvp_contract() -> None:
     ]:
         require(snippet in app_source, f"node graph source missing {snippet}")
 
+    require(
+        'node.addEventListener("pointerdown", beginNodeGraphNodeDrag)' not in app_source,
+        "module body should not start node drag",
+    )
+
     for snippet in [
         'if (event.key === "Escape" && nodeGraphMvp.metadataEditorTarget)',
         "closeNodeMetadataPopover();\n  nodeGraphMvp.sceneContextPoint",
@@ -3052,6 +3061,8 @@ def require_node_graph_mvp_contract() -> None:
         ".dsp-node.dragging",
         ".dsp-node.selected",
         ".dsp-node.removed",
+        ".node-drag-handle",
+        ".node-drag-handle.dragging",
         "pointer-events: auto;",
         ".node-port.output",
         ".node-port.input",
