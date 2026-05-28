@@ -362,6 +362,11 @@ audio {
   filter: drop-shadow(0 0 4px rgba(177, 132, 255, 0.22));
 }
 
+.node-wire-path.inactive-wire {
+  opacity: 0.32;
+  stroke-dasharray: 3 7;
+}
+
 .node-wire-hit-path {
   fill: none;
   stroke: rgba(255, 255, 255, 0.001);
@@ -969,6 +974,12 @@ audio {
 .node-connection-list li.state-read {
   border-color: rgba(177, 132, 255, 0.52);
   background: rgba(177, 132, 255, 0.1);
+}
+
+.node-connection-list li.inactive-wire {
+  border-color: rgba(243, 241, 236, 0.16);
+  background: rgba(243, 241, 236, 0.05);
+  color: var(--muted);
 }
 
 .node-execution-plan-heading {

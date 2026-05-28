@@ -8968,7 +8968,9 @@ function drawNodeGraphWires() {
   if (!workspace || !svg) {
     return;
   }
-  const feedbackSets = nodeGraphFeedbackIdentitySets(compileNodeGraphExecutionPlan());
+  const plan = compileNodeGraphExecutionPlan();
+  const feedbackSets = nodeGraphFeedbackIdentitySets(plan);
+  const activeNodeIds = nodeGraphActiveNodeIds(plan);
 
   const graphRect = nodeGraphGraphRect();
   svg.setAttribute("viewBox", `0 0 ${graphRect.width} ${graphRect.height}`);
@@ -8994,12 +8996,18 @@ function drawNodeGraphWires() {
       connection.destinationPort,
       "input",
     );
+    const isFeedback = feedbackSets.signal.has(nodeGraphSignalWireIdentity(connection));
+    const isInactive = !nodeGraphSignalConnectionIsActive(connection, activeNodeIds);
     drawNodeGraphWirePath(svg, {
       from,
       gradientId: `node-wire-gradient-${index}`,
       index,
       kind: "signal",
-      pathClass: `node-wire-path${feedbackSets.signal.has(nodeGraphSignalWireIdentity(connection)) ? " state-read" : ""}`,
+      pathClass: [
+        "node-wire-path",
+        isFeedback ? "state-read" : "",
+        isInactive ? "inactive-wire" : "",
+      ].filter(Boolean).join(" "),
       to,
     });
 
@@ -9020,13 +9028,20 @@ function drawNodeGraphWires() {
       modulation.destinationNode,
       modulation.destinationParam,
     );
+    const isFeedback = feedbackSets.modulation.has(nodeGraphModulationWireIdentity(modulation));
+    const isInactive = !nodeGraphModulationIsActive(modulation, activeNodeIds);
     drawNodeGraphWirePath(svg, {
       from,
       gradientClass: "node-modulation-wire-gradient-stop",
       gradientId: `node-modulation-wire-gradient-${index}`,
       index,
       kind: "modulation",
-      pathClass: `node-wire-path node-modulation-wire-path${feedbackSets.modulation.has(nodeGraphModulationWireIdentity(modulation)) ? " state-read" : ""}`,
+      pathClass: [
+        "node-wire-path",
+        "node-modulation-wire-path",
+        isFeedback ? "state-read" : "",
+        isInactive ? "inactive-wire" : "",
+      ].filter(Boolean).join(" "),
       to,
     });
 
@@ -9072,6 +9087,7 @@ function renderNodeGraphConnectionList() {
   const source = document.getElementById("nodeGraphSource");
   const validationPill = document.getElementById("nodeGraphValidation");
   const feedbackSets = nodeGraphFeedbackIdentitySets(plan);
+  const activeNodeIds = nodeGraphActiveNodeIds(plan);
 
   list.replaceChildren();
   let renderedWireCount = 0;
@@ -9093,11 +9109,13 @@ function renderNodeGraphConnectionList() {
     item.addEventListener("click", () => setNodeGraphSelection({ type: "wire", kind: "signal", index }));
     const label = document.createElement("span");
     const isFeedback = feedbackSets.signal.has(nodeGraphSignalWireIdentity(connection));
+    const isInactive = !nodeGraphSignalConnectionIsActive(connection, activeNodeIds);
     label.textContent = `${nodeGraphLabel(connection.sourceNode, connection.sourcePort)} -> ${nodeGraphLabel(
       connection.destinationNode,
       connection.destinationPort,
-    )}${isFeedback ? " (state read)" : ""}`;
+    )}${isFeedback ? " (state read)" : ""}${isInactive ? " (inactive)" : ""}`;
     item.classList.toggle("state-read", isFeedback);
+    item.classList.toggle("inactive-wire", isInactive);
     const button = document.createElement("button");
     button.className = "disconnect-wire-button";
     button.type = "button";
@@ -9132,10 +9150,12 @@ function renderNodeGraphConnectionList() {
     item.addEventListener("click", () => setNodeGraphSelection({ type: "wire", kind: "modulation", index }));
     const label = document.createElement("span");
     const isFeedback = feedbackSets.modulation.has(nodeGraphModulationWireIdentity(modulation));
+    const isInactive = !nodeGraphModulationIsActive(modulation, activeNodeIds);
     label.textContent = `${nodeGraphLabel(modulation.sourceNode, modulation.sourcePort)} -> ${nodeGraphNodeDisplayName(
       modulation.destinationNode,
-    )}.${modulation.destinationParam} mod${isFeedback ? " (state read)" : ""}`;
+    )}.${modulation.destinationParam} mod${isFeedback ? " (state read)" : ""}${isInactive ? " (inactive)" : ""}`;
     item.classList.toggle("state-read", isFeedback);
+    item.classList.toggle("inactive-wire", isInactive);
     const button = document.createElement("button");
     button.className = "disconnect-wire-button";
     button.type = "button";
