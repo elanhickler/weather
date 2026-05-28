@@ -105,6 +105,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   setParams(nodes, message = {}) {
     this.planSerial = message.planSerial || 0;
     this.sessionId = message.sessionId || 0;
+    let parameterCount = 0;
     for (const node of Array.isArray(nodes) ? nodes : []) {
       const current = this.nodes.get(node.id);
       if (!current) {
@@ -112,6 +113,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       }
       current.params = { ...(node.params || {}) };
       current.paramMeta = { ...(node.paramMeta || {}) };
+      parameterCount += Object.keys(current.params || {}).length;
       for (const [key, value] of Object.entries(current.params || {})) {
         const smootherKey = this.parameterKey(node.id, key);
         const metadata = current.paramMeta?.[key];
@@ -125,6 +127,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.port.postMessage({
       nodeCount: this.nodes.size,
       order: [...this.order],
+      parameterCount,
       planSerial: this.planSerial,
       sessionId: this.sessionId,
       type: "paramsApplied",

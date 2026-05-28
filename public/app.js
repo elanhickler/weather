@@ -9613,15 +9613,22 @@ function nodeGraphLivePlanSentStatusText(serial = nodeGraphMvp.live.planSerial) 
   return `plan${serialText} sent`;
 }
 
-function nodeGraphLiveParametersSentStatusText(serial = nodeGraphMvp.live.planSerial) {
+function nodeGraphLiveParameterCount(nodes = []) {
+  return (nodes || []).reduce(
+    (total, node) => total + Object.keys(node.params || {}).length,
+    0,
+  );
+}
+
+function nodeGraphLiveParametersSentStatusText(nodes = [], serial = nodeGraphMvp.live.planSerial) {
   const serialText = serial ? ` #${serial}` : "";
-  return `params${serialText} sent`;
+  return `params${serialText} sent ${nodes.length} nodes / ${nodeGraphLiveParameterCount(nodes)} params`;
 }
 
 function nodeGraphLiveParametersAppliedStatusText(message) {
   const serial = Number(message.planSerial) || 0;
   const serialText = serial ? ` #${serial}` : "";
-  return `params${serialText} applied`;
+  return `params${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.parameterCount) || 0} params`;
 }
 
 function nodeGraphLivePlanAppliedStatusText(message) {
@@ -10158,7 +10165,7 @@ function sendNodeGraphLiveParameterUpdate() {
     const nodes = nodeGraphBuildLiveParameterNodes();
     nodeGraphMvp.live.planSerial += 1;
     if (nodeGraphMvp.live.usesWorklet) {
-      setNodeGraphLivePlanStatus(nodeGraphLiveParametersSentStatusText(), "warn");
+      setNodeGraphLivePlanStatus(nodeGraphLiveParametersSentStatusText(nodes), "warn");
       nodeGraphMvp.live.node?.port?.postMessage({
         nodes,
         planSerial: nodeGraphMvp.live.planSerial,
@@ -10169,6 +10176,8 @@ function sendNodeGraphLiveParameterUpdate() {
       updateNodeGraphLiveRuntimeParameters(nodeGraphMvp.live.runtime, nodes);
       setNodeGraphLivePlanStatus(
         nodeGraphLiveParametersAppliedStatusText({
+          nodeCount: nodes.length,
+          parameterCount: nodeGraphLiveParameterCount(nodes),
           planSerial: nodeGraphMvp.live.planSerial,
         }),
         "good",
