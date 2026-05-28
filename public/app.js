@@ -8344,7 +8344,12 @@ function openNodeModuleActionMenu(event) {
 }
 
 function openNodeSceneContextMenu(event) {
-  if (event.target.closest(".dsp-node, .node-port, .node-param-port, .node-slider-readout")) {
+  if (event.target.closest(".dsp-node")) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (event.target.closest(".node-port, .node-param-port, .node-slider-readout")) {
     return;
   }
 
