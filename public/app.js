@@ -10699,11 +10699,10 @@ function beginNodeGraphNodeDrag(event) {
 
   const selectedNodeIds = nodeGraphSelectedNodeIds();
   const wasSelectedAtStart = selectedNodeIds.has(node.dataset.node);
-  if (!selectedNodeIds.has(node.dataset.node)) {
-    setNodeGraphSelection({ type: "node", id: node.dataset.node });
-  }
   const point = nodeGraphClientPoint(event);
-  const draggedNodeIds = nodeGraphSelectedNodeIds();
+  const draggedNodeIds = wasSelectedAtStart
+    ? selectedNodeIds
+    : new Set([node.dataset.node]);
   const draggedNodes = [...draggedNodeIds]
     .map((id) => nodeGraphNodeElement(id))
     .filter(Boolean)
@@ -10744,7 +10743,9 @@ function dragNodeGraphNode(event) {
   const point = nodeGraphClientPoint(event);
   const deltaX = point.x - startPoint.x;
   const deltaY = point.y - startPoint.y;
-  nodeGraphMvp.nodeDragging.moved = true;
+  if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+    nodeGraphMvp.nodeDragging.moved = true;
+  }
   for (const dragged of draggedNodes) {
     positionNodeGraphNode(dragged.element, {
       x: dragged.startX + deltaX,
@@ -10759,7 +10760,7 @@ function endNodeGraphNodeDrag(event) {
     return;
   }
 
-  const { draggedNodes, handle, moved, wasSelectedAtStart } = nodeGraphMvp.nodeDragging;
+  const { draggedNodes, handle, moved, node, wasSelectedAtStart } = nodeGraphMvp.nodeDragging;
   for (const dragged of draggedNodes) {
     dragged.element.classList.remove("dragging");
   }
@@ -10771,6 +10772,8 @@ function endNodeGraphNodeDrag(event) {
   if (!moved) {
     if (wasSelectedAtStart) {
       setNodeGraphSelection(null);
+    } else {
+      setNodeGraphSelection({ type: "node", id: node.dataset.node });
     }
     return;
   }
