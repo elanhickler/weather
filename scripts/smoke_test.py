@@ -3427,6 +3427,8 @@ def require_node_graph_mvp_contract() -> None:
         "setNodeGraphLiveEvidence(\"plan-applied\"",
         "setNodeGraphLiveEvidence(\"params-sent\"",
         "setNodeGraphLiveEvidence(\"params-applied\"",
+        "setNodeGraphLiveEvidence(\"script-blocked\"",
+        "setNodeGraphLiveEvidence(\"processor-error\"",
         "setNodeGraphLiveEvidence(\"stopped\")",
         "function nodeGraphLivePlanStatusText(plan, serial = nodeGraphMvp.live.planSerial)",
         "const fingerprintText = plan.patchFingerprint ?",

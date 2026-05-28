@@ -6879,6 +6879,9 @@ function markNodeGraphRenderScriptBlocked() {
 
 function markNodeGraphLiveScriptBlocked() {
   const message = "fix script before live audio";
+  setNodeGraphLiveEvidence("script-blocked", {
+    patchFingerprint: nodeGraphPatchFingerprint(),
+  });
   setNodeGraphLiveStatus("error", "warn");
   setNodeGraphLivePlanStatus("plan blocked", "warn");
   setNodeGraphLivePlanTitle(message);
@@ -10309,6 +10312,9 @@ function setNodeGraphLiveEngineTitle(text = "") {
 function setNodeGraphLiveProcessorError(message = "AudioWorklet processor error") {
   setNodeGraphLiveOutputMuted(true);
   nodeGraphMvp.live.runtime = null;
+  setNodeGraphLiveEvidence("processor-error", {
+    patchFingerprint: nodeGraphPatchFingerprint(),
+  });
   setNodeGraphLiveStatus("error", "warn");
   setNodeGraphLiveEngineStatus("engine error", "warn");
   setNodeGraphLiveEngineTitle(message);
