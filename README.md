@@ -86,7 +86,8 @@ stored-output:
   a time-linked audiovisual proof
 - rendered visual output can be saved from the browser as a clean PNG without
   the playback cursor overlay; this is a client-side export of the current
-  visual artifact, not server persistence
+  visual artifact, not server persistence, and the filename includes the
+  rendered patch fingerprint
 
 Render Sample and Live Audio expose patch evidence for debugging:
 

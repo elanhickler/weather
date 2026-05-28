@@ -10671,8 +10671,9 @@ function nodeGraphPatchFileName() {
   return `${safeName || "soemdsp-patch"}.json`;
 }
 
-function nodeGraphVisualOutputFileName() {
-  return nodeGraphPatchFileName().replace(/\.json$/i, "-visual.png");
+function nodeGraphVisualOutputFileName(fingerprint = nodeGraphMvp.rendered?.patchFingerprint || nodeGraphPatchFingerprint()) {
+  const fingerprintSuffix = fingerprint ? `-${fingerprint}` : "";
+  return nodeGraphPatchFileName().replace(/\.json$/i, `${fingerprintSuffix}-visual.png`);
 }
 
 function saveNodeGraphScript() {
@@ -12184,6 +12185,7 @@ function drawNodeRenderedVisualOutput(options = {}) {
       canvas.dataset.visualPlaybackState = "idle";
       canvas.dataset.visualExportIncludesPlaybackCursor = "false";
       canvas.dataset.visualExportReady = "false";
+      canvas.dataset.visualPatchFingerprint = "";
       canvas.title = "Node graph visual output waiting for Render Sample";
       setNodeVisualOutputExportReady(false);
       renderNodeVisualOutputMeta({
@@ -12293,6 +12295,7 @@ function drawNodeRenderedVisualOutput(options = {}) {
     canvas.dataset.visualTheme = visualSettings.theme;
     canvas.dataset.visualTrail = String(visualSettings.trail);
     canvas.dataset.visualFrames = String(sourceSamples.length);
+    canvas.dataset.visualPatchFingerprint = rendered.patchFingerprint || "";
     canvas.dataset.visualPeak = formatCompactNumber(rendered.peak || 0);
     canvas.dataset.visualRms = formatCompactNumber(rendered.rms || 0);
     canvas.title =
@@ -12303,6 +12306,7 @@ function drawNodeRenderedVisualOutput(options = {}) {
       Mode: visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode,
       Peak: canvas.dataset.visualPeak,
       Playback: playbackFrame === null ? "idle" : `frame ${playbackFrame}`,
+      Patch: canvas.dataset.visualPatchFingerprint,
       RMS: canvas.dataset.visualRms,
       Scale: visualSettings.scale,
       Source: canvas.dataset.visualSource,
@@ -12344,7 +12348,7 @@ function saveNodeGraphVisualOutputPng() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = nodeGraphVisualOutputFileName();
+    link.download = nodeGraphVisualOutputFileName(nodeGraphMvp.rendered?.patchFingerprint);
     document.body.append(link);
     link.click();
     link.remove();
