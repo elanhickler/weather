@@ -6604,7 +6604,14 @@ function validateNodeGraphPatch(patch) {
 }
 
 function loadNodeGraphPatchFromScript(text) {
-  return validateNodeGraphPatch(JSON.parse(text));
+  try {
+    return validateNodeGraphPatch(JSON.parse(text));
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(`script JSON parse failed: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 function setNodeGraphScriptStatus(message, ok = true) {

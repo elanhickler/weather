@@ -3102,6 +3102,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphReadPatchParameterMetadata(node, key)",
         "function nodeGraphPatchChoiceLabel(metadata, value)",
         "function loadNodeGraphPatchFromScript(text)",
+        "script JSON parse failed:",
         "function commitNodeGraphPatch(patch, options = {})",
         "function recordNodeGraphHistory()",
         "function undoNodeGraphPatch()",
