@@ -9525,6 +9525,11 @@ function nodeGraphLivePlanStatusText(plan, serial = nodeGraphMvp.live.planSerial
   return `plan${serialText} ${plan.nodes.length} nodes / ${plan.connections.length} wires / ${plan.modulations.length} mods`;
 }
 
+function nodeGraphLivePlanSentStatusText(serial = nodeGraphMvp.live.planSerial) {
+  const serialText = serial ? ` #${serial}` : "";
+  return `plan${serialText} sent`;
+}
+
 function nodeGraphLivePlanAppliedStatusText(message) {
   const serial = Number(message.planSerial) || 0;
   const serialText = serial ? ` #${serial}` : "";
@@ -9978,7 +9983,7 @@ function sendNodeGraphLivePlan() {
     const plan = nodeGraphBuildLivePlan();
     nodeGraphMvp.live.planSerial += 1;
     if (nodeGraphMvp.live.usesWorklet) {
-      setNodeGraphLivePlanStatus("plan sent", "warn");
+      setNodeGraphLivePlanStatus(nodeGraphLivePlanSentStatusText(), "warn");
       nodeGraphMvp.live.node?.port?.postMessage({
         plan,
         planSerial: nodeGraphMvp.live.planSerial,
