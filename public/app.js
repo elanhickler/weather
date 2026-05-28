@@ -7047,7 +7047,7 @@ function nodeGraphNodeType(node) {
 
 function nodeGraphNodeDisplayName(node) {
   const element = nodeGraphNodeElement(node);
-  const title = element?.querySelector(".dsp-node-title span")?.textContent?.trim();
+  const title = element?.querySelector(".node-header-title")?.textContent?.trim();
   return title || nodeGraphNodeLabels[nodeGraphNodeType(node)] || node;
 }
 
@@ -8131,8 +8131,8 @@ function createNodeSliderReadout(slider) {
 }
 
 function ensureNodeGraphDragHandle(node) {
-  const title = node.querySelector(".dsp-node-title");
-  if (!title || title.querySelector(".node-drag-handle")) {
+  const actions = node.querySelector(".node-header-actions");
+  if (!actions || actions.querySelector(".node-drag-handle")) {
     return;
   }
 
@@ -8142,7 +8142,7 @@ function ensureNodeGraphDragHandle(node) {
   handle.setAttribute("aria-label", `Move ${nodeGraphNodeDisplayName(node.dataset.node)} module`);
   handle.setAttribute("title", "Move module");
   handle.innerHTML = "&#x2725;";
-  title.prepend(handle);
+  actions.prepend(handle);
 }
 
 function attachNodeGraphNodeEvents(node) {
@@ -8273,24 +8273,23 @@ function createNodeGraphModuleElement(type, node) {
   article.style.setProperty("--node-grid-height-units", String(nodeGraphModuleGridHeightUnits(type)));
 
   const header = document.createElement("div");
-  header.className = "dsp-node-header dsp-node-title";
+  header.className = "dsp-node-header";
+  const actionRow = document.createElement("div");
+  actionRow.className = "node-header-actions";
   const handle = document.createElement("button");
   handle.className = "node-drag-handle";
   handle.type = "button";
   handle.setAttribute("aria-label", `Move ${nodeGraphNodeLabels[type]} module`);
   handle.setAttribute("title", "Move module");
   handle.innerHTML = "&#x2725;";
-  header.append(handle);
-  const titleText = document.createElement("span");
-  titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
-  header.append(titleText);
+  actionRow.append(handle);
   const orderBadge = document.createElement("span");
   orderBadge.className = "node-execution-order-badge";
   orderBadge.dataset.executionState = "inactive";
   orderBadge.textContent = "--";
   orderBadge.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} execution order inactive`);
   orderBadge.setAttribute("title", "Not in compiled execution order");
-  header.append(orderBadge);
+  actionRow.append(orderBadge);
   if (!definition.output) {
     const bypassButton = document.createElement("button");
     bypassButton.className = "node-bypass-button";
@@ -8300,7 +8299,7 @@ function createNodeGraphModuleElement(type, node) {
     bypassButton.setAttribute("aria-label", `Bypass ${nodeGraphNodeLabels[type]} module`);
     bypassButton.setAttribute("aria-pressed", "false");
     bypassButton.setAttribute("title", "Mouse: click to bypass this module. Bypassed modules are removed from the compiled engine.");
-    header.append(bypassButton);
+    actionRow.append(bypassButton);
   }
   const actionButton = document.createElement("button");
   actionButton.className = "node-action-button";
@@ -8309,7 +8308,17 @@ function createNodeGraphModuleElement(type, node) {
   actionButton.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} module actions`);
   actionButton.setAttribute("title", "Module actions");
   actionButton.textContent = "⚙";
-  header.append(actionButton);
+  actionRow.append(actionButton);
+  header.append(actionRow);
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "node-header-title-row";
+  const titleText = document.createElement("span");
+  titleText.className = "node-header-title";
+  titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
+  titleRow.append(titleText);
+  header.append(titleRow);
+
   const inputRail = createNodeGraphPortRail(node, type, definition.inputs, "input");
   const outputRail = createNodeGraphPortRail(node, type, definition.outputs, "output");
   if (inputRail) {

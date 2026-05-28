@@ -176,7 +176,8 @@ audio {
   justify-content: center;
   flex: 1 1 180px;
   min-width: 140px;
-  min-height: 44px;
+  min-height: 72px;
+  height: 72px;
   padding: 6px 10px;
   border: 1px solid rgba(243, 241, 236, 0.08);
   border-radius: 5px;
@@ -206,7 +207,7 @@ audio {
 .node-graph-workspace {
   --node-graph-zoom: 1;
   --node-grid-size: 28px;
-  --node-header-height: 42px;
+  --node-header-height: 56px;
   --node-module-grid-inset: 6px;
   position: relative;
   min-height: 560px;
@@ -460,29 +461,54 @@ audio {
 
 .dsp-node-header {
   position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   height: var(--node-header-height);
-  padding: 0 52px 0 28px;
+  display: grid;
+  grid-template-rows: 22px minmax(0, 1fr);
+  gap: 2px;
+  padding: 5px 18px 5px 18px;
   border-bottom: 1px solid rgba(243, 241, 236, 0.08);
   background: rgba(243, 241, 236, 0.025);
 }
 
 .dsp-node-body {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   display: grid;
   grid-auto-rows: minmax(0, 1fr);
   gap: 0;
   padding: 0;
 }
 
-.dsp-node-title {
+.node-header-actions,
+.node-header-title-row {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  min-width: 0;
   gap: 8px;
 }
 
-.dsp-node-title span {
+.node-header-actions {
+  justify-content: flex-start;
+}
+
+.node-header-title-row {
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.node-header-title {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   overflow-wrap: anywhere;
   font-weight: 650;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .node-execution-order-badge {
