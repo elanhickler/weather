@@ -3431,6 +3431,7 @@ def require_node_graph_mvp_contract() -> None:
         "connectionCount: Number(details.connectionCount) || 0",
         "feedbackConnectionCount: Number(details.feedbackConnectionCount) || 0",
         "feedbackModulationCount: Number(details.feedbackModulationCount) || 0",
+        "message: String(details.message || \"\")",
         "modulationCount: Number(details.modulationCount) || 0",
         "nodeGraphMvp.live.lastEvidence",
         "connectionCount: plan.connections.length",

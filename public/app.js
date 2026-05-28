@@ -6880,6 +6880,7 @@ function markNodeGraphRenderScriptBlocked() {
 function markNodeGraphLiveScriptBlocked() {
   const message = "fix script before live audio";
   setNodeGraphLiveEvidence("script-blocked", {
+    message,
     patchFingerprint: nodeGraphPatchFingerprint(),
   });
   setNodeGraphLiveStatus("error", "warn");
@@ -10321,6 +10322,7 @@ function setNodeGraphLiveProcessorError(message = "AudioWorklet processor error"
   setNodeGraphLiveOutputMuted(true);
   nodeGraphMvp.live.runtime = null;
   setNodeGraphLiveEvidence("processor-error", {
+    message,
     patchFingerprint: nodeGraphPatchFingerprint(),
   });
   setNodeGraphLiveStatus("error", "warn");
@@ -10366,6 +10368,7 @@ function setNodeGraphLiveEvidence(kind = "idle", details = {}) {
     feedbackModulationCount: Number(details.feedbackModulationCount) || 0,
     kind,
     matchesCurrentPatch: patchFingerprint ? patchFingerprint === currentPatchFingerprint : false,
+    message: String(details.message || ""),
     modulationCount: Number(details.modulationCount) || 0,
     nodeCount: Number(details.nodeCount) || 0,
     parameterCount: Number(details.parameterCount) || 0,
@@ -10403,6 +10406,7 @@ function nodeGraphLiveBlockedStatusText(kind, error) {
 function setNodeGraphLiveBlockedError(kind, error, options = {}) {
   const message = error?.message || "unknown issue";
   setNodeGraphLiveEvidence(`${kind}-blocked`, {
+    message,
     patchFingerprint: nodeGraphPatchFingerprint(),
   });
   setNodeGraphLivePlanStatus(nodeGraphLiveBlockedStatusText(kind, error), "warn");
