@@ -9496,8 +9496,11 @@ function disconnectNodeGraphConnection(index, kind = "signal") {
       (_connection, connectionIndex) => connectionIndex !== index,
     );
   }
-  if (sameNodeGraphSelection(nodeGraphMvp.selected, { type: "wire", kind, index })) {
+  const selection = nodeGraphMvp.selected;
+  if (sameNodeGraphSelection(selection, { type: "wire", kind, index })) {
     setNodeGraphSelection(null);
+  } else if (selection?.type === "wire" && (selection.kind || "signal") === kind && selection.index > index) {
+    setNodeGraphSelection({ ...selection, index: selection.index - 1 });
   }
   commitNodeGraphPatch(patch, { status: "wire disconnected" });
 }

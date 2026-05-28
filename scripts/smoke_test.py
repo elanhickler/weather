@@ -3083,6 +3083,8 @@ def require_node_graph_mvp_contract() -> None:
         "function connectNodeGraphPorts(",
         "function connectNodeGraphModulation(",
         "function disconnectNodeGraphConnection(index, kind = \"signal\")",
+        "selection.index > index",
+        "setNodeGraphSelection({ ...selection, index: selection.index - 1 })",
         "Render current patch sample",
         "Render blocked: ${validation.issues.join(\", \")}",
         "function createNodeSliderReadout(slider)",
