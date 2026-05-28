@@ -7511,9 +7511,7 @@ function syncNodeSliderReadout(slider) {
   const unit = (slider.dataset.unit || "").trim();
   const choiceLabel = nodeSliderChoiceLabel(slider);
   if (labelText) {
-    labelText.textContent = formatNodeGraphCodeCommentName(
-      readout.dataset.paramLabel || nodeSliderLabelText(slider),
-    );
+    labelText.textContent = readout.dataset.paramLabel || nodeSliderLabelText(slider);
   }
   valueText.textContent = choiceLabel ?? formatNodeSliderNumber(slider.value, {
     reserveSignSpace: true,
@@ -7550,10 +7548,6 @@ function nodeSliderLabelText(slider) {
     }
   }
   return slider.id;
-}
-
-function formatNodeGraphCodeCommentName(name) {
-  return `/* ${String(name || "").trim()} */`;
 }
 
 function nodeSliderDebugPath(slider) {
