@@ -6165,6 +6165,7 @@ const nodeGraphDefaultPatch = Object.freeze({
     mode: "auto",
     scale: 1,
     style: "glow",
+    theme: "cyan-violet",
   },
   grid: { ...nodeGraphGrid },
   nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node })),
@@ -6317,11 +6318,36 @@ function normalizeNodeGraphPatchVisual(visual = {}) {
   const mode = String(visual.mode || "auto").trim();
   const scale = Number(visual.scale);
   const style = String(visual.style || "glow").trim();
+  const theme = String(visual.theme || "cyan-violet").trim();
   return {
     mode: ["auto", "stereo-xy", "mono-lag-xy"].includes(mode) ? mode : "auto",
     scale: Number.isFinite(scale) ? Math.max(0.1, Math.min(4, scale)) : 1,
     style: ["glow", "trace", "points"].includes(style) ? style : "glow",
+    theme: ["cyan-violet", "ember-gold", "signal-green"].includes(theme) ? theme : "cyan-violet",
   };
+}
+
+function nodeGraphVisualThemeColors(theme = "cyan-violet") {
+  switch (theme) {
+    case "ember-gold":
+      return {
+        glow: "rgba(247, 183, 88, 0.18)",
+        point: "rgba(247, 183, 88, 0.72)",
+        trace: "#f7b758",
+      };
+    case "signal-green":
+      return {
+        glow: "rgba(113, 212, 155, 0.16)",
+        point: "rgba(113, 212, 155, 0.72)",
+        trace: "#71d49b",
+      };
+    default:
+      return {
+        glow: "rgba(177, 132, 255, 0.14)",
+        point: "rgba(127, 199, 217, 0.72)",
+        trace: "#7fc7d9",
+      };
+  }
 }
 
 function cloneNodeGraphParamMeta(paramMeta = {}) {
@@ -6751,6 +6777,7 @@ function syncNodeGraphSettingsView() {
   setNodeGraphSettingsField("patchVisualModeValue", visual.mode);
   setNodeGraphSettingsField("patchVisualScaleValue", visual.scale);
   setNodeGraphSettingsField("patchVisualStyleValue", visual.style);
+  setNodeGraphSettingsField("patchVisualThemeValue", visual.theme);
 }
 
 function readNodeGraphSettingsView() {
@@ -6767,6 +6794,7 @@ function readNodeGraphVisualSettingsView() {
     mode: document.getElementById("patchVisualModeValue")?.value,
     scale: document.getElementById("patchVisualScaleValue")?.value,
     style: document.getElementById("patchVisualStyleValue")?.value,
+    theme: document.getElementById("patchVisualThemeValue")?.value,
   });
 }
 
@@ -11997,6 +12025,7 @@ function drawNodeRenderedVisualOutput() {
 
   const sourceSamples = leftSamples || samples;
   const visualSettings = normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual);
+  const visualTheme = nodeGraphVisualThemeColors(visualSettings.theme);
   const useStereo = visualSettings.mode === "stereo-xy" ||
     (visualSettings.mode === "auto" && Boolean(rightSamples?.length));
   const visualMode = useStereo ? "stereo xy" : "mono lag xy";
@@ -12030,16 +12059,16 @@ function drawNodeRenderedVisualOutput() {
   }
 
   if (visualSettings.style === "points") {
-    context.fillStyle = "rgba(127, 199, 217, 0.72)";
+    context.fillStyle = visualTheme.point;
     for (let frame = firstFrame; frame < sourceSamples.length; frame += Math.max(step * 3, 3)) {
       const point = visualPoint(frame);
       context.fillRect(point.x - 1, point.y - 1, 2, 2);
     }
   } else {
     if (visualSettings.style === "glow") {
-      drawVisualTrace({ lineWidth: 4, strokeStyle: "rgba(177, 132, 255, 0.14)" });
+      drawVisualTrace({ lineWidth: 4, strokeStyle: visualTheme.glow });
     }
-    drawVisualTrace({ lineWidth: 1.3, strokeStyle: "#7fc7d9" });
+    drawVisualTrace({ lineWidth: 1.3, strokeStyle: visualTheme.trace });
   }
 
   canvas.dataset.visualSource = "node graph rendered audio";
@@ -12047,6 +12076,7 @@ function drawNodeRenderedVisualOutput() {
   canvas.dataset.visualModeSetting = visualSettings.mode;
   canvas.dataset.visualScale = String(visualSettings.scale);
   canvas.dataset.visualStyle = visualSettings.style;
+  canvas.dataset.visualTheme = visualSettings.theme;
   canvas.dataset.visualFrames = String(sourceSamples.length);
   canvas.dataset.visualPeak = formatCompactNumber(rendered.peak || 0);
   canvas.dataset.visualRms = formatCompactNumber(rendered.rms || 0);
@@ -12061,6 +12091,7 @@ function drawNodeRenderedVisualOutput() {
     Scale: visualSettings.scale,
     Source: canvas.dataset.visualSource,
     Style: visualSettings.style,
+    Theme: visualSettings.theme,
   });
   if (status) {
     status.textContent = visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode;

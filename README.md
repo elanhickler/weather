@@ -79,8 +79,8 @@ stored-output:
 - patch scripts preserve each node's current parameter values and parameter
   metadata through `nodes[].params` and `nodes[].paramMeta`
 - patch scripts preserve the visual output renderer through `visual.mode`,
-  `visual.style`, and `visual.scale`; this is authoring/display state, not
-  DSP-node behavior
+  `visual.style`, `visual.scale`, and `visual.theme`; this is
+  authoring/display state, not DSP-node behavior
 
 Render Sample and Live Audio expose patch evidence for debugging:
 
