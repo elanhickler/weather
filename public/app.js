@@ -8442,10 +8442,11 @@ function nodeGraphValidate() {
   };
 }
 
-function nodeGraphExecutionParameterSnapshot(order) {
+function nodeGraphExecutionParameterSnapshot(plan) {
   const parametersByNode = {};
-  for (const nodeId of order) {
-    const patchNode = nodeGraphPatchNode(nodeId);
+  const nodesById = new Map((plan.nodes || []).map((node) => [node.id, node]));
+  for (const nodeId of plan.order || []) {
+    const patchNode = nodesById.get(nodeId);
     const type = patchNode?.type || nodeGraphNodeType(nodeId);
     const definition = nodeGraphModuleDefinitions[type];
     const parameters = {};
@@ -8493,7 +8494,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       modulationInputs,
       order: plan.valid ? plan.order : [],
       outputNode: plan.outputNode,
-      parameters: nodeGraphExecutionParameterSnapshot(plan.order),
+      parameters: nodeGraphExecutionParameterSnapshot(plan),
       partialOrder: plan.valid ? [] : plan.order,
       signalInputs,
       sourceNodes: plan.sourceNodes,
