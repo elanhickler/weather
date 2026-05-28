@@ -6015,12 +6015,21 @@ const nodeGraphGrid = Object.freeze({
   sizePx: 28,
 });
 
+function nodeGraphDefaultParamsForType(type) {
+  const params = {};
+  for (const parameter of nodeGraphModuleDefinitions[type]?.parameters || []) {
+    const value = Number(parameter.defaultValue);
+    params[parameter.key] = Number.isFinite(value) ? value : 0;
+  }
+  return params;
+}
+
 const nodeGraphDefaultNodeConfigs = Object.freeze([
-  { id: "osc", type: "osc", gx: 2, gy: 1 },
-  { id: "noise", type: "noise", gx: 2, gy: 12 },
-  { id: "gain", type: "gain", gx: 16, gy: 7 },
-  { id: "bias", type: "bias", gx: 27, gy: 7 },
-  { id: "output", type: "output", gx: 36, gy: 8 },
+  { id: "osc", type: "osc", gx: 2, gy: 1, params: nodeGraphDefaultParamsForType("osc") },
+  { id: "noise", type: "noise", gx: 2, gy: 12, params: nodeGraphDefaultParamsForType("noise") },
+  { id: "gain", type: "gain", gx: 16, gy: 7, params: nodeGraphDefaultParamsForType("gain") },
+  { id: "bias", type: "bias", gx: 27, gy: 7, params: nodeGraphDefaultParamsForType("bias") },
+  { id: "output", type: "output", gx: 36, gy: 8, params: nodeGraphDefaultParamsForType("output") },
 ]);
 
 const nodeGraphDefaultConnections = Object.freeze([
@@ -6190,7 +6199,10 @@ function cloneNodeGraphPatch(patch) {
     grid: { sizePx: Number(patch.grid?.sizePx) || nodeGraphGrid.sizePx },
     info: normalizeNodeGraphPatchInfo(patch.info),
     modulations: (patch.modulations || []).map((modulation) => ({ ...modulation })),
-    nodes: (patch.nodes || []).map((node) => ({ ...node })),
+    nodes: (patch.nodes || []).map((node) => ({
+      ...node,
+      params: { ...(node.params || {}) },
+    })),
   };
 }
 
@@ -6318,6 +6330,30 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
   );
 }
 
+function normalizeNodeGraphPatchParameter(type, key, value) {
+  const parameter = nodeGraphModuleDefinitions[type]?.parameters?.find(
+    (candidate) => candidate.key === key,
+  );
+  if (!parameter) {
+    return null;
+  }
+  const number = Number(value);
+  const fallback = Number(parameter.defaultValue);
+  const candidate = Number.isFinite(number)
+    ? number
+    : Number.isFinite(fallback)
+      ? fallback
+      : 0;
+  const min = Number(parameter.min);
+  const max = Number(parameter.max);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+    return candidate;
+  }
+  return parameter.wraparound
+    ? wrapNodeSliderValue(candidate, min, max)
+    : clampNodeSliderValue(candidate, min, max);
+}
+
 function validateNodeGraphPatch(patch) {
   if (!patch || typeof patch !== "object") {
     throw new Error("patch must be an object");
@@ -6350,8 +6386,15 @@ function validateNodeGraphPatch(patch) {
     if (!Number.isFinite(gx) || !Number.isFinite(gy)) {
       throw new Error(`node ${id} grid position invalid`);
     }
+    const params = {};
+    for (const parameter of nodeGraphModuleDefinitions[type].parameters || []) {
+      const value = Object.hasOwn(node.params || {}, parameter.key)
+        ? node.params[parameter.key]
+        : parameter.defaultValue;
+      params[parameter.key] = normalizeNodeGraphPatchParameter(type, parameter.key, value);
+    }
     ids.add(id);
-    return { gx, gy, id, type };
+    return { gx, gy, id, params, type };
   });
 
   if (!ids.has("output")) {
@@ -6522,6 +6565,17 @@ function applyNodeGraphPatchToDom() {
     positionNodeGraphNode(element, point, { clamp: false, snap: false });
     element.dataset.gridX = String(patchNode.gx);
     element.dataset.gridY = String(patchNode.gy);
+    for (const parameter of nodeGraphModuleDefinitions[patchNode.type]?.parameters || []) {
+      const input = element.querySelector(`input[data-param="${CSS.escape(parameter.key)}"]`);
+      if (!input) {
+        continue;
+      }
+      input.value = String(
+        patchNode.params?.[parameter.key] ??
+        nodeGraphParameterFallback(patchNode.type, parameter.key),
+      );
+      syncNodeSliderReadout(input);
+    }
   }
 }
 
@@ -7274,6 +7328,29 @@ function handleNodeMetadataEditorInput() {
   applyNodeMetadataEditor();
 }
 
+function syncNodeGraphPatchParameterFromSlider(slider, options = {}) {
+  const node = slider?.closest(".dsp-node")?.dataset.node;
+  const key = slider?.dataset.param;
+  if (!node || !key) {
+    return;
+  }
+  const patchNode = nodeGraphMvp.patch.nodes.find((candidate) => candidate.id === node);
+  if (!patchNode) {
+    return;
+  }
+  patchNode.params = {
+    ...(patchNode.params || {}),
+    [key]: nodeGraphReadNodeNumber(node, key),
+  };
+  syncNodeGraphScriptView(options.status || "parameter synced", true);
+  renderNodeGraphExecutionPlanDebug();
+  if (options.record) {
+    recordNodeGraphHistory();
+  } else {
+    renderNodeGraphHistoryControls();
+  }
+}
+
 function updateNodeSliderCurrentValue(slider, rawValue) {
   if (!slider) {
     return;
@@ -7289,6 +7366,10 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
 
   slider.value = String(normalizeNodeSliderValue(slider, value));
   syncNodeSliderReadout(slider);
+  syncNodeGraphPatchParameterFromSlider(slider, {
+    record: true,
+    status: "parameter changed",
+  });
   if (nodeGraphMvp.metadataEditorTarget === slider.id) {
     fillNodeMetadataPopover(slider);
   }
@@ -7301,6 +7382,7 @@ function setNodeSliderValue(slider, value) {
     normalizeNodeSliderValue(slider, value),
   );
   syncNodeSliderReadout(slider);
+  syncNodeGraphPatchParameterFromSlider(slider);
   markNodeGraphRenderPending();
   scheduleNodeGraphLivePlanSync();
 }
@@ -7368,6 +7450,10 @@ function endNodeSliderDrag(event) {
   if (event.pointerId !== undefined && drag.surface.hasPointerCapture?.(event.pointerId)) {
     drag.surface.releasePointerCapture(event.pointerId);
   }
+  syncNodeGraphPatchParameterFromSlider(drag.slider, {
+    record: true,
+    status: "parameter changed",
+  });
   nodeGraphMvp.sliderDragging = null;
 }
 
@@ -7503,6 +7589,7 @@ function attachNodeGraphNodeEvents(node) {
     createNodeSliderReadout(slider);
     slider.addEventListener("input", () => {
       syncNodeSliderReadout(slider);
+      syncNodeGraphPatchParameterFromSlider(slider);
       markNodeGraphRenderPending();
       scheduleNodeGraphLivePlanSync();
     });
