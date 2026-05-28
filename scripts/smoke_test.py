@@ -3034,6 +3034,8 @@ def require_node_graph_mvp_contract() -> None:
         "async function loadNodeMetadataKindTemplates()",
         'fetch("/api/node-metadata-kinds"',
         "function normalizeNodeGraphPatchInfo(info = {})",
+        "duplicate connection",
+        "duplicate modulation",
         "function syncNodeGraphSettingsView()",
         "function readNodeGraphSettingsView()",
         "nodePatchNameHeader",

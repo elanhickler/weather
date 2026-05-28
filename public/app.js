@@ -6538,6 +6538,7 @@ function validateNodeGraphPatch(patch) {
     throw new Error("output node missing");
   }
 
+  const connectionKeys = new Set();
   const connections = Array.isArray(patch.connections) ? patch.connections.map((connection) => {
     const sourceNode = String(connection.sourceNode || "").trim();
     const sourcePort = String(connection.sourcePort || "").trim();
@@ -6557,9 +6558,15 @@ function validateNodeGraphPatch(patch) {
     if (!(nodeGraphModuleDefinitions[destinationType].inputs || []).includes(destinationPort)) {
       throw new Error(`connection destination port invalid: ${destinationNode}.${destinationPort}`);
     }
+    const key = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationPort}`;
+    if (connectionKeys.has(key)) {
+      throw new Error(`duplicate connection ${key}`);
+    }
+    connectionKeys.add(key);
     return { destinationNode, destinationPort, sourceNode, sourcePort };
   }) : [];
 
+  const modulationKeys = new Set();
   const modulations = Array.isArray(patch.modulations) ? patch.modulations.map((modulation) => {
     const sourceNode = String(modulation.sourceNode || "").trim();
     const sourcePort = String(modulation.sourcePort || "").trim();
@@ -6579,6 +6586,11 @@ function validateNodeGraphPatch(patch) {
     if (!(nodeGraphModuleDefinitions[destinationType].parameters || []).some((parameter) => parameter.key === destinationParam)) {
       throw new Error(`modulation destination parameter invalid: ${destinationNode}.${destinationParam}`);
     }
+    const key = `${sourceNode}.${sourcePort}->${destinationNode}.${destinationParam}`;
+    if (modulationKeys.has(key)) {
+      throw new Error(`duplicate modulation ${key}`);
+    }
+    modulationKeys.add(key);
     return { destinationNode, destinationParam, sourceNode, sourcePort };
   }) : [];
 
