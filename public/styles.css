@@ -508,6 +508,7 @@ audio {
   max-width: 100%;
   overflow: hidden;
   overflow-wrap: anywhere;
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
   font-weight: 650;
   text-align: center;
   text-overflow: ellipsis;
