@@ -3080,6 +3080,8 @@ def require_node_graph_mvp_contract() -> None:
         "function cloneNodeGraphParamMeta(paramMeta = {})",
         "paramMeta: cloneNodeGraphParamMeta(node.paramMeta)",
         "function nodeGraphDefaultParamMetaForType(type)",
+        "function createNodeGraphPatchNode(type, options = {})",
+        "patch.nodes.push(createNodeGraphPatchNode(type",
         "function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {})",
         "function nodeGraphGridSnapOffset()",
         "return 6;",

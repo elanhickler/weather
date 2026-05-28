@@ -6069,6 +6069,17 @@ function nodeGraphDefaultParamMetaForType(type) {
   return metadata;
 }
 
+function createNodeGraphPatchNode(type, options = {}) {
+  return {
+    gx: Number.isFinite(Number(options.gx)) ? Number(options.gx) : 0,
+    gy: Number.isFinite(Number(options.gy)) ? Number(options.gy) : 0,
+    id: String(options.id || type),
+    paramMeta: nodeGraphDefaultParamMetaForType(type),
+    params: nodeGraphDefaultParamsForType(type),
+    type,
+  };
+}
+
 function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
   const parameter = nodeGraphModuleDefinitions[type]?.parameters?.find(
     (candidate) => candidate.key === key,
@@ -6122,11 +6133,11 @@ function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
 }
 
 const nodeGraphDefaultNodeConfigs = Object.freeze([
-  { id: "osc", type: "osc", gx: 2, gy: 1, paramMeta: nodeGraphDefaultParamMetaForType("osc"), params: nodeGraphDefaultParamsForType("osc") },
-  { id: "noise", type: "noise", gx: 2, gy: 12, paramMeta: nodeGraphDefaultParamMetaForType("noise"), params: nodeGraphDefaultParamsForType("noise") },
-  { id: "gain", type: "gain", gx: 16, gy: 7, paramMeta: nodeGraphDefaultParamMetaForType("gain"), params: nodeGraphDefaultParamsForType("gain") },
-  { id: "bias", type: "bias", gx: 27, gy: 7, paramMeta: nodeGraphDefaultParamMetaForType("bias"), params: nodeGraphDefaultParamsForType("bias") },
-  { id: "output", type: "output", gx: 36, gy: 8, paramMeta: nodeGraphDefaultParamMetaForType("output"), params: nodeGraphDefaultParamsForType("output") },
+  createNodeGraphPatchNode("osc", { id: "osc", gx: 2, gy: 1 }),
+  createNodeGraphPatchNode("noise", { id: "noise", gx: 2, gy: 12 }),
+  createNodeGraphPatchNode("gain", { id: "gain", gx: 16, gy: 7 }),
+  createNodeGraphPatchNode("bias", { id: "bias", gx: 27, gy: 7 }),
+  createNodeGraphPatchNode("output", { id: "output", gx: 36, gy: 8 }),
 ]);
 
 const nodeGraphDefaultConnections = Object.freeze([
@@ -9194,12 +9205,11 @@ function showNodeGraphModule(node, point = null) {
   counts[type] = (counts[type] || 0) + 1;
   const id = `${type}-${counts[type]}`;
   const gridPoint = point ? nodeGraphPixelToGrid(point) : defaultNodeGraphModuleGridPoint(type);
-  patch.nodes.push({
+  patch.nodes.push(createNodeGraphPatchNode(type, {
+    id,
     gx: gridPoint.gx,
     gy: gridPoint.gy,
-    id,
-    type,
-  });
+  }));
   commitNodeGraphPatch(patch, { status: "module added" });
   setNodeGraphSelection({ type: "node", id });
 }
