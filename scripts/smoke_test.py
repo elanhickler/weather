@@ -397,7 +397,7 @@ def require_soemdsp_wire_meta_traits() -> None:
     for snippet in [
         "std::string_view unit_;",
         ", unit_(WireTypeTraits::get(type).unit_)",
-        ", def_(WireTypeTraits::get(type).def_)",
+        ", def_(!customchoices.empty() ? 0.0 : WireTypeTraits::get(type).def_)",
         ", min_(!customchoices.empty() ? 0.0 : WireTypeTraits::get(type).min_)",
         "? static_cast<double>(customchoices.size() - 1)",
         ": WireTypeTraits::get(type).max_)",
@@ -406,6 +406,7 @@ def require_soemdsp_wire_meta_traits() -> None:
         'static_assert(WireMeta{ "waveform", "", MetaType::waveform }.choices.size() == 5);',
         'static_assert(WireMeta{ "waveform", "", MetaType::waveform }.max_ == 4.0);',
         'static_assert(WireMeta{ "custom", "", MetaType::waveform, choice::onoff }.choices.size() == 2);',
+        'static_assert(WireMeta{ "custom", "", MetaType::waveform, choice::onoff }.def_ == 0.0);',
         'static_assert(WireMeta{ "custom", "", MetaType::waveform, choice::onoff }.max_ == 1.0);',
     ]:
         require(snippet in source, f"soemdsp WireMeta trait contract missing {snippet}")
