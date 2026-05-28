@@ -106,9 +106,11 @@ Render Sample and Live Audio expose patch evidence for debugging:
 - the execution debug panel also reports a `soemdspMapping` block that names
   the Circuit, compiler, Binding, and caller-owned DSP object responsibilities
   for the current browser patch proof
+- the debug surface includes a pseudo-C++ `soemdspRuntimeSketch` showing the
+  future caller-owned block-processing shape without adding a production API
 - `window.soemdspSandboxDebug` exposes `compileExecutionPlan()`,
   `currentPatchFingerprint()`, `lastRender()`, `live()`, and
-  `soemdspMapping()` for direct inspection
+  `soemdspMapping()` / `soemdspRuntimeSketch()` for direct inspection
 
 That compiler is demo-scoped UI machinery, not a `soemdsp` runtime scheduler,
 not a Circuit-owned executor, and not a production project format. Feedback

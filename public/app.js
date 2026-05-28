@@ -9166,6 +9166,33 @@ function nodeGraphSoemdspRuntimeMapping(plan) {
   };
 }
 
+function nodeGraphSoemdspRuntimeSketch(plan) {
+  const mapping = nodeGraphSoemdspRuntimeMapping(plan);
+  const objectLines = mapping.mappedNodes.map((node) =>
+    `// ${node.id}: ${node.objectConcept}`,
+  );
+  const signalLines = mapping.signalBindings.map((binding) =>
+    `// signal ${binding.sourceOutput} -> ${binding.destinationInput} (${binding.readMode})`,
+  );
+  const modulationLines = mapping.modulationBindings.map((binding) =>
+    `// mod ${binding.sourceOutput} -> ${binding.destinationParameter} (${binding.readMode})`,
+  );
+  return [
+    "// soemdsp browser proof -> caller-owned C++ runtime sketch",
+    "// Circuit/patch describes source data; it does not own these DSP objects.",
+    ...objectLines,
+    "Binding::apply(circuit, externalParameterMemory);",
+    ...signalLines,
+    ...modulationLines,
+    "for (std::size_t frame = 0; frame < blockSize; ++frame) {",
+    "  // read same-pass values when available; otherwise read stored node output",
+    `  for (NodeId node : { ${plan.order.map((nodeId) => `\"${nodeId}\"`).join(", ")} }) {`,
+    "    processCallerOwnedDspObject(node, externalParameterMemory, storedOutputs);",
+    "  }",
+    "}",
+  ].join("\n");
+}
+
 function serializeNodeGraphExecutionPlanDebug(plan) {
   const samePassDependencies = {};
   for (const [nodeId, dependencies] of plan.orderDependencies.entries()) {
@@ -9228,6 +9255,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       samePassDependencies,
       signalInputs,
       soemdspMapping: nodeGraphSoemdspRuntimeMapping(plan),
+      soemdspRuntimeSketch: nodeGraphSoemdspRuntimeSketch(plan),
       sourceNodes: plan.sourceNodes,
       stateReadCount: nodeGraphStateReadCount(plan),
       storedOutputInitialValue: 0,
@@ -9267,6 +9295,7 @@ function serializeNodeGraphExecutionPlanApiDebug(plan) {
     ),
     schedulerPolicy: "same-pass acyclic edges; patch-node-order cycle-closing edges read stored outputs",
     soemdspMapping: nodeGraphSoemdspRuntimeMapping(plan),
+    soemdspRuntimeSketch: nodeGraphSoemdspRuntimeSketch(plan),
     stateReadCount: nodeGraphStateReadCount(plan),
     valid: plan.valid,
     wireReads: nodeGraphExecutionWireReads(plan),
@@ -9289,6 +9318,9 @@ function installNodeGraphDebugApi() {
     },
     soemdspMapping(patch = nodeGraphMvp.patch) {
       return nodeGraphSoemdspRuntimeMapping(compileValidatedNodeGraphExecutionPlan(patch));
+    },
+    soemdspRuntimeSketch(patch = nodeGraphMvp.patch) {
+      return nodeGraphSoemdspRuntimeSketch(compileValidatedNodeGraphExecutionPlan(patch));
     },
   });
 }

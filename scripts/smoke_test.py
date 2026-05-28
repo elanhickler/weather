@@ -3425,6 +3425,11 @@ def require_node_graph_mvp_contract() -> None:
         "Caller owns concrete DSP objects and invokes them in compiled order",
         "soemdspMapping: nodeGraphSoemdspRuntimeMapping(plan)",
         "soemdspMapping(patch = nodeGraphMvp.patch)",
+        "function nodeGraphSoemdspRuntimeSketch(plan)",
+        "soemdspRuntimeSketch: nodeGraphSoemdspRuntimeSketch(plan)",
+        "soemdspRuntimeSketch(patch = nodeGraphMvp.patch)",
+        "processCallerOwnedDspObject(node, externalParameterMemory, storedOutputs);",
+        "Binding::apply(circuit, externalParameterMemory);",
         "function nodeGraphPatchFingerprint(patch = nodeGraphMvp.patch)",
         "lastRender: nodeGraphLastRenderDebug()",
         "connectionCount: Number(rendered.connectionCount) || 0",
@@ -4019,9 +4024,10 @@ def require_readme_scheduler_contract() -> None:
         "Live Audio error evidence includes the blocking message",
         "Live Audio plan and parameter acknowledgements show the current patch fingerprint",
         "the execution debug panel also reports a `soemdspMapping` block",
+        "the debug surface includes a pseudo-C++ `soemdspRuntimeSketch`",
         "rendered visual output can be saved from the browser as a clean PNG without the playback cursor overlay",
         "the filename includes the rendered patch fingerprint",
-        "`window.soemdspSandboxDebug` exposes `compileExecutionPlan()`, `currentPatchFingerprint()`, `lastRender()`, `live()`, and `soemdspMapping()`",
+        "`window.soemdspSandboxDebug` exposes `compileExecutionPlan()`, `currentPatchFingerprint()`, `lastRender()`, `live()`, and `soemdspMapping()` / `soemdspRuntimeSketch()`",
         "Feedback routing is intentionally simple stateful patch behavior",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
