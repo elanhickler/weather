@@ -3078,6 +3078,8 @@ def require_node_graph_mvp_contract() -> None:
         "function beginNodeGraphWireDrag(event)",
         "function dragNodeGraphWire(event)",
         "function endNodeGraphWireDrag(event)",
+        "let connected = false;",
+        "if (!connected) {\n    drawNodeGraphWires();\n  }",
         "function connectNodeGraphPorts(",
         "function connectNodeGraphModulation(",
         "function disconnectNodeGraphConnection(index, kind = \"signal\")",

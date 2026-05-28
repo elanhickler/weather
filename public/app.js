@@ -9601,21 +9601,24 @@ function endNodeGraphWireDrag(event) {
     ?.classList.remove("dragging");
   nodeGraphMvp.dragging = null;
 
+  let connected = false;
   if (target?.classList?.contains("modulation-input") && target?.dataset.node && target?.dataset.param) {
-    connectNodeGraphModulation(
+    connected = connectNodeGraphModulation(
       dragging.sourceNode,
       dragging.sourcePort,
       target.dataset.node,
       target.dataset.param,
     );
   } else if (target?.dataset.node && target?.dataset.port) {
-    connectNodeGraphPorts(
+    connected = connectNodeGraphPorts(
       dragging.sourceNode,
       dragging.sourcePort,
       target.dataset.node,
       target.dataset.port,
     );
-  } else {
+  }
+
+  if (!connected) {
     drawNodeGraphWires();
   }
 }
