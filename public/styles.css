@@ -367,6 +367,11 @@ audio {
   stroke-dasharray: 3 7;
 }
 
+.node-wire-path.inactive-wire.selected {
+  opacity: 0.78;
+  filter: drop-shadow(0 0 5px rgba(247, 183, 88, 0.36));
+}
+
 .node-wire-hit-path {
   fill: none;
   stroke: rgba(255, 255, 255, 0.001);
@@ -962,6 +967,11 @@ audio {
   font-size: 0.82rem;
 }
 
+.node-connection-list li.selected {
+  border-color: rgba(247, 183, 88, 0.62);
+  box-shadow: 0 0 0 1px rgba(247, 183, 88, 0.24);
+}
+
 .node-connection-list li span {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -980,6 +990,11 @@ audio {
   border-color: rgba(243, 241, 236, 0.16);
   background: rgba(243, 241, 236, 0.05);
   color: var(--muted);
+}
+
+.node-connection-list li.inactive-wire.selected {
+  border-color: rgba(247, 183, 88, 0.58);
+  color: var(--text);
 }
 
 .node-execution-plan-heading {
