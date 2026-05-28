@@ -9501,9 +9501,10 @@ function renderNodeGraphExecutionPlanSummary(plan) {
     for (const [index, nodeId] of order.entries()) {
       const item = document.createElement("li");
       item.dataset.node = nodeId;
+      item.dataset.executionOrder = String(index + 1);
       item.tabIndex = 0;
       item.setAttribute("role", "button");
-      item.setAttribute("title", `Select ${nodeGraphNodeDisplayName(nodeId)}`);
+      item.setAttribute("aria-label", `Compiled order ${index + 1}: ${nodeGraphNodeDisplayName(nodeId)}`);
       item.textContent = `${index + 1}. ${nodeGraphNodeDisplayName(nodeId)}`;
       item.addEventListener("click", () => setNodeGraphSelection({ type: "node", id: nodeId }));
       item.addEventListener("keydown", (event) => {
@@ -10940,7 +10941,7 @@ function nodeInteractionHelpText(target) {
     return "";
   }
   const helpTarget = target.closest(
-    "[data-interaction-help], button, input, textarea, select, .node-slider-readout, .node-port, .node-param-port, .node-wire-hit-path, .node-wire-path, .node-execution-order-badge",
+    "[data-interaction-help], button, input, textarea, select, .node-slider-readout, .node-port, .node-param-port, .node-wire-hit-path, .node-wire-path, .node-execution-order-badge, .node-execution-order li[data-node]",
   );
   if (!helpTarget) {
     return "";
@@ -10968,6 +10969,11 @@ function nodeInteractionMouseHint(element) {
       return "Compiled order: bypassed\nThis module is ignored by the compiled engine.";
     }
     return "Compiled order: inactive\nThis module is not reachable from Output.";
+  }
+  if (element.matches(".node-execution-order li[data-node]")) {
+    const order = element.dataset.executionOrder || "?";
+    const nodeName = nodeGraphNodeDisplayName(element.dataset.node);
+    return `Compiled order ${order}: ${nodeName}\nMouse: click to select this module in the workspace.`;
   }
   if (element.classList.contains("node-slider-readout")) {
     return "Mouse: drag adjusts, double-click types, right-click edits metadata.";
