@@ -3648,6 +3648,24 @@ def require_node_graph_mvp_contract() -> None:
         require(snippet in worklet_source, f"live audio worklet source missing {snippet}")
 
 
+def require_readme_scheduler_contract() -> None:
+    readme_source = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme_text = " ".join(readme_source.split())
+    for snippet in [
+        "single-pass stored-output",
+        "acyclic edges are evaluated as same-pass dependencies",
+        "cycle-closing signal or modulation edges are allowed as state reads",
+        "each node starts with stored output `0`",
+        "Feedback routing is intentionally simple stateful patch behavior",
+    ]:
+        require(snippet in readme_text, f"README scheduler contract missing {snippet}")
+    for snippet in [
+        "Feedback routing remains blocked",
+        "acyclic browser patches",
+    ]:
+        require(snippet not in readme_text, f"README scheduler contract still has stale text: {snippet}")
+
+
 def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
     manifest_response = request(f"{base_url}/api/manifest")
     require(manifest_response.status == 200, "manifest endpoint did not return 200")
@@ -3895,6 +3913,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         run_step("manifest error surface contract", require_manifest_error_surface_contract)
         run_step("follow/free seek contract", require_follow_free_seek_contract)
         run_step("node graph MVP contract", require_node_graph_mvp_contract)
+        run_step("README scheduler contract", require_readme_scheduler_contract)
         run_step(
             "node metadata kinds transport",
             lambda: require_node_metadata_kinds_transport(base_url),

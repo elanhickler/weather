@@ -4,10 +4,10 @@ Local browser sandbox for `soemdsp` proof artifacts and demo-scoped interactive 
 
 The sandbox now has two lanes:
 
-- a browser-only Node Wiring MVP where output ports can be freely wired into signal or modulation inputs, with reachable acyclic graphs ending at Output compiled into an inspectable browser-local execution plan, rendered to an audible Web Audio buffer, and inspected through local waveform and signal-plot canvases
+- a browser-only Node Wiring MVP where output ports can be freely wired into signal or modulation inputs, with reachable graphs ending at Output compiled into an inspectable browser-local execution plan, rendered to an audible Web Audio buffer, played live through Web Audio, and inspected through local waveform and signal-plot canvases
 - a read-only artifact inspector for generated `soemdsp` handoff manifests, WAVs, phase reports, producer proofs, boundary flags, parameter resync data, waveform playback, level envelopes, and X/Y signal plots
 
-The server remains read-only. The node graph is intentionally demo-scoped browser state. Its execution-plan compiler is a sandbox proof for acyclic browser patches; it does not save patches, mutate `Circuit`, introduce a production `soemdsp` scheduler, or become a plugin layer.
+The server remains read-only. The node graph is intentionally demo-scoped browser state. Its execution-plan compiler is a sandbox proof for browser patches; it does not mutate `Circuit`, introduce a production `soemdsp` scheduler, or become a plugin layer. Patch scripts can be edited, loaded, and saved from the browser, but the server does not persist project state.
 
 ## Run
 
@@ -40,7 +40,7 @@ python C:\Users\argit\Documents\_PROGRAMMING\soemdsp-sandbox\scripts\smoke_test.
 The smoke test starts isolated local servers on automatic temporary ports, checks
 the manifest endpoint, checks the root shell DOM contract, duplicate IDs, and
 audio/waveform control attributes, checks the node graph MVP shell/source/style
-contract, checks static assets, checks the waveform
+contract including the single-pass stored-output scheduler debug surface, checks static assets, checks the waveform
 seek source contract, checks producer proof flags, checks the handoff contract and boundary flags, checks handoff artifact
 references, checks artifact and phase coverage, checks every manifest artifact
 link for reachability, checks report documents, checks hands-on readiness source
@@ -66,16 +66,25 @@ server error responses.
 The local server is read-only. The browser may generate temporary audio from the
 demo node graph, but it does not write patch/project state.
 
-The browser node graph does compile acyclic signal/modulation wiring into a local
-execution plan for Render Sample and Live Audio. That compiler is demo-scoped UI
-machinery, not a `soemdsp` runtime scheduler, not a Circuit-owned executor, and
-not a saved project format. Feedback routing remains blocked by cycle detection.
+The browser node graph compiles signal/modulation wiring into a local execution
+plan for Render Sample and Live Audio. The execution model is single-pass
+stored-output:
+
+- acyclic edges are evaluated as same-pass dependencies
+- cycle-closing signal or modulation edges are allowed as state reads
+- each node starts with stored output `0`
+- each node overwrites its stored output when it runs
+
+That compiler is demo-scoped UI machinery, not a `soemdsp` runtime scheduler,
+not a Circuit-owned executor, and not a production project format. Feedback
+routing is intentionally simple stateful patch behavior, not algebraic loop
+solving.
 
 The sandbox does not:
 
 - instantiate DSP objects
 - schedule production `soemdsp` processing
 - mutate Circuit
-- serialize project files
+- persist project files server-side
 - own audio engine behavior
 - own plugin behavior
