@@ -7458,7 +7458,15 @@ function stopNodeGraphRenderedPlayback() {
   }
 }
 
-function markNodeGraphRenderPending(summary = "waiting for render") {
+function nodeGraphRenderPendingSummary() {
+  try {
+    return nodeGraphValidate().scheduleText;
+  } catch (_error) {
+    return "waiting for render";
+  }
+}
+
+function markNodeGraphRenderPending(summary = "") {
   stopNodeGraphRenderedPlayback();
   nodeGraphMvp.rendered = null;
   document.getElementById("nodePlayButton").disabled = true;
@@ -7470,7 +7478,7 @@ function markNodeGraphRenderPending(summary = "waiting for render") {
   }
   const outputSummary = document.getElementById("nodeOutputSummary");
   if (outputSummary) {
-    outputSummary.textContent = summary;
+    outputSummary.textContent = summary || nodeGraphRenderPendingSummary();
   }
   drawNodeRenderedAudio();
 }
