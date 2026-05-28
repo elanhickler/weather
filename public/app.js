@@ -10526,7 +10526,7 @@ function renderNodeGraphAudio() {
     renderStatus.textContent = "render blocked";
     renderStatus.className = "pill warn";
     document.getElementById("nodeAudioStats").textContent = "peak 0 / rms 0";
-    document.getElementById("nodeOutputSummary").textContent = validation.issues.join(", ");
+    document.getElementById("nodeOutputSummary").textContent = validation.scheduleText;
     drawNodeRenderedAudio();
     return;
   }

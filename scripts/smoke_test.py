@@ -3252,6 +3252,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphRenderPendingSummary()",
         "function nodeGraphPlayBlockedTitle()",
         "outputSummary.textContent = summary || nodeGraphRenderPendingSummary()",
+        "document.getElementById(\"nodeOutputSummary\").textContent = validation.scheduleText",
         "Play blocked: render a sample first",
         "Play blocked: ${validation.issues.join(\", \")}",
         "Play rendered sample",
