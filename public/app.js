@@ -7518,6 +7518,23 @@ function nodeGraphPlayBlockedTitle() {
   }
 }
 
+function setNodeGraphAudioStats(peak = 0, rms = 0, details = {}) {
+  const audioStats = document.getElementById("nodeAudioStats");
+  if (!audioStats) {
+    return;
+  }
+  const frames = Number(details.frames) || 0;
+  const sampleRate = Number(details.sampleRate) || nodeGraphMvp.sampleRate;
+  const durationSeconds = frames > 0 && sampleRate > 0 ? frames / sampleRate : 0;
+  audioStats.textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
+  audioStats.dataset.renderFrames = String(frames);
+  audioStats.dataset.renderSampleRate = String(sampleRate);
+  audioStats.dataset.renderDuration = durationSeconds.toFixed(3);
+  audioStats.title = frames > 0
+    ? `Rendered sample: ${frames} frames / ${durationSeconds.toFixed(3)}s / ${sampleRate} Hz`
+    : "Rendered sample unavailable";
+}
+
 function markNodeGraphRenderPending(summary = "") {
   stopNodeGraphRenderedPlayback();
   nodeGraphMvp.rendered = null;
@@ -7526,10 +7543,7 @@ function markNodeGraphRenderPending(summary = "") {
   playButton.title = nodeGraphPlayBlockedTitle();
   document.getElementById("nodeGraphRenderStatus").textContent = "render pending";
   document.getElementById("nodeGraphRenderStatus").className = "pill warn";
-  const audioStats = document.getElementById("nodeAudioStats");
-  if (audioStats) {
-    audioStats.textContent = "peak 0 / rms 0";
-  }
+  setNodeGraphAudioStats();
   const outputSummary = document.getElementById("nodeOutputSummary");
   if (outputSummary) {
     outputSummary.textContent = summary || nodeGraphRenderPendingSummary();
@@ -10526,7 +10540,7 @@ function renderNodeGraphAudio() {
     playButton.title = `Play blocked: ${validation.issues.join(", ")}`;
     renderStatus.textContent = "render blocked";
     renderStatus.className = "pill warn";
-    document.getElementById("nodeAudioStats").textContent = "peak 0 / rms 0";
+    setNodeGraphAudioStats();
     document.getElementById("nodeOutputSummary").textContent = validation.scheduleText;
     drawNodeRenderedAudio();
     return;
@@ -10588,7 +10602,10 @@ function renderNodeGraphAudio() {
   playButton.title = "Play rendered sample";
   renderStatus.textContent = "render ready";
   renderStatus.className = "pill good";
-  document.getElementById("nodeAudioStats").textContent = `peak ${peak.toFixed(3)} / rms ${rms.toFixed(3)}`;
+  setNodeGraphAudioStats(peak, rms, {
+    frames,
+    sampleRate: nodeGraphMvp.sampleRate,
+  });
   document.getElementById("nodeOutputSummary").textContent = validation.scheduleText;
   drawNodeRenderedAudio();
 }
