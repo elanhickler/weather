@@ -10671,6 +10671,10 @@ function nodeGraphPatchFileName() {
   return `${safeName || "soemdsp-patch"}.json`;
 }
 
+function nodeGraphVisualOutputFileName() {
+  return nodeGraphPatchFileName().replace(/\.json$/i, "-visual.png");
+}
+
 function saveNodeGraphScript() {
   if (!nodeGraphScriptReadyForGraphAction("save")) {
     return;
@@ -12114,6 +12118,15 @@ function renderNodeVisualOutputMeta(entries = {}) {
   }
 }
 
+function setNodeVisualOutputExportReady(ready, title = "") {
+  const button = document.getElementById("nodeSaveVisualOutputButton");
+  if (!button) {
+    return;
+  }
+  button.disabled = !ready;
+  button.title = title || (ready ? "Save visual output as PNG" : "Render Sample before saving visual output");
+}
+
 function drawNodeRenderedVisualOutput() {
   const canvas = document.getElementById("nodeVisualOutputCanvas");
   const status = document.getElementById("nodeVisualOutputStatus");
@@ -12166,7 +12179,9 @@ function drawNodeRenderedVisualOutput() {
     canvas.dataset.visualPlaybackFrame = "";
     canvas.dataset.visualPlaybackProgress = "0";
     canvas.dataset.visualPlaybackState = "idle";
+    canvas.dataset.visualExportReady = "false";
     canvas.title = "Node graph visual output waiting for Render Sample";
+    setNodeVisualOutputExportReady(false);
     renderNodeVisualOutputMeta({
       Frames: 0,
       Mode: "waiting",
@@ -12263,6 +12278,7 @@ function drawNodeRenderedVisualOutput() {
   canvas.dataset.visualPlaybackFrame = playbackFrame === null ? "" : String(playbackFrame);
   canvas.dataset.visualPlaybackProgress = String(nodeGraphMvp.renderedPlayback?.progress || 0);
   canvas.dataset.visualPlaybackState = playbackFrame === null ? "idle" : "playing";
+  canvas.dataset.visualExportReady = "true";
   canvas.dataset.visualScale = String(visualSettings.scale);
   canvas.dataset.visualStyle = visualSettings.style;
   canvas.dataset.visualTheme = visualSettings.theme;
@@ -12289,6 +12305,37 @@ function drawNodeRenderedVisualOutput() {
     status.textContent = visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode;
     status.className = "pill good";
   }
+  setNodeVisualOutputExportReady(true);
+}
+
+function saveNodeGraphVisualOutputPng() {
+  const canvas = document.getElementById("nodeVisualOutputCanvas");
+  const status = document.getElementById("nodeVisualOutputStatus");
+  if (!canvas || canvas.dataset.visualExportReady !== "true") {
+    setNodeVisualOutputExportReady(false);
+    return;
+  }
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      if (status) {
+        status.textContent = "save failed";
+        status.className = "pill warn";
+      }
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nodeGraphVisualOutputFileName();
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    if (status) {
+      status.textContent = "png saved";
+      status.className = "pill good";
+    }
+  }, "image/png");
 }
 
 async function playNodeGraphAudio() {
@@ -12379,6 +12426,7 @@ function initNodeGraphMvp() {
   });
   document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio);
   document.getElementById("nodePlayButton").addEventListener("click", playNodeGraphAudio);
+  document.getElementById("nodeSaveVisualOutputButton").addEventListener("click", saveNodeGraphVisualOutputPng);
   document.getElementById("nodeLiveInputButton").addEventListener("click", toggleNodeGraphLiveInput);
   document.getElementById("nodeLiveOutputButton").addEventListener("click", toggleNodeGraphLiveOutput);
   document.getElementById("nodeDefaultButton").addEventListener("click", restoreDefaultNodeGraph);
