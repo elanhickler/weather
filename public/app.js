@@ -6627,7 +6627,7 @@ function loadNodeGraphPatchFromScript(text) {
     if (error instanceof SyntaxError) {
       throw new Error(`script JSON parse failed: ${error.message}`);
     }
-    throw error;
+    throw new Error(`script validation failed: ${error.message}`);
   }
 }
 
