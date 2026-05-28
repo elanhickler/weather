@@ -7959,9 +7959,9 @@ function createNodeGraphPort(node, type, port, io) {
   button.dataset.node = node;
   button.dataset.port = port;
   button.dataset.io = io;
+  button.dataset.alias = nodeGraphLabel(node, port);
   const label = `${nodeGraphNodeLabels[type]} ${io} port ${port}`;
   button.setAttribute("aria-label", label);
-  button.setAttribute("title", label);
   return button;
 }
 
@@ -7986,9 +7986,9 @@ function createNodeParameterModulationPort(node, type, parameter) {
   button.dataset.param = parameter.key;
   button.dataset.port = parameter.key;
   button.dataset.io = "modulation";
+  button.dataset.alias = `${nodeGraphNodeDisplayName(node)}.${parameter.key} mod`;
   const label = `${nodeGraphNodeLabels[type]} ${parameter.label} modulation input`;
   button.setAttribute("aria-label", label);
-  button.setAttribute("title", label);
   return button;
 }
 
@@ -9583,6 +9583,7 @@ function nodeInteractionHelpText(target) {
 }
 
 function nodeInteractionMouseHint(element) {
+  const alias = element.dataset.alias || "";
   if (element.classList.contains("node-drag-handle")) {
     return "Mouse: drag to move selected module(s).";
   }
@@ -9593,10 +9594,14 @@ function nodeInteractionMouseHint(element) {
     return "Mouse: drag adjusts, double-click types, right-click edits metadata.";
   }
   if (element.classList.contains("node-port")) {
-    return "Mouse: drag to connect signal wire.";
+    const action = element.classList.contains("output")
+      ? "Mouse: drag from output to signal input or modulation input."
+      : "Mouse: drop a signal output here.";
+    return alias ? `Alias: ${alias}\n${action}` : action;
   }
   if (element.classList.contains("node-param-port")) {
-    return "Mouse: reserved modulation input.";
+    const action = "Mouse: drop an output here to modulate this parameter.";
+    return alias ? `Alias: ${alias}\n${action}` : action;
   }
   if (element.matches("input, textarea, select")) {
     return "Mouse: click to edit, drag to select text.";
