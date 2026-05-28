@@ -7452,6 +7452,7 @@ function ensureNodeGraphDragHandle(node) {
 function attachNodeGraphNodeEvents(node) {
   ensureNodeGraphDragHandle(node);
   node.querySelector(".node-drag-handle")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
+  node.querySelector(".node-action-button")?.addEventListener("click", openNodeModuleActionMenu);
   node.addEventListener("pointermove", dragNodeGraphNode);
   node.addEventListener("pointerup", endNodeGraphNodeDrag);
   node.addEventListener("pointercancel", endNodeGraphNodeDrag);
@@ -7572,6 +7573,14 @@ function createNodeGraphModuleElement(type, node) {
   const titleText = document.createElement("span");
   titleText.textContent = node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
   header.append(titleText);
+  const actionButton = document.createElement("button");
+  actionButton.className = "node-action-button";
+  actionButton.type = "button";
+  actionButton.dataset.node = node;
+  actionButton.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} module actions`);
+  actionButton.setAttribute("title", "Module actions");
+  actionButton.textContent = "⚙";
+  header.append(actionButton);
   const inputRail = createNodeGraphPortRail(node, type, definition.inputs, "input");
   const outputRail = createNodeGraphPortRail(node, type, definition.outputs, "output");
   if (inputRail) {
@@ -8310,27 +8319,40 @@ function configureNodeSceneContextMenu(mode) {
   }
 }
 
+function openNodeModuleActionMenu(event) {
+  const button = event.currentTarget;
+  const node = button.closest(".dsp-node");
+  if (!node) {
+    return;
+  }
+
+  const selectedNodeIds = nodeGraphSelectedNodeIds();
+  if (!selectedNodeIds.has(node.dataset.node)) {
+    setNodeGraphSelection({ type: "node", id: node.dataset.node });
+  }
+  nodeGraphMvp.sceneContextPoint = null;
+  nodeGraphMvp.sceneContextTargetNode = node.dataset.node;
+  configureNodeSceneContextMenu("module");
+  const rect = button.getBoundingClientRect();
+  positionNodeSceneContextMenu(
+    document.getElementById("nodeSceneContextMenu"),
+    rect.right,
+    rect.bottom,
+  );
+  event.preventDefault();
+  event.stopPropagation();
+}
+
 function openNodeSceneContextMenu(event) {
-  if (event.target.closest(".node-port, .node-param-port, .node-slider-readout")) {
+  if (event.target.closest(".dsp-node, .node-port, .node-param-port, .node-slider-readout")) {
     return;
   }
 
   event.preventDefault();
   event.stopPropagation();
-  const node = event.target.closest(".dsp-node");
-  if (node) {
-    const selectedNodeIds = nodeGraphSelectedNodeIds();
-    if (!selectedNodeIds.has(node.dataset.node)) {
-      setNodeGraphSelection({ type: "node", id: node.dataset.node });
-    }
-    nodeGraphMvp.sceneContextPoint = null;
-    nodeGraphMvp.sceneContextTargetNode = node.dataset.node;
-    configureNodeSceneContextMenu("module");
-  } else {
-    nodeGraphMvp.sceneContextPoint = nodeGraphClientPoint(event);
-    nodeGraphMvp.sceneContextTargetNode = null;
-    configureNodeSceneContextMenu("add");
-  }
+  nodeGraphMvp.sceneContextPoint = nodeGraphClientPoint(event);
+  nodeGraphMvp.sceneContextTargetNode = null;
+  configureNodeSceneContextMenu("add");
   positionNodeSceneContextMenu(
     document.getElementById("nodeSceneContextMenu"),
     event.clientX,
@@ -8661,6 +8683,9 @@ function nodeInteractionHelpText(target) {
 function nodeInteractionMouseHint(element) {
   if (element.classList.contains("node-drag-handle")) {
     return "Mouse: drag to move selected module(s).";
+  }
+  if (element.classList.contains("node-action-button")) {
+    return "Mouse: click to open module actions.";
   }
   if (element.classList.contains("node-slider-readout")) {
     return "Mouse: drag adjusts, double-click types, right-click edits metadata.";

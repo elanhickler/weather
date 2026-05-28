@@ -424,7 +424,7 @@ audio {
 .dsp-node-header {
   position: relative;
   height: var(--node-header-height);
-  padding: 0 28px;
+  padding: 0 52px 0 28px;
   border-bottom: 1px solid rgba(243, 241, 236, 0.08);
   background: rgba(243, 241, 236, 0.025);
 }
@@ -448,7 +448,8 @@ audio {
   font-weight: 650;
 }
 
-.node-drag-handle {
+.node-drag-handle,
+.node-action-button {
   width: 20px;
   min-width: 20px;
   height: 20px;
@@ -462,8 +463,14 @@ audio {
   line-height: 1;
 }
 
+.node-action-button {
+  margin-left: auto;
+  cursor: pointer;
+}
+
 .node-drag-handle:active,
-.node-drag-handle.dragging {
+.node-drag-handle.dragging,
+.node-action-button:active {
   color: var(--accent-2);
 }
 
