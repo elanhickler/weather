@@ -484,12 +484,10 @@ audio {
 
 .node-parameter-row {
   position: relative;
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
+  display: block;
   align-items: end;
-  gap: 7px;
   min-height: 0;
-  padding: 0 13px;
+  padding: 0 13px 0 23px;
 }
 
 .dsp-node p {
@@ -841,22 +839,26 @@ audio {
 }
 
 .node-param-port {
+  position: absolute;
+  left: 0;
+  top: 50%;
   display: block;
   width: 13px;
   min-width: 13px;
   height: 26px;
   min-height: 26px;
   padding: 0;
-  border-radius: 999px 0 0 999px;
+  border-radius: 0 999px 999px 0;
   color: transparent;
   cursor: crosshair;
   overflow: hidden;
   text-indent: -999px;
+  transform: translateY(-50%);
 }
 
 .node-param-port.modulation-input {
   border-color: rgba(177, 132, 255, 0.62);
-  border-right-width: 0;
+  border-left-width: 0;
   background: rgba(177, 132, 255, 0.16);
 }
 
