@@ -10340,7 +10340,8 @@ function nodeGraphLivePlanStatusText(plan, serial = nodeGraphMvp.live.planSerial
   const serialText = serial ? ` #${serial}` : "";
   const feedbackCount = nodeGraphStateReadCount(plan);
   const feedbackText = feedbackCount ? ` / ${nodeGraphStateReadText(feedbackCount)}` : "";
-  return `plan${serialText} ${plan.nodes.length} nodes / ${plan.connections.length} wires / ${plan.modulations.length} mods${feedbackText}`;
+  const fingerprintText = plan.patchFingerprint ? ` / fp ${plan.patchFingerprint}` : "";
+  return `plan${serialText} ${plan.nodes.length} nodes / ${plan.connections.length} wires / ${plan.modulations.length} mods${feedbackText}${fingerprintText}`;
 }
 
 function nodeGraphLiveBlockedStatusText(kind, error) {
@@ -10389,7 +10390,8 @@ function nodeGraphLiveParametersSentStatusText(nodes = [], serial = nodeGraphMvp
 function nodeGraphLiveParametersAppliedStatusText(message) {
   const serial = Number(message.planSerial) || 0;
   const serialText = serial ? ` #${serial}` : "";
-  return `params${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.parameterCount) || 0} params`;
+  const fingerprintText = message.patchFingerprint ? ` / fp ${message.patchFingerprint}` : "";
+  return `params${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.parameterCount) || 0} params${fingerprintText}`;
 }
 
 function nodeGraphLivePlanAppliedStatusText(message) {
@@ -10398,7 +10400,8 @@ function nodeGraphLivePlanAppliedStatusText(message) {
   const feedbackCount = (Number(message.feedbackConnectionCount) || 0) +
     (Number(message.feedbackModulationCount) || 0);
   const feedbackText = feedbackCount ? ` / ${nodeGraphStateReadText(feedbackCount)}` : "";
-  return `plan${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.connectionCount) || 0} wires / ${Number(message.modulationCount) || 0} mods${feedbackText}`;
+  const fingerprintText = message.patchFingerprint ? ` / fp ${message.patchFingerprint}` : "";
+  return `plan${serialText} ${Number(message.nodeCount) || 0} nodes / ${Number(message.connectionCount) || 0} wires / ${Number(message.modulationCount) || 0} mods${feedbackText}${fingerprintText}`;
 }
 
 function setNodeGraphLiveMeter(peak = 0, rms = 0, clipCount = 0) {
@@ -10492,6 +10495,7 @@ function nodeGraphBuildLivePlan() {
     nodes: nodeGraphBuildLiveParameterNodes(activeNodeIds),
     order: [...compiled.order],
     outputNode: compiled.outputNode,
+    patchFingerprint: nodeGraphPatchFingerprint(),
     sourceNodes: [...compiled.sourceNodes],
   };
 }
@@ -10948,6 +10952,7 @@ function sendNodeGraphLivePlan() {
       setNodeGraphLivePlanTitle(nodeGraphLivePlanScheduleTitle(plan.order));
       nodeGraphMvp.live.node?.port?.postMessage({
         plan,
+        patchFingerprint: plan.patchFingerprint,
         planSerial: nodeGraphMvp.live.planSerial,
         sessionId: nodeGraphMvp.live.sessionId,
         type: "setPlan",
@@ -10989,11 +10994,13 @@ function sendNodeGraphLiveParameterUpdate() {
 
   try {
     const nodes = nodeGraphBuildLiveParameterNodes(nodeGraphMvp.live.activeNodeIds);
+    const patchFingerprint = nodeGraphPatchFingerprint();
     nodeGraphMvp.live.planSerial += 1;
     if (nodeGraphMvp.live.usesWorklet) {
       setNodeGraphLivePlanStatus(nodeGraphLiveParametersSentStatusText(nodes), "warn");
       nodeGraphMvp.live.node?.port?.postMessage({
         nodes,
+        patchFingerprint,
         planSerial: nodeGraphMvp.live.planSerial,
         sessionId: nodeGraphMvp.live.sessionId,
         type: "setParams",
@@ -11004,6 +11011,7 @@ function sendNodeGraphLiveParameterUpdate() {
         nodeGraphLiveParametersAppliedStatusText({
           nodeCount: nodes.length,
           parameterCount: nodeGraphLiveParameterCount(nodes),
+          patchFingerprint,
           planSerial: nodeGraphMvp.live.planSerial,
         }),
         "good",

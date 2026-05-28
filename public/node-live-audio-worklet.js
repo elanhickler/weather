@@ -49,6 +49,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   setPlan(plan, message = {}) {
+    const patchFingerprint = message.patchFingerprint || plan?.patchFingerprint || "";
     this.planSerial = message.planSerial || 0;
     this.sessionId = message.sessionId || 0;
     const nodes = Array.isArray(plan?.nodes) ? plan.nodes : [];
@@ -114,6 +115,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       modulationCount: Array.isArray(plan?.modulations) ? plan.modulations.length : 0,
       nodeCount: this.nodes.size,
       order: [...this.order],
+      patchFingerprint,
       planSerial: this.planSerial,
       sessionId: this.sessionId,
       type: "planApplied",
@@ -121,6 +123,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   setParams(nodes, message = {}) {
+    const patchFingerprint = message.patchFingerprint || "";
     this.planSerial = message.planSerial || 0;
     this.sessionId = message.sessionId || 0;
     let parameterCount = 0;
@@ -146,6 +149,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       nodeCount: this.nodes.size,
       order: [...this.order],
       parameterCount,
+      patchFingerprint,
       planSerial: this.planSerial,
       sessionId: this.sessionId,
       type: "paramsApplied",
