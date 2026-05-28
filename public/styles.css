@@ -739,10 +739,11 @@ audio {
   gap: 7px;
 }
 
-.metadata-popover-heading strong {
+.metadata-popover-heading #metadataPopoverTitle {
   min-width: 0;
   overflow-wrap: anywhere;
   font-size: 0.88rem;
+  font-weight: 400;
 }
 
 .metadata-popover-heading button,
