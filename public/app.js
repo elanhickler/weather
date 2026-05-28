@@ -8498,6 +8498,22 @@ function nodeGraphActiveNodeText(plan) {
     : "";
 }
 
+function nodeGraphActiveWireCount(plan) {
+  return nodeGraphActiveSignalConnections(plan).length + nodeGraphActiveModulations(plan).length;
+}
+
+function nodeGraphPatchWireCount(plan) {
+  return (plan.connections?.length || 0) + (plan.modulations?.length || 0);
+}
+
+function nodeGraphActiveWireText(plan) {
+  const patchWireCount = nodeGraphPatchWireCount(plan);
+  const activeWireCount = nodeGraphActiveWireCount(plan);
+  return patchWireCount > activeWireCount
+    ? `${activeWireCount}/${patchWireCount} wires`
+    : "";
+}
+
 function nodeGraphScheduleText(order, issues = [], feedbackConnections = [], feedbackModulations = []) {
   if (issues.length) {
     return `schedule blocked: ${issues.join(", ")}`;
@@ -8586,6 +8602,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
   return JSON.stringify(
     {
       activeNodeCount: plan.reachableNodes?.length || 0,
+      activeWireCount: nodeGraphActiveWireCount(plan),
       executionModel: "single-pass stored-output",
       feedbackModulations: plan.feedbackModulations.map((modulation) =>
         `${modulation.sourceNode}.${modulation.sourcePort} -> ${modulation.destinationNode}.${modulation.destinationParam}`,
@@ -8600,6 +8617,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       order: plan.valid ? plan.order : [],
       outputNode: plan.outputNode,
       patchNodeCount: plan.nodes?.length || 0,
+      patchWireCount: nodeGraphPatchWireCount(plan),
       parameters: nodeGraphExecutionParameterSnapshot(plan),
       partialOrder: plan.valid ? [] : plan.order,
       schedulerPolicy: "same-pass acyclic edges; cycle-closing edges read stored outputs",
@@ -8624,10 +8642,12 @@ function renderNodeGraphExecutionPlanDebug(plan = compileNodeGraphExecutionPlan(
   }
   const stateReadCount = nodeGraphStateReadCount(plan);
   const activeNodeText = nodeGraphActiveNodeText(plan);
+  const activeWireText = nodeGraphActiveWireText(plan);
   status.textContent = plan.valid
     ? [
       "compiled",
       activeNodeText,
+      activeWireText,
       stateReadCount ? nodeGraphStateReadText(stateReadCount) : "",
     ].filter(Boolean).join(" / ")
     : "blocked";
