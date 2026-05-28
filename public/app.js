@@ -8538,13 +8538,13 @@ function createNodeGraphModuleElement(type, node) {
   if (inputRail) {
     header.append(inputRail);
   }
-  if (outputRail) {
-    header.append(outputRail);
-  }
   article.append(header);
 
   const body = document.createElement("div");
   body.className = "dsp-node-body";
+  if (outputRail) {
+    body.append(outputRail);
+  }
 
   for (const parameter of definition.parameters) {
     body.append(createNodeGraphParameter(node, type, parameter));
