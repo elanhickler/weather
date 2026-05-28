@@ -392,6 +392,22 @@ def read_soemdsp_meta_kinds() -> set[str]:
     return names
 
 
+def require_soemdsp_wire_meta_traits() -> None:
+    source = SOEMDSP_META_HEADER.read_text(encoding="utf-8")
+    for snippet in [
+        "std::string_view unit_;",
+        ", unit_(WireTypeTraits::get(type).unit_)",
+        ", def_(WireTypeTraits::get(type).def_)",
+        ", min_(WireTypeTraits::get(type).min_)",
+        ", max_(WireTypeTraits::get(type).max_)",
+        'static_assert(WireMeta{ "frequency", "", MetaType::frequency }.unit_ == "Hz");',
+        'static_assert(WireMeta{ "frequency", "", MetaType::frequency }.max_ == 20000.0);',
+        'static_assert(WireMeta{ "waveform", "", MetaType::waveform }.choices.size() == 5);',
+        'static_assert(WireMeta{ "waveform", "", MetaType::waveform }.max_ == 4.0);',
+    ]:
+        require(snippet in source, f"soemdsp WireMeta trait contract missing {snippet}")
+
+
 def find_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         server.bind(("127.0.0.1", 0))
@@ -4097,6 +4113,7 @@ def run_valid_manifest_smoke(port: int, manifest: Path) -> None:
         run_step("follow/free seek contract", require_follow_free_seek_contract)
         run_step("node graph MVP contract", require_node_graph_mvp_contract)
         run_step("README scheduler contract", require_readme_scheduler_contract)
+        run_step("soemdsp WireMeta traits", require_soemdsp_wire_meta_traits)
         run_step(
             "node metadata kinds transport",
             lambda: require_node_metadata_kinds_transport(base_url),
