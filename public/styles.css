@@ -1251,6 +1251,10 @@ audio {
   margin-top: 12px;
 }
 
+.node-execution-json-heading {
+  margin-top: 12px;
+}
+
 .node-runtime-sketch {
   max-height: 260px;
   margin-top: 8px;

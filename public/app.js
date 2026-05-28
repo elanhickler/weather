@@ -7328,9 +7328,9 @@ function formatNodeSliderMetadataTooltip(slider) {
 
 function syncNodeSliderMetadataTooltip(slider) {
   const tooltip = formatNodeSliderMetadataTooltip(slider);
-  slider.title = tooltip;
   slider.setAttribute("aria-valuetext", tooltip);
-  slider.closest(".node-slider-drag-surface")?.setAttribute("title", tooltip);
+  slider.removeAttribute("title");
+  slider.closest(".node-slider-drag-surface")?.removeAttribute("title");
 }
 
 function clampNodeSliderValue(value, min, max) {
@@ -7518,7 +7518,7 @@ function syncNodeSliderReadout(slider) {
   unitText.setAttribute("aria-hidden", unit ? "false" : "true");
   readout.dataset.value = slider.value;
   readout.dataset.unit = unit;
-  readout.title = `${formatNodeSliderMetadataTooltip(slider)} / double-click to type`;
+  readout.removeAttribute("title");
   readout.style.setProperty(
     "--value-position",
     `${Math.max(0, Math.min(100, position))}%`,
@@ -8245,7 +8245,6 @@ function createNodeSliderReadout(slider) {
   readout.className = "node-slider-readout";
   readout.dataset.sliderTarget = slider.id;
   readout.setAttribute("aria-label", `${slider.id} current value`);
-  readout.setAttribute("title", formatNodeSliderMetadataTooltip(slider));
   populateNodeSliderReadoutShell(readout);
   attachNodeSliderReadoutEvents(readout);
   label.append(readout);
@@ -9328,9 +9327,10 @@ function installNodeGraphDebugApi() {
 function renderNodeGraphExecutionPlanDebug(plan = compileNodeGraphExecutionPlan()) {
   const status = document.getElementById("nodeExecutionPlanStatus");
   const debug = document.getElementById("nodeExecutionPlanDebug");
+  const jsonStatus = document.getElementById("nodeExecutionJsonStatus");
   const sketch = document.getElementById("nodeRuntimeSketch");
   const sketchStatus = document.getElementById("nodeRuntimeSketchStatus");
-  if (!status || !debug || !sketch || !sketchStatus) {
+  if (!status || !debug || !jsonStatus || !sketch || !sketchStatus) {
     return;
   }
   const stateReadCount = nodeGraphStateReadCount(plan);
@@ -9359,6 +9359,11 @@ function renderNodeGraphExecutionPlanDebug(plan = compileNodeGraphExecutionPlan(
     : plan.issues.join(", ");
   sketchStatus.className = `pill ${plan.valid ? "good" : "warn"}`;
   debug.textContent = serializeNodeGraphExecutionPlanDebug(plan);
+  jsonStatus.textContent = plan.valid ? "ready" : "blocked";
+  jsonStatus.title = plan.valid
+    ? "Full compiled execution JSON"
+    : plan.issues.join(", ");
+  jsonStatus.className = `pill ${plan.valid ? "good" : "warn"}`;
 }
 
 function fallbackCopyTextToClipboard(text) {
@@ -9418,6 +9423,37 @@ async function copyNodeGraphRuntimeSketch() {
   }
 }
 
+async function copyNodeGraphExecutionJson() {
+  const debug = document.getElementById("nodeExecutionPlanDebug");
+  const jsonStatus = document.getElementById("nodeExecutionJsonStatus");
+  const text = debug?.textContent || "";
+  if (!text || text === "waiting for graph") {
+    if (jsonStatus) {
+      jsonStatus.textContent = "nothing to copy";
+      jsonStatus.className = "pill warn";
+    }
+    return;
+  }
+  try {
+    await copyTextToClipboard(text);
+    if (jsonStatus) {
+      jsonStatus.textContent = "copied";
+      jsonStatus.className = "pill good";
+    }
+  } catch (error) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(debug);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    if (jsonStatus) {
+      jsonStatus.textContent = "selected";
+      jsonStatus.title = error.message;
+      jsonStatus.className = "pill good";
+    }
+  }
+}
+
 function renderNodeGraphExecutionOrderBadges(plan) {
   const orderIndex = new Map((plan.order || []).map((nodeId, index) => [nodeId, index + 1]));
   const bypassedNodes = nodeGraphPlanBypassedNodeIds(plan);
@@ -9432,7 +9468,10 @@ function renderNodeGraphExecutionOrderBadges(plan) {
       badge.textContent = String(order);
       badge.dataset.executionState = "active";
       badge.setAttribute("aria-label", `${nodeGraphNodeDisplayName(nodeId)} compiled order ${order}`);
-      badge.setAttribute("title", `Compiled order ${order}`);
+      badge.setAttribute(
+        "title",
+        `Compiled order ${order}: this module runs at step ${order} in the current execution plan.`,
+      );
     } else if (bypassedNodes.has(nodeId)) {
       badge.textContent = "off";
       badge.dataset.executionState = "bypassed";
@@ -10901,7 +10940,7 @@ function nodeInteractionHelpText(target) {
     return "";
   }
   const helpTarget = target.closest(
-    "[data-interaction-help], button, input, textarea, select, .node-slider-readout, .node-port, .node-param-port, .node-wire-hit-path, .node-wire-path",
+    "[data-interaction-help], button, input, textarea, select, .node-slider-readout, .node-port, .node-param-port, .node-wire-hit-path, .node-wire-path, .node-execution-order-badge",
   );
   if (!helpTarget) {
     return "";
@@ -10919,6 +10958,16 @@ function nodeInteractionMouseHint(element) {
   }
   if (element.classList.contains("node-bypass-button")) {
     return "Mouse: click to bypass this module. Bypassed modules are removed from the compiled engine.";
+  }
+  if (element.classList.contains("node-execution-order-badge")) {
+    const state = element.dataset.executionState || "inactive";
+    if (state === "active") {
+      return `Compiled order: ${element.textContent}\nThis module runs at this step in the current execution plan.`;
+    }
+    if (state === "bypassed") {
+      return "Compiled order: bypassed\nThis module is ignored by the compiled engine.";
+    }
+    return "Compiled order: inactive\nThis module is not reachable from Output.";
   }
   if (element.classList.contains("node-slider-readout")) {
     return "Mouse: drag adjusts, double-click types, right-click edits metadata.";
@@ -10961,6 +11010,9 @@ function nodeInteractionMouseHint(element) {
   }
   if (element.id === "nodeCopyRuntimeSketchButton") {
     return "Mouse: click to copy the caller-owned C++ runtime sketch.";
+  }
+  if (element.id === "nodeCopyExecutionJsonButton") {
+    return "Mouse: click to copy the full compiled execution JSON.";
   }
   if (element.id === "nodeDeleteButton") {
     return "Mouse: click to delete selected item.";
@@ -12551,6 +12603,7 @@ function initNodeGraphMvp() {
   document.getElementById("nodeRenderButton").addEventListener("click", renderNodeGraphAudio);
   document.getElementById("nodePlayButton").addEventListener("click", playNodeGraphAudio);
   document.getElementById("nodeCopyRuntimeSketchButton").addEventListener("click", copyNodeGraphRuntimeSketch);
+  document.getElementById("nodeCopyExecutionJsonButton").addEventListener("click", copyNodeGraphExecutionJson);
   document.getElementById("nodeSaveVisualOutputButton").addEventListener("click", saveNodeGraphVisualOutputPng);
   document.getElementById("nodeLiveInputButton").addEventListener("click", toggleNodeGraphLiveInput);
   document.getElementById("nodeLiveOutputButton").addEventListener("click", toggleNodeGraphLiveOutput);

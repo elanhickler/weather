@@ -112,6 +112,10 @@ Render Sample and Live Audio expose patch evidence for debugging:
   full JSON debug dump so the C++ mapping can be read directly in the browser
 - the Runtime Sketch panel can copy the pseudo-C++ sketch to the clipboard for
   handoff or comparison
+- execution badges expose fixed help text for compiled order, bypassed, and
+  inactive module states without using slider hover titles
+- the Execution JSON panel can copy or select the full debug dump for handoff
+  and comparison
 - `window.soemdspSandboxDebug` exposes `compileExecutionPlan()`,
   `currentPatchFingerprint()`, `lastRender()`, `live()`, and
   `soemdspMapping()` / `soemdspRuntimeSketch()` for direct inspection
