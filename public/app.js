@@ -11880,6 +11880,21 @@ function drawNodeRenderedSignalPlot() {
   context.stroke();
 }
 
+function renderNodeVisualOutputMeta(entries = {}) {
+  const list = document.getElementById("nodeVisualOutputMeta");
+  if (!list) {
+    return;
+  }
+  list.replaceChildren();
+  for (const [label, value] of Object.entries(entries)) {
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const description = document.createElement("dd");
+    description.textContent = String(value);
+    list.append(term, description);
+  }
+}
+
 function drawNodeRenderedVisualOutput() {
   const canvas = document.getElementById("nodeVisualOutputCanvas");
   const status = document.getElementById("nodeVisualOutputStatus");
@@ -11930,6 +11945,13 @@ function drawNodeRenderedVisualOutput() {
     canvas.dataset.visualMode = "waiting";
     canvas.dataset.visualFrames = "0";
     canvas.title = "Node graph visual output waiting for Render Sample";
+    renderNodeVisualOutputMeta({
+      Frames: 0,
+      Mode: "waiting",
+      Peak: "0",
+      RMS: "0",
+      Source: "unavailable",
+    });
     if (status) {
       status.textContent = "waiting";
       status.className = "pill";
@@ -11987,6 +12009,13 @@ function drawNodeRenderedVisualOutput() {
   canvas.title =
     `Node graph visual output / ${canvas.dataset.visualMode} / ` +
     `${sourceSamples.length} frames / peak ${canvas.dataset.visualPeak} / rms ${canvas.dataset.visualRms}`;
+  renderNodeVisualOutputMeta({
+    Frames: sourceSamples.length,
+    Mode: visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode,
+    Peak: canvas.dataset.visualPeak,
+    RMS: canvas.dataset.visualRms,
+    Source: canvas.dataset.visualSource,
+  });
   if (status) {
     status.textContent = visualSettings.mode === "auto" ? `auto ${visualMode}` : visualMode;
     status.className = "pill good";

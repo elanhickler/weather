@@ -1214,6 +1214,10 @@ audio {
   box-shadow: inset 0 0 28px rgba(127, 199, 217, 0.06);
 }
 
+.node-visual-output-meta {
+  margin-top: 8px;
+}
+
 body.debug-collapsed .node-wiring-panel ~ .panel,
 body.debug-collapsed .node-wiring-panel ~ .grid {
   display: none;
