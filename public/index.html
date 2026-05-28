@@ -204,8 +204,13 @@
           <span>Delete</span>
           <kbd>Delete</kbd>
         </button>
-        <button id="nodeSceneCloseMenu" type="button" role="menuitem">
-          <span>Close</span>
+        <button
+          id="nodeSceneCloseMenu"
+          class="panel-close-button"
+          type="button"
+          role="menuitem"
+          aria-label="Close module actions">
+          <span aria-hidden="true">[ X ]</span>
         </button>
       </div>
 
@@ -263,7 +268,11 @@
               title="Move parameter metadata editor">&#x2725;</button>
             <strong id="metadataPopoverTitle">Parameter Metadata</strong>
           </div>
-          <button id="metadataPopoverClose" type="button" aria-label="Close parameter metadata editor">Close</button>
+          <button
+            id="metadataPopoverClose"
+            class="panel-close-button"
+            type="button"
+            aria-label="Close parameter metadata editor">[ X ]</button>
         </div>
         <div class="metadata-popover-grid">
           <label>Min <input id="metadataMinValue" type="text" inputmode="decimal"></label>

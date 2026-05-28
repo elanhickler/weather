@@ -768,6 +768,14 @@ audio {
   color: var(--accent-2);
 }
 
+.metadata-popover-heading .panel-close-button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  padding: 0 7px;
+  font-family: Consolas, "Courier New", monospace;
+  letter-spacing: 0;
+}
+
 .metadata-popover-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -893,6 +901,13 @@ audio {
   padding: 0 10px;
   font-size: 0.78rem;
   text-align: left;
+}
+
+.node-scene-context-menu .panel-close-button {
+  justify-content: center;
+  font-family: Consolas, "Courier New", monospace;
+  letter-spacing: 0;
+  text-align: center;
 }
 
 .node-scene-context-menu button[hidden] {
