@@ -7440,7 +7440,26 @@ function closeNodeSceneContextMenu() {
   nodeGraphMvp.sceneContextTargetNode = null;
 }
 
+function stopNodeGraphRenderedPlayback() {
+  const source = nodeGraphMvp.bufferSource;
+  if (!source) {
+    return;
+  }
+  nodeGraphMvp.bufferSource = null;
+  try {
+    source.stop();
+  } catch (_error) {
+    // Already-ended render playback is harmless.
+  }
+  try {
+    source.disconnect();
+  } catch (_error) {
+    // A disconnected source is already silent.
+  }
+}
+
 function markNodeGraphRenderPending(summary = "waiting for render") {
+  stopNodeGraphRenderedPlayback();
   nodeGraphMvp.rendered = null;
   document.getElementById("nodePlayButton").disabled = true;
   document.getElementById("nodeGraphRenderStatus").textContent = "render pending";
@@ -10543,10 +10562,7 @@ async function playNodeGraphAudio() {
   if (nodeGraphMvp.audioContext.state === "suspended") {
     await nodeGraphMvp.audioContext.resume();
   }
-  if (nodeGraphMvp.bufferSource) {
-    nodeGraphMvp.bufferSource.stop();
-    nodeGraphMvp.bufferSource.disconnect();
-  }
+  stopNodeGraphRenderedPlayback();
 
   const channelCount = nodeGraphMvp.rendered.leftSamples?.length ? 2 : 1;
   const buffer = nodeGraphMvp.audioContext.createBuffer(

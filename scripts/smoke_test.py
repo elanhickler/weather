@@ -3164,6 +3164,8 @@ def require_node_graph_mvp_contract() -> None:
         "function applyNodeMetadataEditor()",
         "function closeNodeMetadataPopover()",
         "function closeNodeSceneContextMenu()",
+        "function stopNodeGraphRenderedPlayback()",
+        "stopNodeGraphRenderedPlayback();",
         "function markNodeGraphRenderPending(summary = \"waiting for render\")",
         'audioStats.textContent = "peak 0 / rms 0"',
         "outputSummary.textContent = summary",
