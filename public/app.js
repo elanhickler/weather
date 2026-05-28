@@ -8150,7 +8150,7 @@ function nodeGraphTopologicalOrder(nodes, dependencies, reachableNodes) {
       return;
     }
     if (visiting.has(nodeId)) {
-      issues.push(`cycle detected at ${nodeGraphNodeDisplayName(nodeId)}`);
+      issues.push(`feedback cycle unsupported at ${nodeGraphNodeDisplayName(nodeId)}`);
       return;
     }
     if (visited.has(nodeId)) {

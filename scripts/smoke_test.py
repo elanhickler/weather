@@ -3396,7 +3396,7 @@ def require_node_graph_mvp_contract() -> None:
         "function toggleDebugSections()",
         "document.addEventListener(\"keydown\", handleNodeGraphKeydown)",
         "missing Output speaker input",
-        "cycle detected at",
+        "feedback cycle unsupported at",
         "const mixInput = (nodeId, port = \"In\")",
         "frameValues.get(modulation.sourceNode)",
         "\"waveform\"",
