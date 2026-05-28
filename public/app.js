@@ -8451,9 +8451,9 @@ function createNodeGraphModuleElement(type, node) {
   titleRow.className = "node-header-title-row";
   const titleText = document.createElement("span");
   titleText.className = "node-header-title";
-  titleText.textContent = formatNodeGraphCodeCommentName(
-    node === type ? nodeGraphNodeLabels[type] : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`,
-  );
+  titleText.textContent = node === type
+    ? nodeGraphNodeLabels[type]
+    : `${nodeGraphNodeLabels[type]} ${node.split("-").at(-1)}`;
   titleRow.append(titleText);
   header.append(titleRow);
 
