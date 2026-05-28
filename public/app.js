@@ -6024,12 +6024,109 @@ function nodeGraphDefaultParamsForType(type) {
   return params;
 }
 
+function normalizeNodeGraphMetadataChoices(value, fallback = []) {
+  const choices = Array.isArray(value)
+    ? value
+    : String(value ?? "").split(",");
+  const normalized = choices
+    .map((choice) => String(choice).trim())
+    .filter(Boolean);
+  return normalized.length ? normalized : [...fallback];
+}
+
+function nodeGraphParameterDefinitionMetadata(parameter) {
+  if (!parameter) {
+    return null;
+  }
+  const min = Number(parameter.min);
+  const max = Number(parameter.max);
+  const safeMin = Number.isFinite(min) ? min : 0;
+  const safeMax = Number.isFinite(max) && max >= safeMin ? max : safeMin + 1;
+  const mid = Number(parameter.mid);
+  const def = Number(parameter.defaultValue);
+  const step = Number(parameter.step);
+  return {
+    choices: normalizeNodeGraphMetadataChoices(parameter.choices || []),
+    def: clampNodeSliderValue(Number.isFinite(def) ? def : safeMin, safeMin, safeMax),
+    displayChoices: Boolean(parameter.displayChoices),
+    kind: parameter.kind || "decimal",
+    linearSmoothing: parameter.linearSmoothing !== false,
+    max: safeMax,
+    mid: clampNodeSliderValue(Number.isFinite(mid) ? mid : (safeMin + safeMax) / 2, safeMin, safeMax),
+    min: safeMin,
+    showSign: Boolean(parameter.showSign),
+    step: Number.isFinite(step) && step > 0 ? step : 0,
+    unit: parameter.unit ?? "",
+    wraparound: Boolean(parameter.wraparound),
+  };
+}
+
+function nodeGraphDefaultParamMetaForType(type) {
+  const metadata = {};
+  for (const parameter of nodeGraphModuleDefinitions[type]?.parameters || []) {
+    metadata[parameter.key] = nodeGraphParameterDefinitionMetadata(parameter);
+  }
+  return metadata;
+}
+
+function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
+  const parameter = nodeGraphModuleDefinitions[type]?.parameters?.find(
+    (candidate) => candidate.key === key,
+  );
+  const fallback = nodeGraphParameterDefinitionMetadata(parameter);
+  if (!fallback) {
+    return null;
+  }
+  const source = metadata && typeof metadata === "object" ? metadata : {};
+  let min = Number(Object.hasOwn(source, "min") ? source.min : fallback.min);
+  let max = Number(Object.hasOwn(source, "max") ? source.max : fallback.max);
+  if (!Number.isFinite(min)) {
+    min = fallback.min;
+  }
+  if (!Number.isFinite(max)) {
+    max = fallback.max;
+  }
+  if (min > max) {
+    [min, max] = [max, min];
+  }
+  if (max <= min) {
+    max = min + 1;
+  }
+  const mid = Number(Object.hasOwn(source, "mid") ? source.mid : fallback.mid);
+  const def = Number(Object.hasOwn(source, "def") ? source.def : fallback.def);
+  const step = Number(Object.hasOwn(source, "step") ? source.step : fallback.step);
+  const choices = normalizeNodeGraphMetadataChoices(
+    Object.hasOwn(source, "choices") ? source.choices : fallback.choices,
+    fallback.choices,
+  );
+  return {
+    choices,
+    def: clampNodeSliderValue(Number.isFinite(def) ? def : fallback.def, min, max),
+    displayChoices: Object.hasOwn(source, "displayChoices")
+      ? Boolean(source.displayChoices)
+      : fallback.displayChoices,
+    kind: normalizeNodeMetadataKind(source.kind || fallback.kind),
+    linearSmoothing: Object.hasOwn(source, "linearSmoothing")
+      ? Boolean(source.linearSmoothing)
+      : fallback.linearSmoothing,
+    max,
+    mid: clampNodeSliderValue(Number.isFinite(mid) ? mid : fallback.mid, min, max),
+    min,
+    showSign: Object.hasOwn(source, "showSign") ? Boolean(source.showSign) : fallback.showSign,
+    step: Number.isFinite(step) && step > 0 ? step : 0,
+    unit: String(Object.hasOwn(source, "unit") ? source.unit ?? "" : fallback.unit),
+    wraparound: Object.hasOwn(source, "wraparound")
+      ? Boolean(source.wraparound)
+      : fallback.wraparound,
+  };
+}
+
 const nodeGraphDefaultNodeConfigs = Object.freeze([
-  { id: "osc", type: "osc", gx: 2, gy: 1, params: nodeGraphDefaultParamsForType("osc") },
-  { id: "noise", type: "noise", gx: 2, gy: 12, params: nodeGraphDefaultParamsForType("noise") },
-  { id: "gain", type: "gain", gx: 16, gy: 7, params: nodeGraphDefaultParamsForType("gain") },
-  { id: "bias", type: "bias", gx: 27, gy: 7, params: nodeGraphDefaultParamsForType("bias") },
-  { id: "output", type: "output", gx: 36, gy: 8, params: nodeGraphDefaultParamsForType("output") },
+  { id: "osc", type: "osc", gx: 2, gy: 1, paramMeta: nodeGraphDefaultParamMetaForType("osc"), params: nodeGraphDefaultParamsForType("osc") },
+  { id: "noise", type: "noise", gx: 2, gy: 12, paramMeta: nodeGraphDefaultParamMetaForType("noise"), params: nodeGraphDefaultParamsForType("noise") },
+  { id: "gain", type: "gain", gx: 16, gy: 7, paramMeta: nodeGraphDefaultParamMetaForType("gain"), params: nodeGraphDefaultParamsForType("gain") },
+  { id: "bias", type: "bias", gx: 27, gy: 7, paramMeta: nodeGraphDefaultParamMetaForType("bias"), params: nodeGraphDefaultParamsForType("bias") },
+  { id: "output", type: "output", gx: 36, gy: 8, paramMeta: nodeGraphDefaultParamMetaForType("output"), params: nodeGraphDefaultParamsForType("output") },
 ]);
 
 const nodeGraphDefaultConnections = Object.freeze([
@@ -6193,6 +6290,18 @@ function normalizeNodeGraphPatchInfo(info = {}) {
   };
 }
 
+function cloneNodeGraphParamMeta(paramMeta = {}) {
+  return Object.fromEntries(
+    Object.entries(paramMeta || {}).map(([key, metadata]) => [
+      key,
+      {
+        ...(metadata || {}),
+        choices: [...(metadata?.choices || [])],
+      },
+    ]),
+  );
+}
+
 function cloneNodeGraphPatch(patch) {
   return {
     connections: (patch.connections || []).map((connection) => ({ ...connection })),
@@ -6201,6 +6310,7 @@ function cloneNodeGraphPatch(patch) {
     modulations: (patch.modulations || []).map((modulation) => ({ ...modulation })),
     nodes: (patch.nodes || []).map((node) => ({
       ...node,
+      paramMeta: cloneNodeGraphParamMeta(node.paramMeta),
       params: { ...(node.params || {}) },
     })),
   };
@@ -6330,7 +6440,7 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
   );
 }
 
-function normalizeNodeGraphPatchParameter(type, key, value) {
+function normalizeNodeGraphPatchParameter(type, key, value, metadata = null) {
   const parameter = nodeGraphModuleDefinitions[type]?.parameters?.find(
     (candidate) => candidate.key === key,
   );
@@ -6338,18 +6448,18 @@ function normalizeNodeGraphPatchParameter(type, key, value) {
     return null;
   }
   const number = Number(value);
-  const fallback = Number(parameter.defaultValue);
+  const fallback = Number(metadata?.def ?? parameter.defaultValue);
   const candidate = Number.isFinite(number)
     ? number
     : Number.isFinite(fallback)
       ? fallback
       : 0;
-  const min = Number(parameter.min);
-  const max = Number(parameter.max);
+  const min = Number(metadata?.min ?? parameter.min);
+  const max = Number(metadata?.max ?? parameter.max);
   if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
     return candidate;
   }
-  return parameter.wraparound
+  return metadata?.wraparound || parameter.wraparound
     ? wrapNodeSliderValue(candidate, min, max)
     : clampNodeSliderValue(candidate, min, max);
 }
@@ -6387,14 +6497,26 @@ function validateNodeGraphPatch(patch) {
       throw new Error(`node ${id} grid position invalid`);
     }
     const params = {};
+    const paramMeta = {};
     for (const parameter of nodeGraphModuleDefinitions[type].parameters || []) {
+      const metadata = normalizeNodeGraphPatchParameterMetadata(
+        type,
+        parameter.key,
+        node.paramMeta?.[parameter.key],
+      );
+      paramMeta[parameter.key] = metadata;
       const value = Object.hasOwn(node.params || {}, parameter.key)
         ? node.params[parameter.key]
         : parameter.defaultValue;
-      params[parameter.key] = normalizeNodeGraphPatchParameter(type, parameter.key, value);
+      params[parameter.key] = normalizeNodeGraphPatchParameter(
+        type,
+        parameter.key,
+        value,
+        metadata,
+      );
     }
     ids.add(id);
-    return { gx, gy, id, params, type };
+    return { gx, gy, id, paramMeta, params, type };
   });
 
   if (!ids.has("output")) {
@@ -6570,6 +6692,11 @@ function applyNodeGraphPatchToDom() {
       if (!input) {
         continue;
       }
+      setNodeSliderMetadata(
+        input,
+        patchNode.paramMeta?.[parameter.key] ||
+        nodeGraphParameterDefinitionMetadata(parameter),
+      );
       input.value = String(
         patchNode.params?.[parameter.key] ??
         nodeGraphParameterFallback(patchNode.type, parameter.key),
@@ -6689,6 +6816,15 @@ function nodeGraphReadNodeParameterMetadata(node, key) {
     `input[data-param="${CSS.escape(key)}"]`,
   );
   if (!input) {
+    const patchMetadata = nodeGraphPatchNode(node)?.paramMeta?.[key];
+    if (patchMetadata) {
+      return {
+        linearSmoothing: patchMetadata.linearSmoothing !== false,
+        max: Number(patchMetadata.max ?? 1),
+        min: Number(patchMetadata.min ?? 0),
+        wraparound: Boolean(patchMetadata.wraparound),
+      };
+    }
     const definition = nodeGraphModuleDefinitions[nodeGraphPatchNodeType(node)];
     const parameter = definition?.parameters?.find((candidate) => candidate.key === key);
     return {
@@ -7284,6 +7420,9 @@ function applyNodeMetadataEditor() {
   }
 
   setNodeSliderMetadata(slider, readNodeMetadataEditorValues(slider));
+  syncNodeGraphPatchMetadataFromSlider(slider, {
+    status: "metadata synced",
+  });
   markNodeGraphRenderPending();
 }
 
@@ -7328,6 +7467,43 @@ function handleNodeMetadataEditorInput() {
   applyNodeMetadataEditor();
 }
 
+function syncNodeGraphPatchMetadataFromSlider(slider, options = {}) {
+  const node = slider?.closest(".dsp-node")?.dataset.node;
+  const key = slider?.dataset.param;
+  if (!node || !key) {
+    return;
+  }
+  const patchNode = nodeGraphMvp.patch.nodes.find((candidate) => candidate.id === node);
+  if (!patchNode) {
+    return;
+  }
+  patchNode.paramMeta = {
+    ...(patchNode.paramMeta || {}),
+    [key]: normalizeNodeGraphPatchParameterMetadata(
+      patchNode.type,
+      key,
+      nodeSliderMetadata(slider),
+    ),
+  };
+  patchNode.params = {
+    ...(patchNode.params || {}),
+    [key]: normalizeNodeGraphPatchParameter(
+      patchNode.type,
+      key,
+      nodeGraphReadNodeNumber(node, key),
+      patchNode.paramMeta[key],
+    ),
+  };
+  syncNodeGraphScriptView(options.status || "metadata synced", true);
+  renderNodeGraphExecutionPlanDebug();
+  scheduleNodeGraphLivePlanSync();
+  if (options.record) {
+    recordNodeGraphHistory();
+  } else {
+    renderNodeGraphHistoryControls();
+  }
+}
+
 function syncNodeGraphPatchParameterFromSlider(slider, options = {}) {
   const node = slider?.closest(".dsp-node")?.dataset.node;
   const key = slider?.dataset.param;
@@ -7338,9 +7514,22 @@ function syncNodeGraphPatchParameterFromSlider(slider, options = {}) {
   if (!patchNode) {
     return;
   }
+  patchNode.paramMeta = {
+    ...(patchNode.paramMeta || {}),
+    [key]: normalizeNodeGraphPatchParameterMetadata(
+      patchNode.type,
+      key,
+      patchNode.paramMeta?.[key] || nodeSliderMetadata(slider),
+    ),
+  };
   patchNode.params = {
     ...(patchNode.params || {}),
-    [key]: nodeGraphReadNodeNumber(node, key),
+    [key]: normalizeNodeGraphPatchParameter(
+      patchNode.type,
+      key,
+      nodeGraphReadNodeNumber(node, key),
+      patchNode.paramMeta[key],
+    ),
   };
   if (options.deferUi) {
     return;
