@@ -8975,6 +8975,20 @@ function nodeGraphLastRenderDebug() {
   };
 }
 
+function nodeGraphRuntimeBoundaryDebug(plan) {
+  return {
+    authoringOnly: ["info", "grid", "visual", "bypassedNodes", "node gx/gy"],
+    compiledRuntime: ["order", "active signal wires", "active modulation wires", "parameters", "wire read modes"],
+    compilerFiltered: {
+      bypassedNodes: [...(plan.bypassedNodes || [])],
+      inactiveNodes: [...(plan.inactiveNodes || [])],
+      inactiveWireReads: nodeGraphInactiveWireReads(plan),
+    },
+    invariant: "DSP nodes do not know patch authoring or display fields",
+    visual: normalizeNodeGraphPatchVisual(nodeGraphMvp.patch.visual),
+  };
+}
+
 function serializeNodeGraphExecutionPlanDebug(plan) {
   const samePassDependencies = {};
   for (const [nodeId, dependencies] of plan.orderDependencies.entries()) {
@@ -9032,6 +9046,7 @@ function serializeNodeGraphExecutionPlanDebug(plan) {
       patchWireCount: nodeGraphPatchWireCount(plan),
       parameters: nodeGraphExecutionParameterSnapshot(plan),
       partialOrder: plan.valid ? [] : plan.order,
+      runtimeBoundary: nodeGraphRuntimeBoundaryDebug(plan),
       schedulerPolicy: "same-pass acyclic edges; patch-node-order cycle-closing edges read stored outputs",
       samePassDependencies,
       signalInputs,
@@ -9064,6 +9079,7 @@ function serializeNodeGraphExecutionPlanApiDebug(plan) {
     order: [...plan.order],
     patchNodeCount: plan.nodes?.length || 0,
     patchWireCount: nodeGraphPatchWireCount(plan),
+    runtimeBoundary: nodeGraphRuntimeBoundaryDebug(plan),
     samePassDependencies: [...plan.orderDependencies.entries()].reduce(
       (dependencies, [node, sources]) => ({
         ...dependencies,
