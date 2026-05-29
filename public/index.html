@@ -325,7 +325,7 @@
         </div>
         <div class="metadata-popover-grid">
           <label>Min <input id="metadataMinValue" type="text" inputmode="decimal"></label>
-          <label>Mid <input id="metadataMidValue" type="text" inputmode="decimal"></label>
+          <label id="metadataMidLabel">Mid <input id="metadataMidValue" type="text" inputmode="decimal"></label>
           <label>Max <input id="metadataMaxValue" type="text" inputmode="decimal"></label>
           <label>Default <input id="metadataDefaultValue" type="text" inputmode="decimal"></label>
           <label>Drag Step <input id="metadataStepValue" type="text" inputmode="decimal"></label>
@@ -346,6 +346,10 @@
           <label class="metadata-checkbox-label">
             <input id="metadataWraparoundValue" type="checkbox">
             Wraparound
+          </label>
+          <label class="metadata-checkbox-label">
+            <input id="metadataNonlinearSliderValue" type="checkbox">
+            Nonlinear slider
           </label>
           <label class="metadata-checkbox-label">
             <input id="metadataLinearSmoothingValue" type="checkbox">

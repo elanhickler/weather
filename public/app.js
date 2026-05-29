@@ -6107,6 +6107,7 @@ function nodeGraphParameterDefinitionMetadata(parameter) {
   const mid = Number(parameter.mid);
   const def = Number(parameter.defaultValue);
   const step = Number(parameter.step);
+  const safeMid = clampNodeSliderValue(Number.isFinite(mid) ? mid : (safeMin + safeMax) / 2, safeMin, safeMax);
   return {
     choices: normalizeNodeGraphMetadataChoices(parameter.choices || []),
     def: clampNodeSliderValue(Number.isFinite(def) ? def : safeMin, safeMin, safeMax),
@@ -6117,8 +6118,11 @@ function nodeGraphParameterDefinitionMetadata(parameter) {
     kind: parameter.kind || "decimal",
     linearSmoothing: parameter.linearSmoothing !== false,
     max: safeMax,
-    mid: clampNodeSliderValue(Number.isFinite(mid) ? mid : (safeMin + safeMax) / 2, safeMin, safeMax),
+    mid: safeMid,
     min: safeMin,
+    nonlinearSlider: Object.hasOwn(parameter, "nonlinearSlider")
+      ? Boolean(parameter.nonlinearSlider)
+      : Math.abs(safeMid - (safeMin + safeMax) / 2) > Number.EPSILON,
     showSign: Boolean(parameter.showSign),
     step: Number.isFinite(step) && step > 0 ? step : 0,
     unit: parameter.unit ?? "",
@@ -6128,12 +6132,20 @@ function nodeGraphParameterDefinitionMetadata(parameter) {
 
 function normalizeNodeMetadataKindTemplate(template = {}) {
   const choices = normalizeNodeGraphMetadataChoices(template.choices || []);
+  const min = Number(template.min);
+  const max = Number(template.max);
+  const mid = Number(template.mid);
+  const hasRange = Number.isFinite(min) && Number.isFinite(max) && max > min;
+  const nonlinearSlider = Object.hasOwn(template, "nonlinearSlider")
+    ? Boolean(template.nonlinearSlider)
+    : hasRange && Number.isFinite(mid) && Math.abs(mid - (min + max) / 2) > Number.EPSILON;
   return {
     ...template,
     choices,
     divideChoicesVisibly: Object.hasOwn(template, "divideChoicesVisibly")
       ? Boolean(template.divideChoicesVisibly)
       : Boolean(choices.length),
+    nonlinearSlider,
   };
 }
 
@@ -6202,6 +6214,9 @@ function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
     max,
     mid: clampNodeSliderValue(Number.isFinite(mid) ? mid : fallback.mid, min, max),
     min,
+    nonlinearSlider: Object.hasOwn(source, "nonlinearSlider")
+      ? Boolean(source.nonlinearSlider)
+      : fallback.nonlinearSlider,
     showSign: Object.hasOwn(source, "showSign") ? Boolean(source.showSign) : fallback.showSign,
     step: Number.isFinite(step) && step > 0 ? step : 0,
     unit: String(Object.hasOwn(source, "unit") ? source.unit ?? "" : fallback.unit),
@@ -6386,7 +6401,12 @@ const nodeMetadataKindAliases = Object.freeze({
   bipolar: "decimal_bipolar",
   gain: "amplitude",
 });
-let nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates;
+let nodeMetadataKindTemplates = Object.freeze(Object.fromEntries(
+  Object.entries(fallbackNodeMetadataKindTemplates).map(([kind, template]) => [
+    kind,
+    normalizeNodeMetadataKindTemplate(template),
+  ]),
+));
 
 function nodeGraphOneLineText(value) {
   return String(value ?? "").replace(/[\r\n]+/g, " ").trim();
@@ -7485,6 +7505,10 @@ function nodeSliderShouldUseLinearSmoothing(slider) {
   return slider.dataset.linearSmoothing !== "false";
 }
 
+function nodeSliderShouldUseNonlinearSlider(slider) {
+  return slider.dataset.nonlinearSlider === "true";
+}
+
 function formatNodeSliderCompactNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Number(number.toFixed(6)).toString() : "";
@@ -7575,6 +7599,7 @@ function nodeSliderMetadata(slider) {
     displayChoices: nodeSliderShouldDisplayChoices(slider),
     divideChoicesVisibly: nodeSliderShouldDivideChoicesVisibly(slider),
     linearSmoothing: nodeSliderShouldUseLinearSmoothing(slider),
+    nonlinearSlider: nodeSliderShouldUseNonlinearSlider(slider),
     showSign: nodeSliderShouldShowSign(slider),
     wraparound: nodeSliderShouldWraparound(slider),
     unit: slider.dataset.unit ?? "",
@@ -7589,11 +7614,10 @@ function nodeSliderMetadata(slider) {
 function formatNodeSliderMetadataTooltip(slider) {
   const metadata = nodeSliderMetadata(slider);
   const stepText = metadata.step > 0 ? formatNodeSliderNumber(metadata.step) : "any";
-  return [
+  const rows = [
     `current ${formatNodeSliderNumber(metadata.cur)}`,
     `default ${formatNodeSliderNumber(metadata.def)}`,
     `min ${formatNodeSliderNumber(metadata.min)}`,
-    `mid ${formatNodeSliderNumber(metadata.mid)}`,
     `max ${formatNodeSliderNumber(metadata.max)}`,
     `step ${stepText}`,
     `kind ${metadata.kind}`,
@@ -7602,9 +7626,14 @@ function formatNodeSliderMetadataTooltip(slider) {
     `display choices ${metadata.displayChoices}`,
     `divide choices visibly ${metadata.divideChoicesVisibly}`,
     `linear smoothing ${metadata.linearSmoothing}`,
+    `nonlinear slider ${metadata.nonlinearSlider}`,
     `show sign ${metadata.showSign}`,
     `wraparound ${metadata.wraparound}`,
-  ].join(" / ");
+  ];
+  if (metadata.nonlinearSlider) {
+    rows.splice(3, 0, `mid ${formatNodeSliderNumber(metadata.mid)}`);
+  }
+  return rows.join(" / ");
 }
 
 function syncNodeSliderMetadataTooltip(slider) {
@@ -7714,6 +7743,9 @@ function normalizedNodeSliderMid(slider) {
 }
 
 function nodeSliderSkewExponent(slider) {
+  if (!nodeSliderShouldUseNonlinearSlider(slider)) {
+    return 1;
+  }
   return Math.log(normalizedNodeSliderMid(slider)) / Math.log(0.5);
 }
 
@@ -7759,6 +7791,7 @@ function setNodeSliderMetadata(slider, metadata) {
   slider.dataset.displayChoices = metadata.displayChoices ? "true" : "false";
   slider.dataset.divideChoicesVisibly = metadata.divideChoicesVisibly ? "true" : "false";
   slider.dataset.linearSmoothing = metadata.linearSmoothing ? "true" : "false";
+  slider.dataset.nonlinearSlider = metadata.nonlinearSlider ? "true" : "false";
   slider.dataset.showSign = metadata.showSign ? "true" : "false";
   slider.dataset.wraparound = metadata.wraparound ? "true" : "false";
   slider.value = String(normalizeNodeSliderValue(slider, Number(slider.value), metadata.min, metadata.max));
@@ -7985,7 +8018,12 @@ async function loadNodeMetadataKindTemplates() {
       applyNodeMetadataKindTemplates(payload.templates);
     }
   } catch (_error) {
-    nodeMetadataKindTemplates = fallbackNodeMetadataKindTemplates;
+    nodeMetadataKindTemplates = Object.freeze(Object.fromEntries(
+      Object.entries(fallbackNodeMetadataKindTemplates).map(([kind, template]) => [
+        kind,
+        normalizeNodeMetadataKindTemplate(template),
+      ]),
+    ));
   }
 }
 
@@ -8006,9 +8044,19 @@ function fillNodeMetadataPopover(slider) {
   document.getElementById("metadataDisplayChoicesValue").checked = metadata.displayChoices;
   document.getElementById("metadataDivideChoicesValue").checked = metadata.divideChoicesVisibly;
   document.getElementById("metadataLinearSmoothingValue").checked = metadata.linearSmoothing;
+  document.getElementById("metadataNonlinearSliderValue").checked = metadata.nonlinearSlider;
   document.getElementById("metadataShowSignValue").checked = metadata.showSign;
   document.getElementById("metadataWraparoundValue").checked = metadata.wraparound;
+  syncNodeMetadataMidVisibility();
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
+}
+
+function syncNodeMetadataMidVisibility() {
+  const label = document.getElementById("metadataMidLabel");
+  const checkbox = document.getElementById("metadataNonlinearSliderValue");
+  if (label && checkbox) {
+    label.hidden = !checkbox.checked;
+  }
 }
 
 function openNodeMetadataPopover(event, readout) {
@@ -8282,6 +8330,7 @@ function readNodeMetadataEditorValues(slider) {
     displayChoices: document.getElementById("metadataDisplayChoicesValue").checked,
     divideChoicesVisibly: document.getElementById("metadataDivideChoicesValue").checked,
     linearSmoothing: document.getElementById("metadataLinearSmoothingValue").checked,
+    nonlinearSlider: document.getElementById("metadataNonlinearSliderValue").checked,
     step: stepInput.toLowerCase() === "any"
       ? 0
       : Math.max(0, parseNodeMetadataNumber(stepInput, current.step)),
@@ -8328,8 +8377,10 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataDisplayChoicesValue").checked = Boolean(template.displayChoices);
   document.getElementById("metadataDivideChoicesValue").checked = Boolean(template.divideChoicesVisibly);
   document.getElementById("metadataLinearSmoothingValue").checked = template.linearSmoothing !== false;
+  document.getElementById("metadataNonlinearSliderValue").checked = Boolean(template.nonlinearSlider);
   document.getElementById("metadataShowSignValue").checked = Boolean(template.showPlusMinus);
   document.getElementById("metadataWraparoundValue").checked = Boolean(template.wraparound);
+  syncNodeMetadataMidVisibility();
   applyNodeMetadataEditor();
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
@@ -8343,6 +8394,7 @@ function handleNodeMetadataEditorInput() {
   if (!nodeGraphMvp.metadataEditorTarget) {
     return;
   }
+  syncNodeMetadataMidVisibility();
   applyNodeMetadataEditor();
 }
 
@@ -8844,6 +8896,7 @@ function createNodeGraphParameter(node, type, parameter) {
   input.dataset.displayChoices = parameter.displayChoices ? "true" : "false";
   input.dataset.divideChoicesVisibly = parameter.divideChoicesVisibly ? "true" : "false";
   input.dataset.linearSmoothing = parameter.linearSmoothing === false ? "false" : "true";
+  input.dataset.nonlinearSlider = nodeGraphParameterDefinitionMetadata(parameter)?.nonlinearSlider ? "true" : "false";
   input.dataset.showSign = parameter.showSign ? "true" : "false";
   input.dataset.wraparound = parameter.wraparound ? "true" : "false";
   input.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${parameter.label}`);
