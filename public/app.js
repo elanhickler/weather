@@ -8997,7 +8997,7 @@ function nodeGraphModuleRequiredHeightUnits(type) {
 function nodeGraphModuleGridHeightUnits(type) {
   const roughGridUnits = 4 + Math.max(1, nodeGraphModuleBodyRowCount(type)) * 1.25;
   const requiredGridUnits = nodeGraphModuleRequiredHeightUnits(type);
-  return Math.max(roughGridUnits, requiredGridUnits);
+  return Math.ceil(Math.max(roughGridUnits, requiredGridUnits));
 }
 
 function createNodeGraphModuleElement(type, node) {
