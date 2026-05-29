@@ -4180,6 +4180,8 @@ def require_node_graph_mvp_contract() -> None:
         "grid-column: 1",
         "grid-row: 1",
         "align-self: center",
+        "width: 57%",
+        "height: 70%",
         ".node-param-port.modulation-input",
         ".node-param-port.parameter-output",
         "grid-column: 3",
