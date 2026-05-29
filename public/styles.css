@@ -567,7 +567,7 @@ audio {
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-auto-rows: var(--node-body-row-height);
+  grid-auto-rows: minmax(var(--node-body-row-height), 1fr);
   gap: var(--node-body-row-gap);
   padding: 0;
 }

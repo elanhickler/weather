@@ -4133,7 +4133,7 @@ def require_node_graph_mvp_contract() -> None:
         "border-radius: 5px",
         "grid-template-rows: var(--node-header-height) auto minmax(0, 1fr)",
         ".dsp-node-body",
-        "grid-auto-rows: var(--node-body-row-height)",
+        "grid-auto-rows: minmax(var(--node-body-row-height), 1fr)",
         "gap: var(--node-body-row-gap)",
         ".dsp-node-io-section",
         ".node-io-column",
