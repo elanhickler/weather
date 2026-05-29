@@ -6075,7 +6075,7 @@ function nodeGraphParameterDefinitionMetadata(parameter) {
     displayChoices: Boolean(parameter.displayChoices),
     divideChoicesVisibly: Object.hasOwn(parameter, "divideChoicesVisibly")
       ? Boolean(parameter.divideChoicesVisibly)
-      : Boolean(parameter.displayChoices && parameter.choices?.length),
+      : Boolean(parameter.choices?.length),
     kind: parameter.kind || "decimal",
     linearSmoothing: parameter.linearSmoothing !== false,
     max: safeMax,
@@ -6085,6 +6085,17 @@ function nodeGraphParameterDefinitionMetadata(parameter) {
     step: Number.isFinite(step) && step > 0 ? step : 0,
     unit: parameter.unit ?? "",
     wraparound: Boolean(parameter.wraparound),
+  };
+}
+
+function normalizeNodeMetadataKindTemplate(template = {}) {
+  const choices = normalizeNodeGraphMetadataChoices(template.choices || []);
+  return {
+    ...template,
+    choices,
+    divideChoicesVisibly: Object.hasOwn(template, "divideChoicesVisibly")
+      ? Boolean(template.divideChoicesVisibly)
+      : Boolean(choices.length),
   };
 }
 
@@ -7800,7 +7811,12 @@ function applyNodeMetadataKindTemplates(templates) {
     return;
   }
 
-  nodeMetadataKindTemplates = Object.freeze(templates);
+  nodeMetadataKindTemplates = Object.freeze(Object.fromEntries(
+    Object.entries(templates).map(([kind, template]) => [
+      kind,
+      normalizeNodeMetadataKindTemplate(template),
+    ]),
+  ));
   const select = document.getElementById("metadataKindValue");
   if (select) {
     select.replaceChildren();
@@ -13164,7 +13180,10 @@ function initNodeGraphMvp() {
     .addEventListener("click", () => zoomNodeGraphBy(nodeGraphZoomLimits.step));
   document
     .getElementById("nodeSettingsViewButton")
-    .addEventListener("click", () => setNodeGraphViewMode("settings"));
+    .addEventListener("click", () => {
+      const settingsVisible = !document.getElementById("nodeSettingsView").hidden;
+      setNodeGraphViewMode(settingsVisible ? "modular" : "settings");
+    });
   document
     .getElementById("nodeModularViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("modular"));
