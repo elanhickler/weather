@@ -10572,6 +10572,15 @@ function nodeGraphConnectWireEndpoints(a, b) {
   return false;
 }
 
+function nodeGraphWireEndpointsShouldBurst(a, b) {
+  return Boolean(
+    a &&
+    b &&
+    ((a.io === "output" && b.io === "output") ||
+      (a.io === "input" && b.io === "input")),
+  );
+}
+
 function burstNodeGraphZap(point) {
   const surface = nodeGraphZoomSurface();
   if (!surface || !point) {
@@ -10640,7 +10649,9 @@ function endNodeGraphWireDrag(event) {
   const connected = nodeGraphConnectWireEndpoints(dragging.endpoint, targetEndpoint);
 
   if (!connected) {
-    burstNodeGraphZap(nodeGraphClientPoint(event));
+    if (nodeGraphWireEndpointsShouldBurst(dragging.endpoint, targetEndpoint)) {
+      burstNodeGraphZap(nodeGraphClientPoint(event));
+    }
     drawNodeGraphWires();
   }
 }
@@ -11553,7 +11564,7 @@ function nodeInteractionMouseHint(element) {
     return alias ? `Alias: ${alias}\n${action}` : action;
   }
   if (element.classList.contains("node-param-port")) {
-    const action = "Mouse: drop an output here to modulate this parameter. Input wires burst.";
+    const action = "Mouse: drop an output here to modulate this parameter.";
     return alias ? `Alias: ${alias}\n${action}` : action;
   }
   if (element.classList.contains("node-wire-hit-path") || element.classList.contains("node-wire-path")) {
