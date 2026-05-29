@@ -5960,7 +5960,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   spiral: {
-    outputs: ["Out"],
+    outputs: ["X", "Y", "Z"],
     parameters: [
       { key: "frequency", label: "Frequency", defaultValue: "440", min: "40", mid: "440", max: "2000", step: "1", unit: "Hz" },
       { key: "density", label: "Density", defaultValue: "1", min: "0.1", mid: "1", max: "16", step: "0.01" },
@@ -12226,11 +12226,14 @@ function nodeGraphApplyParameterBounds(value, metadata = {}) {
     : clampNodeSliderValue(value, min, max);
 }
 
-function readNodeGraphRuntimeOutput(runtime, frameValues, nodeId) {
-  if (frameValues?.has(nodeId)) {
-    return frameValues.get(nodeId) || 0;
+function readNodeGraphRuntimeOutput(runtime, frameValues, nodeId, port = "Out") {
+  const output = frameValues?.has(nodeId)
+    ? frameValues.get(nodeId)
+    : runtime.nodeOutputs?.get(nodeId);
+  if (output && typeof output === "object") {
+    return Number(output[port] ?? output.Out ?? 0) || 0;
   }
-  return runtime.nodeOutputs?.get(nodeId) || 0;
+  return Number(output) || 0;
 }
 
 function normalizeNodeGraphParameterOutputValue(value, metadata = {}) {
@@ -12249,7 +12252,7 @@ function readNodeGraphRuntimePortOutput(runtime, frameValues, nodeId, port = "Ou
   const node = runtime.nodes?.get(nodeId);
   const parameter = nodeGraphParameterOutputPort(node?.type, port);
   if (!parameter) {
-    return readNodeGraphRuntimeOutput(runtime, frameValues, nodeId);
+    return readNodeGraphRuntimeOutput(runtime, frameValues, nodeId, port);
   }
   const metadata = node?.paramMeta?.[port] || {};
   const value = readNodeGraphLiveSmoothedParam(
@@ -12493,7 +12496,7 @@ function jerobeamSpiralSample(options) {
   );
   const stereo = spiralRender(rotated.x, rotated.y, rotated.z, zDepth);
   state.zHistory = rotated.z;
-  return { ...stereo, z: rotated.z };
+  return { ...stereo, x: rotated.x, y: rotated.y, z: rotated.z };
 }
 
 function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
@@ -12585,7 +12588,7 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frames,
         frameValues,
       );
-      const stereo = jerobeamSpiralSample({
+      const spiral = jerobeamSpiralSample({
         density: read("density", 1),
         frequency: read("frequency", 440),
         morph: read("morph", 0),
@@ -12605,7 +12608,12 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         zAmount: read("zAmount", 0),
         zDepth: read("zDepth", 0),
       });
-      value = ((stereo.left + stereo.right) * 0.5) * read("level", 0.35);
+      const level = read("level", 0.35);
+      value = {
+        X: spiral.x * level,
+        Y: spiral.y * level,
+        Z: spiral.z * level,
+      };
     } else if (node?.type === "gain") {
       value = mixInput(nodeId) * readNodeGraphLiveEffectiveParam(
         runtime,

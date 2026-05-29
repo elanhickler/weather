@@ -315,11 +315,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       : this.clampValue(value, min, max);
   }
 
-  readRuntimeOutput(frameValues, nodeId) {
-    if (frameValues?.has(nodeId)) {
-      return frameValues.get(nodeId) || 0;
+  readRuntimeOutput(frameValues, nodeId, port = "Out") {
+    const output = frameValues?.has(nodeId)
+      ? frameValues.get(nodeId)
+      : this.nodeOutputs.get(nodeId);
+    if (output && typeof output === "object") {
+      return Number(output[port] ?? output.Out ?? 0) || 0;
     }
-    return this.nodeOutputs.get(nodeId) || 0;
+    return Number(output) || 0;
   }
 
   parameterOutputExists(node, port) {
@@ -341,7 +344,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   readRuntimePortOutput(frameValues, nodeId, port = "Out", frame = 0, frames = 1) {
     const node = this.nodes.get(nodeId);
     if (!this.parameterOutputExists(node, port)) {
-      return this.readRuntimeOutput(frameValues, nodeId);
+      return this.readRuntimeOutput(frameValues, nodeId, port);
     }
     const value = this.readSmoothedParameter(node, port, 0, frame, frames);
     return this.normalizeParameterOutputValue(value, node?.paramMeta?.[port] || {});
@@ -545,7 +548,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     );
     const stereo = this.spiralRender(rotated.x, rotated.y, rotated.z, options.zDepth);
     state.zHistory = rotated.z;
-    return { ...stereo, z: rotated.z };
+    return { ...stereo, x: rotated.x, y: rotated.y, z: rotated.z };
   }
 
   evaluateFrame(frame, frames) {
@@ -604,7 +607,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           frames,
           frameValues,
         );
-        const stereo = this.jerobeamSpiralSample({
+        const spiral = this.jerobeamSpiralSample({
           density: read("density", 1),
           frequency: read("frequency", 440),
           morph: read("morph", 0),
@@ -624,7 +627,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           zAmount: read("zAmount", 0),
           zDepth: read("zDepth", 0),
         });
-        value = ((stereo.left + stereo.right) * 0.5) * read("level", 0.35);
+        const level = read("level", 0.35);
+        value = {
+          X: spiral.x * level,
+          Y: spiral.y * level,
+          Z: spiral.z * level,
+        };
       } else if (node?.type === "gain") {
         value = mixInput(nodeId) *
           this.readEffectiveParameter(node, "amount", 1, frame, frames, frameValues);
