@@ -6940,8 +6940,8 @@ function setNodeGraphSettingsField(id, value) {
 
 function syncNodeGraphSettingsView() {
   const info = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch.info);
-  document.getElementById("nodePatchNameHeader").textContent = info.name;
-  document.getElementById("nodePatchTagsHeader").textContent = info.tags;
+  setNodeGraphSettingsField("nodePatchNameHeader", info.name);
+  setNodeGraphSettingsField("nodePatchTagsHeader", info.tags);
   setNodeGraphSettingsField("patchNameValue", info.name);
   setNodeGraphSettingsField("patchAuthorValue", info.author);
   setNodeGraphSettingsField("patchTagsValue", info.tags);
@@ -6989,6 +6989,23 @@ function commitNodeGraphSettingsHistory() {
   recordNodeGraphHistory();
   const scriptStatus = nodeGraphPatchScriptStatus("settings saved", true);
   syncNodeGraphScriptView(scriptStatus.message, scriptStatus.ok);
+}
+
+function handleNodeGraphHeaderInfoInput(event) {
+  const field = event.currentTarget?.dataset?.patchHeaderInfoField;
+  if (!["name", "tags"].includes(field)) {
+    return;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  patch.info = normalizeNodeGraphPatchInfo({
+    ...patch.info,
+    [field]: event.currentTarget.value,
+  });
+  commitNodeGraphPatch(patch, {
+    markPending: false,
+    record: false,
+    status: "settings synced",
+  });
 }
 
 function renderNodeGraphHistoryControls() {
@@ -13547,6 +13564,10 @@ function initNodeGraphMvp() {
     .addEventListener("change", handleNodeGraphScriptFileLoad);
   for (const field of document.querySelectorAll("[data-patch-info-field]")) {
     field.addEventListener("input", handleNodeGraphSettingsInput);
+    field.addEventListener("change", commitNodeGraphSettingsHistory);
+  }
+  for (const field of document.querySelectorAll("[data-patch-header-info-field]")) {
+    field.addEventListener("input", handleNodeGraphHeaderInfoInput);
     field.addEventListener("change", commitNodeGraphSettingsHistory);
   }
   for (const field of document.querySelectorAll("[data-patch-visual-field]")) {

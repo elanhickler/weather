@@ -47,9 +47,21 @@
 
     <section class="panel node-wiring-panel" aria-label="Node wiring MVP">
       <div class="panel-heading">
-        <div>
-          <p id="nodePatchNameHeader"></p>
-          <h2 id="nodePatchTagsHeader"></h2>
+        <div class="node-patch-header-fields">
+          <input
+            id="nodePatchNameHeader"
+            class="node-patch-header-field name"
+            type="text"
+            autocomplete="off"
+            aria-label="Patch name"
+            data-patch-header-info-field="name">
+          <input
+            id="nodePatchTagsHeader"
+            class="node-patch-header-field tags"
+            type="text"
+            autocomplete="off"
+            aria-label="Patch tags"
+            data-patch-header-info-field="tags">
         </div>
         <div class="panel-heading-actions">
           <span id="nodeGraphStatus" class="pill">Graph Ready</span>

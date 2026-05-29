@@ -44,8 +44,7 @@ body {
 
 .status-strip span,
 .audio-panel p,
-.summary-card > span:first-child,
-#nodePatchNameHeader {
+.summary-card > span:first-child {
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
@@ -152,6 +151,39 @@ audio {
 
 .node-wiring-panel .audio-panel {
   margin-top: 14px;
+}
+
+.node-patch-header-fields {
+  display: grid;
+  min-width: min(100%, 320px);
+  gap: 2px;
+}
+
+.node-patch-header-field {
+  width: min(100%, 520px);
+  min-width: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.node-patch-header-field.name {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.node-patch-header-field.tags {
+  font-size: 1.45rem;
+  font-weight: 650;
+}
+
+.node-patch-header-field:focus {
+  outline: none;
+  border-color: rgba(127, 199, 217, 0.58);
+  background: rgba(17, 20, 24, 0.62);
 }
 
 .node-view-toolbar {
