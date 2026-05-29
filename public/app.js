@@ -8932,6 +8932,13 @@ function nodeGraphModuleBodyRowCount(type) {
   return (definition?.parameters?.length || 0) + (definition?.output ? 1 : 0);
 }
 
+function nodeGraphModuleVisibleBodyRowCount(type) {
+  const rows = nodeGraphModuleBodyRowCount(type);
+  return nodeGraphModuleDefinitions[type]?.output
+    ? rows
+    : Math.max(rows, 4);
+}
+
 const nodeGraphModuleWidthLimits = Object.freeze({
   maxGu: 18,
   minGu: 4,
@@ -8958,7 +8965,7 @@ function nodeGraphPatchNodeGridWidthUnits(node) {
 }
 
 function nodeGraphModuleSliderBodyHeightGu(type) {
-  const rows = Math.max(1, nodeGraphModuleBodyRowCount(type));
+  const rows = Math.max(1, nodeGraphModuleVisibleBodyRowCount(type));
   return (
     rows * nodeGraphModuleLayout.sliderRowHeightGu +
     Math.max(0, rows - 1) * nodeGraphModuleLayout.bodyRowGapGu
@@ -8995,7 +9002,7 @@ function nodeGraphModuleRequiredHeightUnits(type) {
 }
 
 function nodeGraphModuleGridHeightUnits(type) {
-  const roughGridUnits = 4 + Math.max(1, nodeGraphModuleBodyRowCount(type)) * 1.25;
+  const roughGridUnits = 4 + Math.max(1, nodeGraphModuleVisibleBodyRowCount(type)) * 1.25;
   const requiredGridUnits = nodeGraphModuleRequiredHeightUnits(type);
   return Math.ceil(Math.max(roughGridUnits, requiredGridUnits));
 }
@@ -9081,6 +9088,16 @@ function createNodeGraphModuleElement(type, node) {
 
   for (const parameter of definition.parameters) {
     body.append(createNodeGraphParameter(node, type, parameter));
+  }
+  const placeholderRows = Math.max(
+    0,
+    nodeGraphModuleVisibleBodyRowCount(type) - nodeGraphModuleBodyRowCount(type),
+  );
+  for (let index = 0; index < placeholderRows; index += 1) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "node-parameter-row node-parameter-row-placeholder";
+    placeholder.setAttribute("aria-hidden", "true");
+    body.append(placeholder);
   }
   article.append(body);
 

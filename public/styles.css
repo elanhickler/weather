@@ -818,6 +818,10 @@ audio {
   padding: var(--node-slider-row-padding-block) 0;
 }
 
+.node-parameter-row-placeholder {
+  pointer-events: none;
+}
+
 .node-parameter-control {
   grid-column: 2;
   grid-row: 1;
