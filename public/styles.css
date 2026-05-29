@@ -655,7 +655,7 @@ audio {
   max-width: 100%;
   color: var(--muted);
   font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   line-height: 1;
 }
 
@@ -817,7 +817,7 @@ audio {
     rgba(11, 14, 18, 0.96);
   color: var(--text);
   font-family: Consolas, "Courier New", monospace;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   line-height: 1;
 }
 
@@ -854,7 +854,7 @@ audio {
   overflow: hidden;
   color: var(--muted);
   font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
-  font-size: 0.74rem;
+  font-size: 0.79rem;
   line-height: 1;
   text-align: left;
   text-overflow: ellipsis;
@@ -874,7 +874,7 @@ audio {
   grid-column: 2;
   min-width: var(--node-slider-unit-width);
   color: var(--accent);
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   line-height: 1;
   text-align: right;
 }
