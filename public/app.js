@@ -7497,7 +7497,7 @@ function nodeGraphParameterKey(node, parameter) {
 
 function formatNodeSliderNumber(value, options = {}) {
   const number = Number(value);
-  const text = number.toFixed(6);
+  const text = Number.isFinite(number) ? Number(number.toFixed(6)).toString() : "";
   if (options.showSign && number >= 0) {
     return `+${text}`;
   }

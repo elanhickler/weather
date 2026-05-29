@@ -3206,6 +3206,8 @@ def require_node_graph_mvp_contract() -> None:
         "function syncNodeGraphPatchParameterFromSlider(slider, options = {})",
         "if (options.deferUi)",
         "function syncNodeSliderReadout(slider)",
+        "function formatNodeSliderNumber(value, options = {})",
+        "Number(number.toFixed(6)).toString()",
         "function parseNodeMetadataChoices(value)",
         "function formatNodeMetadataChoices(choices)",
         "function nodeSliderShouldDisplayChoices(slider)",
