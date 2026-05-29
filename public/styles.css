@@ -1132,6 +1132,47 @@ audio {
   display: none;
 }
 
+.scene-context-width-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(3.5em, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 0;
+}
+
+.scene-context-width-controls[hidden] {
+  display: none;
+}
+
+.scene-context-width-controls button {
+  justify-content: center;
+  text-align: center;
+}
+
+.scene-context-width-controls button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.scene-context-width-controls button:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.scene-context-width-controls span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.74rem;
+  line-height: 1;
+  text-align: center;
+}
+
 .node-scene-context-menu button kbd {
   margin-left: auto;
   border: 0;

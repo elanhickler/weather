@@ -6158,7 +6158,7 @@ function nodeGraphDefaultParamMetaForType(type) {
 }
 
 function createNodeGraphPatchNode(type, options = {}) {
-  return {
+  const node = {
     gx: Number.isFinite(Number(options.gx)) ? Number(options.gx) : 0,
     gy: Number.isFinite(Number(options.gy)) ? Number(options.gy) : 0,
     id: String(options.id || type),
@@ -6166,6 +6166,10 @@ function createNodeGraphPatchNode(type, options = {}) {
     params: nodeGraphDefaultParamsForType(type),
     type,
   };
+  if (Object.hasOwn(options, "widthGu")) {
+    node.widthGu = normalizeNodeGraphModuleWidthUnits(type, options.widthGu);
+  }
+  return node;
 }
 
 function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
@@ -6870,6 +6874,11 @@ function validateNodeGraphPatch(patch) {
     if (!Number.isFinite(gx) || !Number.isFinite(gy)) {
       throw new Error(`node ${id} grid position invalid`);
     }
+    const hasCustomWidth = Object.hasOwn(node, "widthGu");
+    const widthGu = normalizeNodeGraphModuleWidthUnits(type, node.widthGu);
+    if (hasCustomWidth && !Number.isFinite(Number(node.widthGu))) {
+      throw new Error(`node ${id} widthGu invalid`);
+    }
     const params = {};
     const paramMeta = {};
     for (const parameter of nodeGraphModuleDefinitions[type].parameters || []) {
@@ -6890,7 +6899,15 @@ function validateNodeGraphPatch(patch) {
       );
     }
     ids.add(id);
-    return { gx, gy, id, paramMeta, params, type };
+    return {
+      gx,
+      gy,
+      id,
+      paramMeta,
+      params,
+      type,
+      ...(hasCustomWidth ? { widthGu } : {}),
+    };
   });
 
   if (!ids.has("output")) {
@@ -7180,6 +7197,7 @@ function applyNodeGraphPatchToDom() {
       element = createNodeGraphModuleElement(patchNode.type, patchNode.id);
       container.append(element);
     }
+    element.style.setProperty("--node-grid-width-units", String(nodeGraphPatchNodeGridWidthUnits(patchNode)));
     const point = nodeGraphGridToPixel(patchNode);
     positionNodeGraphNode(element, point, { clamp: false, snap: false });
     element.dataset.gridX = String(patchNode.gx);
@@ -8911,8 +8929,29 @@ function nodeGraphModuleBodyRowCount(type) {
   return (definition?.parameters?.length || 0) + (definition?.output ? 1 : 0);
 }
 
-function nodeGraphModuleGridWidthUnits(type) {
+const nodeGraphModuleWidthLimits = Object.freeze({
+  maxGu: 18,
+  minGu: 4,
+});
+
+function nodeGraphDefaultModuleGridWidthUnits(type) {
   return nodeGraphModuleDefinitions[type]?.output ? 6 : 7;
+}
+
+function normalizeNodeGraphModuleWidthUnits(type, widthGu) {
+  const fallback = nodeGraphDefaultModuleGridWidthUnits(type);
+  const value = Math.round(Number(widthGu));
+  return Number.isFinite(value)
+    ? Math.max(nodeGraphModuleWidthLimits.minGu, Math.min(nodeGraphModuleWidthLimits.maxGu, value))
+    : fallback;
+}
+
+function nodeGraphModuleGridWidthUnits(type) {
+  return nodeGraphDefaultModuleGridWidthUnits(type);
+}
+
+function nodeGraphPatchNodeGridWidthUnits(node) {
+  return normalizeNodeGraphModuleWidthUnits(node?.type, node?.widthGu);
 }
 
 function nodeGraphModuleSliderBodyHeightGu(type) {
@@ -11306,26 +11345,40 @@ function configureNodeSceneContextMenu(mode) {
   const copyButton = document.getElementById("nodeSceneCopyModule");
   const deleteButton = document.getElementById("nodeSceneDeleteModule");
   const closeButton = document.getElementById("nodeSceneCloseMenu");
+  const widthControls = document.getElementById("nodeSceneWidthControls");
+  const widthDecrease = document.getElementById("nodeSceneWidthDecrease");
+  const widthIncrease = document.getElementById("nodeSceneWidthIncrease");
+  const widthValue = document.getElementById("nodeSceneWidthValue");
   const moduleMode = mode === "module";
   const targetNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
   const canCopy = moduleMode && targetNode?.type !== "output";
   const canDelete = moduleMode && targetNode && targetNode.type !== "output";
+  const widthGu = targetNode ? nodeGraphPatchNodeGridWidthUnits(targetNode) : 0;
   title.textContent = moduleMode ? "MODULE ACTIONS" : "Add Module";
   menu.setAttribute("aria-label", moduleMode ? "Module actions" : "Add module");
   addGroup.hidden = moduleMode;
   copyButton.hidden = !moduleMode;
   deleteButton.hidden = !moduleMode;
+  widthControls.hidden = !moduleMode;
   closeButton.hidden = false;
   if (moduleMode) {
     copyButton.disabled = !canCopy;
     copyButton.title = canCopy ? "Copy module (Ctrl+C)" : "Copy unavailable: Output module is required";
     deleteButton.disabled = !canDelete;
     deleteButton.title = canDelete ? "Delete module (Delete)" : "Delete unavailable: Output module is required";
+    widthValue.textContent = `${widthGu} gu`;
+    widthDecrease.disabled = widthGu <= nodeGraphModuleWidthLimits.minGu;
+    widthDecrease.title = "Decrease this module width by one grid unit";
+    widthIncrease.disabled = widthGu >= nodeGraphModuleWidthLimits.maxGu;
+    widthIncrease.title = "Increase this module width by one grid unit";
   } else {
     copyButton.disabled = true;
     copyButton.title = "Copy unavailable: select a module";
     deleteButton.disabled = true;
     deleteButton.title = "Delete unavailable: select a module";
+    widthValue.textContent = "";
+    widthDecrease.disabled = true;
+    widthIncrease.disabled = true;
   }
 }
 
@@ -11523,7 +11576,7 @@ function nodeGraphPatchNodeGridRect(node) {
   return {
     bottom: node.gy + nodeGraphModuleGridHeightUnits(node.type),
     left: node.gx,
-    right: node.gx + nodeGraphModuleGridWidthUnits(node.type),
+    right: node.gx + nodeGraphPatchNodeGridWidthUnits(node),
     top: node.gy,
   };
 }
@@ -11594,6 +11647,7 @@ function copyNodeGraphModule(sourceNode) {
       gx: gridPoint.gx,
       gy: gridPoint.gy,
       id,
+      ...(Object.hasOwn(sourceNode, "widthGu") ? { widthGu: sourceNode.widthGu } : {}),
     }),
     paramMeta: cloneNodeGraphParamMeta(sourceNode.paramMeta),
     params: { ...(sourceNode.params || {}) },
@@ -11608,6 +11662,34 @@ function copyNodeGraphModuleFromContext() {
     copyNodeGraphModule(sourceNode);
   }
   closeNodeSceneContextMenu();
+}
+
+function adjustNodeGraphModuleWidthFromContext(delta) {
+  const sourceNode = nodeGraphPatchNode(nodeGraphMvp.sceneContextTargetNode);
+  if (!sourceNode) {
+    return;
+  }
+
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
+  if (!targetNode) {
+    return;
+  }
+  const currentWidthGu = nodeGraphPatchNodeGridWidthUnits(targetNode);
+  const nextWidthGu = normalizeNodeGraphModuleWidthUnits(targetNode.type, currentWidthGu + delta);
+  if (nextWidthGu === currentWidthGu) {
+    configureNodeSceneContextMenu("module");
+    return;
+  }
+
+  const defaultWidthGu = nodeGraphDefaultModuleGridWidthUnits(targetNode.type);
+  if (nextWidthGu === defaultWidthGu) {
+    delete targetNode.widthGu;
+  } else {
+    targetNode.widthGu = nextWidthGu;
+  }
+  commitNodeGraphPatch(patch, { status: "module width changed" });
+  configureNodeSceneContextMenu("module");
 }
 
 function copySelectedNodeGraphModule() {
@@ -13893,6 +13975,12 @@ function initNodeGraphMvp() {
   document
     .getElementById("nodeSceneCopyModule")
     .addEventListener("click", copyNodeGraphModuleFromContext);
+  document
+    .getElementById("nodeSceneWidthDecrease")
+    .addEventListener("click", () => adjustNodeGraphModuleWidthFromContext(-1));
+  document
+    .getElementById("nodeSceneWidthIncrease")
+    .addEventListener("click", () => adjustNodeGraphModuleWidthFromContext(1));
   document
     .getElementById("nodeSceneCloseMenu")
     .addEventListener("click", closeNodeSceneContextMenu);
