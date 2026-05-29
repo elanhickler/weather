@@ -8361,28 +8361,22 @@ function beginNodeSliderDrag(event) {
     return;
   }
 
-  if (event.altKey) {
+  const rect = surface.getBoundingClientRect();
+  const pointerMode = event.altKey ? "absolute" : "relative";
+  let startTravel = nodeSliderTravelFromValue(slider, Number(slider.value));
+  if (pointerMode === "absolute") {
     setNodeSliderValue(
       slider,
       quantizeNodeSliderDragValue(slider, nodeSliderValueFromPointer(slider, surface, event.clientX)),
     );
-    syncNodeGraphPatchParameterFromSlider(slider, {
-      record: true,
-      status: "parameter changed",
-    });
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-
-  const rect = surface.getBoundingClientRect();
-  let startTravel = nodeSliderTravelFromValue(slider, Number(slider.value));
-  if (nodeSliderShouldDisplayChoices(slider) && nodeSliderShouldDivideChoicesVisibly(slider)) {
+    startTravel = nodeSliderTravelFromValue(slider, Number(slider.value));
+  } else if (nodeSliderShouldDisplayChoices(slider) && nodeSliderShouldDivideChoicesVisibly(slider)) {
     setNodeChoiceSliderFromPointer(slider, surface, event.clientX);
     startTravel = nodeSliderTravelFromValue(slider, Number(slider.value));
   }
   nodeGraphMvp.sliderDragging = {
     pointerId: event.pointerId ?? null,
+    pointerMode,
     slider,
     surface,
     startTravel,
@@ -8407,16 +8401,26 @@ function dragNodeSlider(event) {
     return;
   }
 
-  const horizontalDelta = event.clientX - drag.startX;
-  const verticalDelta = drag.startY - event.clientY;
-  const travelDelta = ((horizontalDelta + verticalDelta) / drag.width) * drag.fineScale;
-  setNodeSliderValue(
-    drag.slider,
-    quantizeNodeSliderDragValue(
+  if (drag.pointerMode === "absolute") {
+    setNodeSliderValue(
       drag.slider,
-      nodeSliderValueFromTravel(drag.slider, drag.startTravel + travelDelta),
-    ),
-  );
+      quantizeNodeSliderDragValue(
+        drag.slider,
+        nodeSliderValueFromPointer(drag.slider, drag.surface, event.clientX),
+      ),
+    );
+  } else {
+    const horizontalDelta = event.clientX - drag.startX;
+    const verticalDelta = drag.startY - event.clientY;
+    const travelDelta = ((horizontalDelta + verticalDelta) / drag.width) * drag.fineScale;
+    setNodeSliderValue(
+      drag.slider,
+      quantizeNodeSliderDragValue(
+        drag.slider,
+        nodeSliderValueFromTravel(drag.slider, drag.startTravel + travelDelta),
+      ),
+    );
+  }
   event.preventDefault();
 }
 
