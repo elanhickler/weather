@@ -3374,9 +3374,9 @@ button.saved-default,
   justify-self: start;
   display: block;
   box-sizing: border-box;
-  width: calc(var(--node-port-column-width) + var(--node-port-column-gap));
-  min-width: calc(var(--node-port-column-width) + var(--node-port-column-gap));
-  height: min(100%, calc(var(--node-body-row-height) - (var(--node-body-row-gap) * 0.5)));
+  width: var(--node-port-column-width);
+  min-width: var(--node-port-column-width);
+  height: var(--node-port-diameter);
   min-height: 0;
   padding: 0;
   border: 0;
@@ -3421,9 +3421,9 @@ button.saved-default,
   grid-row: 1;
   align-self: center;
   justify-self: end;
-  width: calc(var(--node-port-column-width) + var(--node-port-column-gap));
-  min-width: calc(var(--node-port-column-width) + var(--node-port-column-gap));
-  height: min(100%, calc(var(--node-body-row-height) - (var(--node-body-row-gap) * 0.5)));
+  width: var(--node-port-column-width);
+  min-width: var(--node-port-column-width);
+  height: var(--node-port-diameter);
   min-height: 0;
 }
 
@@ -3491,11 +3491,13 @@ button.saved-default,
   pointer-events: none;
 }
 
-.node-param-port:hover {
+.node-param-port:hover,
+.node-param-port.patch-point-hover {
   filter: brightness(1.08);
 }
 
-.node-param-port:not(.connected-port):hover::before {
+.node-param-port:not(.connected-port):hover::before,
+.node-param-port:not(.connected-port).patch-point-hover::before {
   /* Legacy smoke contract token: color-mix(in srgb, var(--node-port-hover-fill). */
   border-color: color-mix(in srgb, var(--node-param-hover-stroke, var(--node-port-hover-stroke)) 68%, transparent);
   background: color-mix(in srgb, var(--node-param-hover-color, var(--node-port-hover-fill)) 16%, transparent);
@@ -3504,22 +3506,17 @@ button.saved-default,
     0 0 var(--node-hover-glow-size) var(--node-hover-glow-spread) color-mix(in srgb, var(--node-param-hover-color, var(--node-port-hover-fill)) 38%, transparent);
 }
 
-.node-param-port.connected-port:hover::after {
+.node-port.connected-port:hover::after,
+.node-port.connected-port.patch-point-hover::after,
+.node-param-port.connected-port:hover::after,
+.node-param-port.connected-port.patch-point-hover::after {
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--node-patch-point-color, var(--node-port-hover-fill)) 52%, transparent),
     0 0 var(--node-hover-glow-size) var(--node-hover-glow-spread) color-mix(in srgb, var(--node-patch-point-color, var(--node-port-hover-fill)) 34%, transparent);
 }
 
-.node-port:not(.node-param-port):hover {
-  border-color: color-mix(in srgb, var(--node-port-hover-color, var(--node-port-hover-stroke)) 68%, transparent);
-  background-color: color-mix(in srgb, var(--node-port-hover-color, var(--node-port-hover-fill)) 16%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--node-port-hover-color, var(--node-port-hover-fill)) 32%, transparent),
-    0 0 var(--node-hover-glow-size) var(--node-hover-glow-spread) color-mix(in srgb, var(--node-port-hover-color, var(--node-port-hover-fill)) 38%, transparent);
-  filter: brightness(1.08);
-}
-
-.node-io-row:hover .node-port:not(.node-param-port) {
+.node-port:not(.node-param-port):hover,
+.node-port:not(.node-param-port).patch-point-hover {
   border-color: color-mix(in srgb, var(--node-port-hover-color, var(--node-port-hover-stroke)) 68%, transparent);
   background-color: color-mix(in srgb, var(--node-port-hover-color, var(--node-port-hover-fill)) 16%, transparent);
   box-shadow:

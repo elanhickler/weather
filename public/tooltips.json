@@ -66,8 +66,8 @@
     "reportBug": "Report a soemdsp sandbox bug"
   },
   "module": {
-    "drag": "Mouse: click to select. Ctrl/Shift+click adds or removes from selection. Alt+drag moves modules; Ctrl/Shift+Alt+drag adds to selection while moving.",
-    "move": "Mouse: Alt+drag to move modules. Click to select; Ctrl/Shift+click adds or removes from selection.",
+    "drag": "Mouse: drag to move modules. Click to select. Ctrl/Shift+click adds or removes from selection; Ctrl/Shift+drag adds to selection while moving.",
+    "move": "Mouse: drag to move modules. Click to select; Ctrl/Shift+click adds or removes from selection.",
     "actions": "Mouse: click to open module actions.",
     "actionsTitle": "Module actions",
     "textBoxEdit": "Display-only text. Edit content from this module's actions menu. Text clips to the box height and scales down to fit width. Mouse wheel zooms the modular view.",
@@ -84,12 +84,10 @@
   },
   "wire": {
     "selected": "Mouse: click to select this wire. Delete removes selected wire.",
-    "output": "Plain drag wires this output area to a signal input or modulation input. Alt+drag moves this patch point if movement is available.",
-    "parameterOutput": "Plain drag wires normalized 0..1 slider output to a signal input or modulation input. Alt+drag moves this patch point if movement is available.",
-    "input": "Plain drag reroutes wires to or from this signal input area. Alt+drag moves this patch point if movement is available.",
-    "outputRow": "Plain drag wires this output area to a signal input or modulation input. Alt+drag moves this patch point if movement is available.",
-    "inputRow": "Plain drag reroutes wires to or from this signal input area. Alt+drag moves this patch point if movement is available.",
-    "modulationInput": "Plain drag drops or reroutes an output here to modulate this parameter. Alt+drag moves this patch point if movement is available."
+    "output": "Plain drag between this output and a signal input or modulation input to create a wire.",
+    "parameterOutput": "Plain drag between this normalized 0..1 slider output and a signal input or modulation input to create a wire.",
+    "input": "Plain drag between this signal input and an output to create a wire. To change an existing connection, select and delete the wire, then create a new one.",
+    "modulationInput": "Plain drag between this modulation input and an output to create a wire. To change an existing modulation, select and delete the wire, then create a new one."
   },
   "slider": {
     "numeric": "Mouse: drag adjusts, Alt+click jumps, Ctrl+click resets to default, Ctrl/Shift drag fine tunes, double-click types, right-click edits metadata.",

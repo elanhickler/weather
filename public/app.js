@@ -7171,9 +7171,21 @@ const nodeGraphWireHelpers = window.createNodeGraphWireHelpers({
   patch: () => nodeGraphMvp.patch,
   portCenter: nodeGraphPortCenter,
   portSelector: nodeGraphPortSelector,
+  selectWire: selectNodeGraphWire,
   setSelection: setNodeGraphSelection,
   wireFromSelection: nodeGraphWireFromSelection,
   zoomSurface: nodeGraphZoomSurface,
+});
+
+const nodeGraphWireInteractions = window.createNodeGraphWireInteractionController({
+  burstZap: burstNodeGraphZap,
+  clientPoint: nodeGraphClientPoint,
+  drawWires: drawNodeGraphWires,
+  helpers: nodeGraphWireHelpers,
+  setHelp: setNodeInteractionHelp,
+  state: nodeGraphMvp,
+  svg: () => document.getElementById("nodeWireSvg"),
+  workspace: () => document.getElementById("nodeGraphWorkspace"),
 });
 
 const nodeGraphZoomLimits = Object.freeze({
@@ -9993,10 +10005,10 @@ function attachNodeGraphNodeEvents(node) {
   node.addEventListener("pointercancel", endNodeGraphNodeDrag);
   node.addEventListener("lostpointercapture", endNodeGraphNodeDrag);
   for (const port of node.querySelectorAll(".node-port")) {
-    port.addEventListener("pointerdown", beginNodeGraphWireDrag);
+    port.addEventListener("pointerdown", nodeGraphWireInteractions.beginWireDrag);
   }
   for (const port of node.querySelectorAll(".node-param-port.modulation-input")) {
-    port.addEventListener("pointerdown", beginNodeGraphWireDrag);
+    port.addEventListener("pointerdown", nodeGraphWireInteractions.beginWireDrag);
   }
   for (const slider of node.querySelectorAll('input[type="range"]')) {
     createNodeSliderReadout(slider);
@@ -12338,74 +12350,6 @@ function renderNodeGraphSelection() {
   setNodeInteractionHelp(nodeInteractionHelpText(document.activeElement));
 }
 
-function nodeGraphPath(from, to) {
-  const horizontalDistance = Math.abs(to.x - from.x);
-  const verticalDistance = Math.abs(to.y - from.y);
-  const span = Math.min(96, horizontalDistance * 0.48 + verticalDistance * 0.12);
-  return `M ${from.x} ${from.y} C ${from.x + span} ${from.y}, ${to.x - span} ${to.y}, ${to.x} ${to.y}`;
-}
-
-function nodeGraphStraightPath(from, to) {
-  return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-}
-
-function nodeGraphHexToRgb(color) {
-  const match = String(color || "").trim().match(/^#([0-9a-f]{6})$/i);
-  if (!match) {
-    return null;
-  }
-  const value = Number.parseInt(match[1], 16);
-  return {
-    b: value & 255,
-    g: (value >> 8) & 255,
-    r: (value >> 16) & 255,
-  };
-}
-
-function nodeGraphMixWireColor(fromColor, toColor) {
-  const fromRgb = nodeGraphHexToRgb(fromColor);
-  const toRgb = nodeGraphHexToRgb(toColor);
-  if (!fromRgb || !toRgb) {
-    return `color-mix(in srgb, ${fromColor} 50%, ${toColor})`;
-  }
-  const channel = (key) => Math.round((fromRgb[key] + toRgb[key]) / 2);
-  return `rgb(${channel("r")} ${channel("g")} ${channel("b")})`;
-}
-
-function createNodeGraphWireGradient(svg, id, from, to, stopClass = "node-wire-gradient-stop", colors = null) {
-  const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
-  gradient.id = id;
-  gradient.setAttribute("gradientUnits", "userSpaceOnUse");
-  gradient.setAttribute("x1", String(from.x));
-  gradient.setAttribute("y1", String(from.y));
-  gradient.setAttribute("x2", String(to.x));
-  gradient.setAttribute("y2", String(to.y));
-
-  const [fromColor, toColor] = colors || [null, null];
-  const middleColor = fromColor && toColor ? nodeGraphMixWireColor(fromColor, toColor) : null;
-  // Legacy smoke contract strings: ["48%", "0.36", fromColor], ["52%", "0.36", toColor].
-  for (const [offset, opacity, color] of [
-    ["0%", "1", fromColor],
-    ["48%", "0.36", fromColor],
-    ["50%", "0.34", middleColor],
-    ["52%", "0.36", toColor],
-    ["100%", "1", toColor],
-  ]) {
-    const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-    stop.setAttribute("class", stopClass);
-    stop.setAttribute("offset", offset);
-    stop.setAttribute("stop-opacity", opacity);
-    if (color) {
-      stop.setAttribute("stop-color", color);
-      stop.style.setProperty("stop-color", color);
-    }
-    gradient.append(stop);
-  }
-
-  svg.querySelector("defs")?.append(gradient);
-  return `url(#${id})`;
-}
-
 function selectNodeGraphWire(event, index, kind = "signal") {
   event.stopPropagation();
   setNodeGraphSelection({ type: "wire", kind, index });
@@ -12430,42 +12374,6 @@ function nodeGraphPortWireColor(node, port, io) {
     return nodeGraphCssColor("--node-param-output-fill", "#66e0a3");
   }
   return nodeGraphCssColor("--node-output-fill", "#e2a86d");
-}
-
-function drawNodeGraphWirePath(svg, options) {
-  const {
-    alias = "",
-    from,
-    gradientClass = "node-wire-gradient-stop",
-    gradientId,
-    index,
-    kind = "signal",
-    mode = "same-pass",
-    pathClass = "node-wire-path",
-    to,
-    wireColors = null,
-  } = options;
-  const pathData = nodeGraphPath(from, to);
-  const stroke = createNodeGraphWireGradient(svg, gradientId, from, to, gradientClass, wireColors);
-  const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  hitPath.setAttribute("class", "node-wire-hit-path");
-  hitPath.dataset.alias = alias;
-  hitPath.dataset.connectionIndex = String(index);
-  hitPath.dataset.connectionKind = kind;
-  hitPath.dataset.interactionMode = mode;
-  hitPath.setAttribute("d", pathData);
-  hitPath.addEventListener("click", (event) => selectNodeGraphWire(event, index, kind));
-  svg.append(hitPath);
-
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("class", pathClass);
-  path.dataset.alias = alias;
-  path.dataset.connectionIndex = String(index);
-  path.dataset.connectionKind = kind;
-  path.dataset.interactionMode = mode;
-  path.setAttribute("d", pathData);
-  path.setAttribute("stroke", stroke);
-  svg.append(path);
 }
 
 function drawNodeGraphWires() {
@@ -12494,12 +12402,6 @@ function drawNodeGraphWires() {
 
   for (const [index, connection] of nodeGraphMvp.connections.entries()) {
     if (
-      nodeGraphMvp.dragging?.pickup?.kind === "signal" &&
-      nodeGraphMvp.dragging.pickup.index === index
-    ) {
-      continue;
-    }
-    if (
       !nodeGraphMvp.activeNodes.has(connection.sourceNode) ||
       !nodeGraphMvp.activeNodes.has(connection.destinationNode) ||
       !nodeGraphPatchNodeIsVisible(connection.sourceNode) ||
@@ -12518,7 +12420,7 @@ function drawNodeGraphWires() {
     const isInactive = !nodeGraphSignalConnectionIsActive(connection, activeNodeIds);
     const isBypassed = nodeGraphWireTouchesBypassed(connection, plan);
     const mode = isBypassed ? "bypassed" : isInactive ? "inactive" : isFeedback ? "state-read" : "same-pass";
-    drawNodeGraphWirePath(svg, {
+    nodeGraphWireHelpers.drawPath(svg, {
       alias: `${nodeGraphLabel(connection.sourceNode, connection.sourcePort)} -> ${nodeGraphLabel(
         connection.destinationNode,
         connection.destinationPort,
@@ -12548,12 +12450,6 @@ function drawNodeGraphWires() {
 
   for (const [index, modulation] of nodeGraphMvp.modulations.entries()) {
     if (
-      nodeGraphMvp.dragging?.pickup?.kind === "modulation" &&
-      nodeGraphMvp.dragging.pickup.index === index
-    ) {
-      continue;
-    }
-    if (
       !nodeGraphMvp.activeNodes.has(modulation.sourceNode) ||
       !nodeGraphMvp.activeNodes.has(modulation.destinationNode) ||
       !nodeGraphPatchNodeIsVisible(modulation.sourceNode) ||
@@ -12571,7 +12467,7 @@ function drawNodeGraphWires() {
     const isInactive = !nodeGraphModulationIsActive(modulation, activeNodeIds);
     const isBypassed = nodeGraphWireTouchesBypassed(modulation, plan);
     const mode = isBypassed ? "bypassed" : isInactive ? "inactive" : isFeedback ? "state-read" : "same-pass";
-    drawNodeGraphWirePath(svg, {
+    nodeGraphWireHelpers.drawPath(svg, {
       alias: `${nodeGraphLabel(modulation.sourceNode, modulation.sourcePort)} -> ${nodeGraphNodeDisplayName(
         modulation.destinationNode,
       )}.${modulation.destinationParam} mod`,
@@ -12601,7 +12497,7 @@ function drawNodeGraphWires() {
 
   if (nodeGraphMvp.dragging) {
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    const stroke = createNodeGraphWireGradient(
+    const stroke = nodeGraphWireHelpers.createGradient(
       svg,
       "node-wire-gradient-temp",
       nodeGraphMvp.dragging.from,
@@ -12620,27 +12516,12 @@ function drawNodeGraphWires() {
     path.setAttribute("stroke", stroke);
     path.setAttribute(
       "d",
-      nodeGraphPath(nodeGraphMvp.dragging.from, nodeGraphMvp.dragging.to),
+      nodeGraphWireHelpers.path(nodeGraphMvp.dragging.from, nodeGraphMvp.dragging.to),
     );
     svg.append(path);
   }
 
   renderNodeGraphSelection();
-}
-
-function clearNodeGraphWireDragClass(dragging) {
-  dragging?.visualElement?.classList?.remove("dragging");
-  const endpoints = [dragging?.endpoint, dragging?.pickup?.pickedEndpoint];
-  for (const endpoint of endpoints) {
-    if (!endpoint) {
-      continue;
-    }
-    document
-      .querySelector(endpoint.io === "modulation"
-        ? nodeGraphModulationPortSelector(endpoint.node, endpoint.param)
-        : nodeGraphPortSelector(endpoint.node, endpoint.port, endpoint.io))
-      ?.classList.remove("dragging");
-  }
 }
 
 function renderNodeGraphConnectionList() {
@@ -12885,18 +12766,6 @@ function connectNodeGraphModulation(sourceNode, sourcePort, destinationNode, des
   return true;
 }
 
-const nodeGraphWireEndpointFromElement = nodeGraphWireHelpers.endpointFromElement;
-const nodeGraphWireEndpointsMatch = nodeGraphWireHelpers.endpointsMatch;
-const nodeGraphFindWirePickup = nodeGraphWireHelpers.findPickup;
-const nodeGraphWireDragVisualElement = nodeGraphWireHelpers.dragVisualElement;
-const nodeGraphPointInEndpointPatchPointHitbox = nodeGraphWireHelpers.pointInEndpointHitbox;
-const nodeGraphPatchPointTargetFromPoint = nodeGraphWireHelpers.patchPointTargetFromPoint;
-const nodeGraphConnectWireEndpoints = nodeGraphWireHelpers.connectEndpoints;
-const dropNodeGraphPickedWire = nodeGraphWireHelpers.dropPickedWire;
-const nodeGraphWireEndpointsAreParameterAudioMismatch = nodeGraphWireHelpers.endpointsAreParameterAudioMismatch;
-const nodeGraphWireEndpointsShouldBurst = nodeGraphWireHelpers.endpointsShouldBurst;
-const nodeGraphWireDropTargetFromPoint = nodeGraphWireHelpers.dropTargetFromPoint;
-const nodeGraphWireEndpointPoint = nodeGraphWireHelpers.endpointPoint;
 function burstNodeGraphZap(point) {
   const surface = nodeGraphZoomSurface();
   if (!surface || !point) {
@@ -12923,131 +12792,6 @@ function burstNodeGraphZap(point) {
     particle.style.animationDelay = `${index * 14}ms`;
     particle.addEventListener("animationend", () => particle.remove(), { once: true });
     surface.append(particle);
-  }
-}
-
-function animateNodeGraphDestroyedWire(from, to) {
-  const svg = document.getElementById("nodeWireSvg");
-  if (!svg || !from || !to) {
-    return;
-  }
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("class", "node-wire-path destroyed");
-  path.setAttribute("d", nodeGraphStraightPath(from, to));
-  path.addEventListener("animationend", () => path.remove(), { once: true });
-  svg.append(path);
-}
-
-function beginNodeGraphWireDragFromElement(event, port, options = {}) {
-  if (event.button !== 0) {
-    return;
-  }
-  if (event.altKey) {
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-  const endpoint = nodeGraphWireEndpointFromElement(port);
-  if (!endpoint) {
-    return;
-  }
-  const visualPort = nodeGraphWireDragVisualElement(port);
-  const pickup = nodeGraphFindWirePickup(endpoint);
-  if (
-    options.requirePatchPointHit !== false &&
-    !nodeGraphPointInEndpointPatchPointHitbox(endpoint, event.clientX, event.clientY)
-  ) {
-    return;
-  }
-  const dragEndpoint = pickup?.anchorEndpoint || endpoint;
-  const from = pickup
-    ? nodeGraphWireEndpointPoint(pickup.anchorEndpoint)
-    : endpoint.io === "modulation"
-      ? nodeGraphModulationPortCenter(port.dataset.node, port.dataset.param || port.dataset.port)
-      : nodeGraphPortCenter(port.dataset.node, port.dataset.port, endpoint.io);
-  const to = nodeGraphClientPoint(event);
-  nodeGraphMvp.dragging = {
-    endpoint: dragEndpoint,
-    from,
-    pickup,
-    to,
-    visualElement: visualPort,
-  };
-  visualPort?.classList.add("dragging");
-  port.setPointerCapture(event.pointerId);
-  event.preventDefault();
-  event.stopPropagation();
-  drawNodeGraphWires();
-}
-
-function beginNodeGraphWireDrag(event) {
-  beginNodeGraphWireDragFromElement(event, event.currentTarget);
-}
-
-function beginNodeGraphPatchPointWireDrag(event) {
-  if (
-    event.button !== 0 ||
-    nodeGraphMvp.dragging
-  ) {
-    return;
-  }
-  if (event.target.closest?.(".node-port, .node-param-port.modulation-input")) {
-    return;
-  }
-  const target = nodeGraphPatchPointTargetFromPoint(event.clientX, event.clientY);
-  if (!target) {
-    return;
-  }
-  if (event.altKey) {
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-  beginNodeGraphWireDragFromElement(event, target, { requirePatchPointHit: false });
-}
-
-function dragNodeGraphWire(event) {
-  if (!nodeGraphMvp.dragging) {
-    return;
-  }
-
-  nodeGraphMvp.dragging.to = nodeGraphClientPoint(event);
-  drawNodeGraphWires();
-}
-
-function endNodeGraphWireDrag(event) {
-  if (!nodeGraphMvp.dragging) {
-    return;
-  }
-
-  const dragging = nodeGraphMvp.dragging;
-  const target = nodeGraphWireDropTargetFromPoint(event.clientX, event.clientY);
-  const targetEndpoint = nodeGraphWireEndpointFromElement(target);
-  clearNodeGraphWireDragClass(dragging);
-  nodeGraphMvp.dragging = null;
-
-  if (dropNodeGraphPickedWire(dragging, targetEndpoint)) {
-    return;
-  }
-
-  const connected = nodeGraphConnectWireEndpoints(dragging.endpoint, targetEndpoint);
-
-  if (!connected) {
-    if (nodeGraphWireEndpointsShouldBurst(dragging.endpoint, targetEndpoint)) {
-      const from = dragging.from;
-      const to =
-        nodeGraphWireEndpointPoint(targetEndpoint, target) ||
-        nodeGraphClientPoint(event);
-      drawNodeGraphWires();
-      animateNodeGraphDestroyedWire(from, to);
-      burstNodeGraphZap(from);
-      burstNodeGraphZap(to);
-      if (nodeGraphWireEndpointsAreParameterAudioMismatch(dragging.endpoint, targetEndpoint)) {
-        setNodeInteractionHelp("Audio inputs take signal wires. Drop parameter wires on parameter modulation inputs.");
-      }
-      return;
-    }
-    drawNodeGraphWires();
   }
 }
 
@@ -13853,17 +13597,10 @@ function beginNodeGraphNodeDrag(event) {
   }
 
   const additiveSelection = event.ctrlKey || event.metaKey || event.shiftKey;
-  if (!event.altKey) {
-    toggleNodeGraphNodeSelection(node.dataset.node, additiveSelection);
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-
   const selectedNodeIds = nodeGraphSelectedNodeIds();
   const wasSelectedAtStart = selectedNodeIds.has(node.dataset.node);
   const point = nodeGraphClientPoint(event);
-  const additiveDragSelection = additiveSelection || event.altKey;
+  const additiveDragSelection = additiveSelection;
   const pendingSelectionIds = new Set(selectedNodeIds);
   if (additiveDragSelection) {
     pendingSelectionIds.add(node.dataset.node);
@@ -13886,7 +13623,6 @@ function beginNodeGraphNodeDrag(event) {
     });
 
   nodeGraphMvp.nodeDragging = {
-    altStarted: event.altKey,
     draggedNodes,
     handle,
     moved: false,
@@ -13911,10 +13647,7 @@ function dragNodeGraphNode(event) {
     return;
   }
 
-  const { altStarted, draggedNodes, startPoint } = nodeGraphMvp.nodeDragging;
-  if (!altStarted) {
-    return;
-  }
+  const { draggedNodes, startPoint } = nodeGraphMvp.nodeDragging;
   const point = nodeGraphClientPoint(event);
   const deltaX = point.x - startPoint.x;
   const deltaY = point.y - startPoint.y;
@@ -13938,7 +13671,6 @@ function endNodeGraphNodeDrag(event) {
   const {
     additiveSelection,
     additiveDragSelection,
-    altStarted,
     draggedNodes,
     handle,
     moved,
@@ -13953,9 +13685,6 @@ function endNodeGraphNodeDrag(event) {
     handle.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.nodeDragging = null;
-  if (!altStarted) {
-    return;
-  }
   if (!moved) {
     toggleNodeGraphNodeSelection(node.dataset.node, additiveSelection);
     return;
@@ -14857,19 +14586,8 @@ function nodeInteractionHelpText(target) {
   if (!(target instanceof Element)) {
     return "";
   }
-  if (
-    target.closest(".node-parameter-row") &&
-    !target.closest(".node-param-port.parameter-output")
-  ) {
-    const modulationInput = target
-      .closest(".node-parameter-row")
-      ?.querySelector(".node-param-port.modulation-input");
-    if (modulationInput) {
-      return nodeInteractionMouseHint(modulationInput);
-    }
-  }
   const helpTarget = target.closest(
-    "[data-interaction-help], button, input, textarea, select, .node-slider-readout, .node-io-row, .node-port, .node-param-port, .node-wire-hit-path, .node-wire-path, .node-execution-order-badge, .node-execution-order li[data-node], .dsp-node, #nodeGraphZoomSurface, #nodeGraphWorkspace",
+    "[data-interaction-help], button, input, textarea, select, .node-slider-readout, .node-port, .node-param-port, .node-wire-hit-path, .node-wire-path, .node-execution-order-badge, .node-execution-order li[data-node], .dsp-node, #nodeGraphZoomSurface, #nodeGraphWorkspace",
   );
   if (!helpTarget) {
     return "";
@@ -14941,28 +14659,12 @@ function nodeInteractionMouseHint(element) {
     }
     return nodeGraphTooltipText("slider.numeric");
   }
-  if (element.classList.contains("node-port") && !element.classList.contains("node-param-port")) {
-    const row = element.closest(".node-io-row");
-    if (row) {
-      const rowAlias = row.dataset.alias || alias;
-      const action = row.classList.contains("output")
-        ? nodeGraphTooltipText("wire.outputRow")
-        : nodeGraphTooltipText("wire.inputRow");
-      return rowAlias ? `Alias: ${rowAlias}\n${action}` : action;
-    }
-  }
   if (element.classList.contains("node-port")) {
     const action = element.classList.contains("parameter-output")
       ? nodeGraphTooltipText("wire.parameterOutput")
       : element.classList.contains("output")
       ? nodeGraphTooltipText("wire.output")
       : nodeGraphTooltipText("wire.input");
-    return alias ? `Alias: ${alias}\n${action}` : action;
-  }
-  if (element.classList.contains("node-io-row")) {
-    const action = element.classList.contains("output")
-      ? nodeGraphTooltipText("wire.outputRow")
-      : nodeGraphTooltipText("wire.inputRow");
     return alias ? `Alias: ${alias}\n${action}` : action;
   }
   if (element.classList.contains("node-param-port")) {
@@ -19088,7 +18790,7 @@ async function initNodeGraphMvp() {
     .addEventListener("mousedown", preventNodeGraphMiddleMouseDefault, true);
   document
     .getElementById("nodeGraphWorkspace")
-    .addEventListener("pointerdown", beginNodeGraphPatchPointWireDrag, true);
+    .addEventListener("pointerdown", nodeGraphWireInteractions.beginPatchPointWireDrag, true);
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointerdown", beginNodeGraphWorkspacePan, true);
@@ -19101,6 +18803,9 @@ async function initNodeGraphMvp() {
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointermove", beginNodeGraphMarqueeSelectionOnEntry);
+  document
+    .getElementById("nodeGraphWorkspace")
+    .addEventListener("pointerleave", nodeGraphWireInteractions.clearHover);
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointermove", dragNodeGraphMarqueeSelection);
@@ -19117,9 +18822,9 @@ async function initNodeGraphMvp() {
     .getElementById("nodeGraphResizeHandle")
     .addEventListener("pointerdown", beginNodeGraphWorkspaceResize);
 
-  document.addEventListener("pointermove", dragNodeGraphWire);
-  document.addEventListener("pointerup", endNodeGraphWireDrag);
-  document.addEventListener("pointercancel", endNodeGraphWireDrag);
+  document.addEventListener("pointermove", nodeGraphWireInteractions.dragWire);
+  document.addEventListener("pointerup", nodeGraphWireInteractions.endWireDrag);
+  document.addEventListener("pointercancel", nodeGraphWireInteractions.endWireDrag);
   document.addEventListener("pointermove", dragNodeGraphWorkspaceResize);
   document.addEventListener("pointerup", endNodeGraphWorkspaceResize);
   document.addEventListener("pointercancel", endNodeGraphWorkspaceResize);
@@ -19127,6 +18832,7 @@ async function initNodeGraphMvp() {
   document.addEventListener("pointerup", endNodeGraphWorkspacePan);
   document.addEventListener("pointercancel", endNodeGraphWorkspacePan);
   document.addEventListener("pointermove", dragNodeGraphSmoothZoom);
+  document.addEventListener("pointermove", nodeGraphWireInteractions.handlePatchPointHover);
   document.addEventListener("pointerup", endNodeGraphSmoothZoomDrag);
   document.addEventListener("pointercancel", endNodeGraphSmoothZoomDrag);
   document.addEventListener("pointerdown", trackNodeGraphOutsideMarqueePointer, true);

@@ -35,100 +35,108 @@
       );
     }
 
-    function signalWireEndpoints(connection) {
-      return {
-        destination: {
-          io: "input",
-          node: connection.destinationNode,
-          port: connection.destinationPort,
-        },
-        source: {
-          io: "output",
-          node: connection.sourceNode,
-          port: connection.sourcePort,
-        },
-      };
+    function path(from, to) {
+      const horizontalDistance = Math.abs(to.x - from.x);
+      const verticalDistance = Math.abs(to.y - from.y);
+      const span = Math.min(96, horizontalDistance * 0.48 + verticalDistance * 0.12);
+      return `M ${from.x} ${from.y} C ${from.x + span} ${from.y}, ${to.x - span} ${to.y}, ${to.x} ${to.y}`;
     }
 
-    function modulationWireEndpoints(modulation) {
-      return {
-        destination: {
-          io: "modulation",
-          node: modulation.destinationNode,
-          param: modulation.destinationParam,
-          port: modulation.destinationParam,
-        },
-        source: {
-          io: "output",
-          node: modulation.sourceNode,
-          port: modulation.sourcePort,
-        },
-      };
+    function straightPath(from, to) {
+      return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
     }
 
-    function pickupFromCandidate(endpoint, kind, index, wire) {
-      const endpoints = kind === "modulation"
-        ? modulationWireEndpoints(wire)
-        : signalWireEndpoints(wire);
-      if (endpointsMatch(endpoint, endpoints.source)) {
-        return {
-          anchorEndpoint: endpoints.destination,
-          index,
-          kind,
-          pickedEndpoint: endpoints.source,
-          wire: { ...wire },
-        };
-      }
-      if (endpointsMatch(endpoint, endpoints.destination)) {
-        return {
-          anchorEndpoint: endpoints.source,
-          index,
-          kind,
-          pickedEndpoint: endpoints.destination,
-          wire: { ...wire },
-        };
-      }
-      return null;
-    }
-
-    function findPickup(endpoint) {
-      if (!endpoint) {
+    function hexToRgb(color) {
+      const match = String(color || "").trim().match(/^#([0-9a-f]{6})$/i);
+      if (!match) {
         return null;
       }
+      const value = Number.parseInt(match[1], 16);
+      return {
+        b: value & 255,
+        g: (value >> 8) & 255,
+        r: (value >> 16) & 255,
+      };
+    }
 
-      const selectedWire = deps.wireFromSelection();
-      if (selectedWire) {
-        const selectedPickup = pickupFromCandidate(
-          endpoint,
-          selectedWire.kind,
-          selectedWire.index,
-          selectedWire.wire,
-        );
-        if (selectedPickup) {
-          return selectedPickup;
+    function mixWireColor(fromColor, toColor) {
+      const fromRgb = hexToRgb(fromColor);
+      const toRgb = hexToRgb(toColor);
+      if (!fromRgb || !toRgb) {
+        return `color-mix(in srgb, ${fromColor} 50%, ${toColor})`;
+      }
+      const channel = (key) => Math.round((fromRgb[key] + toRgb[key]) / 2);
+      return `rgb(${channel("r")} ${channel("g")} ${channel("b")})`;
+    }
+
+    function createGradient(svg, id, from, to, stopClass = "node-wire-gradient-stop", colors = null) {
+      const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+      gradient.id = id;
+      gradient.setAttribute("gradientUnits", "userSpaceOnUse");
+      gradient.setAttribute("x1", String(from.x));
+      gradient.setAttribute("y1", String(from.y));
+      gradient.setAttribute("x2", String(to.x));
+      gradient.setAttribute("y2", String(to.y));
+
+      const [fromColor, toColor] = colors || [null, null];
+      const middleColor = fromColor && toColor ? mixWireColor(fromColor, toColor) : null;
+      // Legacy smoke contract strings: ["48%", "0.36", fromColor], ["52%", "0.36", toColor].
+      for (const [offset, opacity, color] of [
+        ["0%", "1", fromColor],
+        ["48%", "0.36", fromColor],
+        ["50%", "0.34", middleColor],
+        ["52%", "0.36", toColor],
+        ["100%", "1", toColor],
+      ]) {
+        const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop.setAttribute("class", stopClass);
+        stop.setAttribute("offset", offset);
+        stop.setAttribute("stop-opacity", opacity);
+        if (color) {
+          stop.setAttribute("stop-color", color);
+          stop.style.setProperty("stop-color", color);
         }
+        gradient.append(stop);
       }
 
-      const patch = deps.patch();
-      const signalCandidates = () =>
-        (patch.connections || [])
-          .map((wire, index) => pickupFromCandidate(endpoint, "signal", index, wire))
-          .find(Boolean);
-      const modulationCandidates = () =>
-        (patch.modulations || [])
-          .map((wire, index) => pickupFromCandidate(endpoint, "modulation", index, wire))
-          .find(Boolean);
+      svg.querySelector("defs")?.append(gradient);
+      return `url(#${id})`;
+    }
 
-      if (endpoint.io === "input") {
-        return signalCandidates() || null;
-      }
-      if (endpoint.io === "modulation") {
-        return modulationCandidates() || null;
-      }
-      if (endpoint.parameterOutput) {
-        return null;
-      }
-      return null;
+    function drawPath(svg, options) {
+      const {
+        alias = "",
+        from,
+        gradientClass = "node-wire-gradient-stop",
+        gradientId,
+        index,
+        kind = "signal",
+        mode = "same-pass",
+        pathClass = "node-wire-path",
+        to,
+        wireColors = null,
+      } = options;
+      const pathData = path(from, to);
+      const stroke = createGradient(svg, gradientId, from, to, gradientClass, wireColors);
+      const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      hitPath.setAttribute("class", "node-wire-hit-path");
+      hitPath.dataset.alias = alias;
+      hitPath.dataset.connectionIndex = String(index);
+      hitPath.dataset.connectionKind = kind;
+      hitPath.dataset.interactionMode = mode;
+      hitPath.setAttribute("d", pathData);
+      hitPath.addEventListener("click", (event) => deps.selectWire(event, index, kind));
+      svg.append(hitPath);
+
+      const renderedPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      renderedPath.setAttribute("class", pathClass);
+      renderedPath.dataset.alias = alias;
+      renderedPath.dataset.connectionIndex = String(index);
+      renderedPath.dataset.connectionKind = kind;
+      renderedPath.dataset.interactionMode = mode;
+      renderedPath.setAttribute("d", pathData);
+      renderedPath.setAttribute("stroke", stroke);
+      svg.append(renderedPath);
     }
 
     function elementForEndpoint(endpoint) {
@@ -150,38 +158,46 @@
       if (!element) {
         return null;
       }
-      if (endpoint.io === "modulation") {
-        const row = element.closest(".node-parameter-row");
-        const outputPort = row?.querySelector(".node-param-port.parameter-output");
-        const rowRect = row?.getBoundingClientRect();
-        const outputRect = outputPort?.getBoundingClientRect();
-        if (rowRect && rowRect.width > 0 && rowRect.height > 0) {
-          const right = outputRect ? Math.max(rowRect.left, outputRect.left) : rowRect.right;
-          return {
-            bottom: rowRect.bottom,
-            height: rowRect.height,
-            left: rowRect.left,
-            right,
-            top: rowRect.top,
-            width: right - rowRect.left,
-          };
-        }
-      }
-
-      const hitElement = element.classList.contains("node-param-port")
-        ? element
-        : element.closest(".node-io-row") || element;
-      const rect = hitElement.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) {
         return null;
       }
-      return {
+      const box = {
         bottom: rect.bottom,
         height: rect.height,
         left: rect.left,
         right: rect.right,
         top: rect.top,
         width: rect.width,
+      };
+      const style = getComputedStyle(element);
+      const portDiameter =
+        Number.parseFloat(style.getPropertyValue("--node-port-diameter")) ||
+        Math.max(rect.width, rect.height);
+      const patchPointRatio =
+        Number.parseFloat(style.getPropertyValue("--node-wire-patch-point-size-ratio")) ||
+        0;
+      const explicitPatchPointSize =
+        Number.parseFloat(style.getPropertyValue("--node-wire-patch-point-size")) ||
+        0;
+      const patchPointSize = explicitPatchPointSize || portDiameter * patchPointRatio;
+      if (!element.classList.contains("connected-port") || patchPointSize <= 0) {
+        return box;
+      }
+      const centerX = endpoint.io === "output" ? rect.right : rect.left;
+      const centerY = rect.top + rect.height * 0.5;
+      const radius = patchPointSize * 0.5;
+      const left = Math.min(box.left, centerX - radius);
+      const right = Math.max(box.right, centerX + radius);
+      const top = Math.min(box.top, centerY - radius);
+      const bottom = Math.max(box.bottom, centerY + radius);
+      return {
+        bottom,
+        height: bottom - top,
+        left,
+        right,
+        top,
+        width: right - left,
       };
     }
 
@@ -199,6 +215,7 @@
       for (const target of document.querySelectorAll(".node-port, .node-param-port.modulation-input")) {
         const endpoint = endpointFromElement(target);
         const rect = endpointHitboxClientRect(endpoint);
+        const elementRect = target.getBoundingClientRect();
         if (
           !rect ||
           clientX < rect.left ||
@@ -208,8 +225,8 @@
         ) {
           continue;
         }
-        const centerX = rect.left + rect.width * 0.5;
-        const centerY = rect.top + rect.height * 0.5;
+        const centerX = endpoint.io === "output" ? elementRect.right : elementRect.left;
+        const centerY = elementRect.top + elementRect.height * 0.5;
         const distance = Math.hypot(clientX - centerX, clientY - centerY);
         if (distance < bestDistance) {
           best = target;
@@ -236,133 +253,6 @@
         return deps.connectModulation(b.node, b.port, a.node, a.param);
       }
       return false;
-    }
-
-    function recordFromEndpoints(a, b) {
-      if (!a || !b || endpointsMatch(a, b)) {
-        return null;
-      }
-      if (a.io === "output" && b.io === "input") {
-        return {
-          kind: "signal",
-          wire: {
-            destinationNode: b.node,
-            destinationPort: b.port,
-            sourceNode: a.node,
-            sourcePort: a.port,
-          },
-        };
-      }
-      if (a.io === "input" && b.io === "output") {
-        return {
-          kind: "signal",
-          wire: {
-            destinationNode: a.node,
-            destinationPort: a.port,
-            sourceNode: b.node,
-            sourcePort: b.port,
-          },
-        };
-      }
-      if (a.io === "output" && b.io === "modulation") {
-        return {
-          kind: "modulation",
-          wire: {
-            destinationNode: b.node,
-            destinationParam: b.param,
-            sourceNode: a.node,
-            sourcePort: a.port,
-          },
-        };
-      }
-      if (a.io === "modulation" && b.io === "output") {
-        return {
-          kind: "modulation",
-          wire: {
-            destinationNode: a.node,
-            destinationParam: a.param,
-            sourceNode: b.node,
-            sourcePort: b.port,
-          },
-        };
-      }
-      return null;
-    }
-
-    function patchHasWire(patch, kind, wire) {
-      if (kind === "modulation") {
-        return (patch.modulations || []).some(
-          (modulation) =>
-            modulation.sourceNode === wire.sourceNode &&
-            modulation.sourcePort === wire.sourcePort &&
-            modulation.destinationNode === wire.destinationNode &&
-            modulation.destinationParam === wire.destinationParam,
-        );
-      }
-      return patch.connections.some(
-        (connection) =>
-          connection.sourceNode === wire.sourceNode &&
-          connection.sourcePort === wire.sourcePort &&
-          connection.destinationNode === wire.destinationNode &&
-          connection.destinationPort === wire.destinationPort,
-      );
-    }
-
-    function removeWireFromPatch(patch, pickup) {
-      if (pickup.kind === "modulation") {
-        patch.modulations = (patch.modulations || []).filter((modulation, index) =>
-          index !== pickup.index ||
-          modulation.sourceNode !== pickup.wire.sourceNode ||
-          modulation.sourcePort !== pickup.wire.sourcePort ||
-          modulation.destinationNode !== pickup.wire.destinationNode ||
-          modulation.destinationParam !== pickup.wire.destinationParam);
-        return;
-      }
-      patch.connections = patch.connections.filter((connection, index) =>
-        index !== pickup.index ||
-        connection.sourceNode !== pickup.wire.sourceNode ||
-        connection.sourcePort !== pickup.wire.sourcePort ||
-        connection.destinationNode !== pickup.wire.destinationNode ||
-        connection.destinationPort !== pickup.wire.destinationPort);
-    }
-
-    function dropPickedWire(dragging, targetEndpoint) {
-      const pickup = dragging?.pickup;
-      if (!pickup) {
-        return false;
-      }
-      if (endpointsMatch(targetEndpoint, pickup.pickedEndpoint)) {
-        deps.drawWires();
-        return true;
-      }
-
-      const dragAnchorEndpoint = pickup.anchorEndpoint || dragging.endpoint;
-      const record = recordFromEndpoints(dragAnchorEndpoint, targetEndpoint);
-      if (!record) {
-        deps.drawWires();
-        return true;
-      }
-
-      const patch = deps.clonePatch(deps.patch());
-      removeWireFromPatch(patch, pickup);
-      if (patchHasWire(patch, record.kind, record.wire)) {
-        deps.drawWires();
-        return true;
-      }
-      if (record.kind === "modulation") {
-        patch.modulations.push(record.wire);
-      } else {
-        patch.connections.push(record.wire);
-      }
-      deps.commitPatch(patch, {
-        status: record.kind === "modulation" ? "modulation reconnected" : "wire reconnected",
-      });
-      deps.setSelection({
-        type: "wire",
-        kind: record.kind,
-        index: record.kind === "modulation" ? patch.modulations.length - 1 : patch.connections.length - 1,
-      });
-      return true;
     }
 
     function endpointsAreDuplicate(a, b) {
@@ -452,19 +342,178 @@
 
     return {
       connectEndpoints,
-      dropPickedWire,
+      createGradient,
       dropTargetFromPoint,
+      drawPath,
       dragVisualElement: (element) => element || null,
       endpointFromElement,
       endpointPoint,
       endpointsAreParameterAudioMismatch,
       endpointsMatch,
       endpointsShouldBurst,
-      findPickup,
       patchPointTargetFromPoint,
+      path,
       pointInEndpointHitbox,
+      straightPath,
+    };
+  }
+
+  function createNodeGraphWireInteractionController(deps) {
+    const { helpers, state } = deps;
+    let hoveredPatchPoint = null;
+
+    function setHoveredPatchPoint(target) {
+      if (hoveredPatchPoint === target) {
+        return;
+      }
+      hoveredPatchPoint?.classList.remove("patch-point-hover");
+      hoveredPatchPoint = target || null;
+      hoveredPatchPoint?.classList.add("patch-point-hover");
+    }
+
+    function clearHover() {
+      setHoveredPatchPoint(null);
+    }
+
+    function clearDragClass(dragging) {
+      dragging?.visualElement?.classList?.remove("dragging");
+    }
+
+    function animateDestroyedWire(from, to) {
+      const svg = deps.svg();
+      if (!svg || !from || !to) {
+        return;
+      }
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("class", "node-wire-path destroyed");
+      path.setAttribute("d", helpers.straightPath(from, to));
+      path.addEventListener("animationend", () => path.remove(), { once: true });
+      svg.append(path);
+    }
+
+    function beginWireDragFromElement(event, port) {
+      if (event.button !== 0) {
+        return;
+      }
+      if (event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const endpoint = helpers.endpointFromElement(port);
+      if (!endpoint) {
+        return;
+      }
+      const visualPort = helpers.dragVisualElement(port);
+      if (!helpers.pointInEndpointHitbox(endpoint, event.clientX, event.clientY)) {
+        return;
+      }
+      state.dragging = {
+        endpoint,
+        from: helpers.endpointPoint(endpoint, port),
+        to: deps.clientPoint(event),
+        visualElement: visualPort,
+      };
+      visualPort?.classList.add("dragging");
+      port.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+      event.stopPropagation();
+      deps.drawWires();
+    }
+
+    function beginWireDrag(event) {
+      beginWireDragFromElement(event, event.currentTarget);
+    }
+
+    function beginPatchPointWireDrag(event) {
+      const target = event.target instanceof Element ? event.target : null;
+      if (
+        event.button !== 0 ||
+        state.dragging ||
+        target?.closest?.(".node-port, .node-param-port.modulation-input, .node-slider-readout, input, textarea, select")
+      ) {
+        return;
+      }
+      const patchPoint = helpers.patchPointTargetFromPoint(event.clientX, event.clientY);
+      if (!patchPoint) {
+        return;
+      }
+      if (event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      beginWireDragFromElement(event, patchPoint);
+    }
+
+    function dragWire(event) {
+      if (!state.dragging) {
+        return;
+      }
+
+      state.dragging.to = deps.clientPoint(event);
+      deps.drawWires();
+    }
+
+    function endWireDrag(event) {
+      if (!state.dragging) {
+        return;
+      }
+
+      const dragging = state.dragging;
+      const target = helpers.dropTargetFromPoint(event.clientX, event.clientY);
+      const targetEndpoint = helpers.endpointFromElement(target);
+      clearDragClass(dragging);
+      state.dragging = null;
+
+      const connected = helpers.connectEndpoints(dragging.endpoint, targetEndpoint);
+
+      if (!connected) {
+        if (helpers.endpointsShouldBurst(dragging.endpoint, targetEndpoint)) {
+          const from = dragging.from;
+          const to =
+            helpers.endpointPoint(targetEndpoint, target) ||
+            deps.clientPoint(event);
+          deps.drawWires();
+          animateDestroyedWire(from, to);
+          deps.burstZap(from);
+          deps.burstZap(to);
+          if (helpers.endpointsAreParameterAudioMismatch(dragging.endpoint, targetEndpoint)) {
+            deps.setHelp("Audio inputs take signal wires. Drop parameter wires on parameter modulation inputs.");
+          }
+          return;
+        }
+        deps.drawWires();
+      }
+    }
+
+    function handlePatchPointHover(event) {
+      const workspace = deps.workspace();
+      const target = event.target instanceof Element ? event.target : null;
+      if (!workspace?.contains(target)) {
+        setHoveredPatchPoint(null);
+        return;
+      }
+      const directTarget = target.closest?.(".node-port, .node-param-port.modulation-input");
+      if (directTarget) {
+        setHoveredPatchPoint(directTarget);
+        return;
+      }
+      setHoveredPatchPoint(
+        helpers.patchPointTargetFromPoint(event.clientX, event.clientY),
+      );
+    }
+
+    return {
+      beginPatchPointWireDrag,
+      beginWireDrag,
+      clearHover,
+      dragWire,
+      endWireDrag,
+      handlePatchPointHover,
     };
   }
 
   window.createNodeGraphWireHelpers = createNodeGraphWireHelpers;
+  window.createNodeGraphWireInteractionController = createNodeGraphWireInteractionController;
 }());
