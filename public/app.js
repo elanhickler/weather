@@ -5905,7 +5905,7 @@ const nodeGraphDefaultPatch = Object.freeze({
 const nodeGraphDefaultPresetUrl = "./public/presets/default.json";
 const nodeGraphDefaultPresetStorageKey = "soemdsp-sandbox.defaultPatch";
 const nodeUiDevDefaultSettingsUrl = "./public/presets/useruisettings.json";
-const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v2";
+const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v4";
 
 const nodeUiDevFontFamilyOptions = Object.freeze([
   {
@@ -5943,14 +5943,14 @@ const nodeUiDevFontFamilyOptions = Object.freeze([
 const nodeUiDevSettingControls = Object.freeze([
   { defaultValue: 100, id: "nodeUiDevSettingsHeaderTextSize", key: "settingsHeaderTextSize", max: 100, min: 0, type: "number" },
   { defaultValue: 50, id: "nodeUiDevButtonTextSize", key: "uiDevButtonTextSize", max: 100, min: 0, type: "number" },
-  { defaultValue: 76, id: "nodeUiDevLiveToggleTextSize", key: "liveToggleTextSize", max: 100, min: 0, type: "number" },
-  { defaultValue: 62, id: "nodeUiDevModularHeaderButtonBackground", key: "modularHeaderButtonBackground", max: 100, min: 0, type: "number" },
-  { defaultValue: 14, id: "nodeUiDevTooltipTextSize", key: "tooltipTextSize", max: 28, min: 8, type: "number" },
-  { defaultValue: 5, id: "nodeUiDevMinimumGridBrightness", key: "minimumGridBrightness", max: 100, min: 0, type: "number" },
-  { defaultValue: 100, exposeDefault: true, id: "nodeUiDevModuleLightSpread", key: "moduleLightSpread", max: 220, min: 40, type: "number" },
+  { defaultValue: 76, exposeDefault: true, id: "nodeUiDevLiveToggleTextSize", key: "liveToggleTextSize", max: 100, min: 0, type: "number" },
+  { defaultValue: 62, exposeDefault: true, id: "nodeUiDevModularHeaderButtonBackground", key: "modularHeaderButtonBackground", max: 100, min: 0, type: "number" },
+  { defaultValue: 14, exposeDefault: true, id: "nodeUiDevTooltipTextSize", key: "tooltipTextSize", max: 28, min: 8, type: "number" },
+  { defaultValue: 0, exposeDefault: true, id: "nodeUiDevMinimumGridBrightness", key: "minimumGridBrightness", max: 100, min: 0, type: "number" },
+  { defaultValue: 78, exposeDefault: true, id: "nodeUiDevModuleLightSpread", key: "moduleLightSpread", max: 220, min: 40, type: "number" },
   { defaultValue: 6, exposeDefault: true, id: "nodeUiDevModuleGridInset", key: "moduleGridInset", max: 20, min: 0, type: "number" },
   { defaultValue: 10, exposeDefault: true, id: "nodeUiDevModuleRoundness", key: "moduleRoundness", max: 100, min: 0, type: "number" },
-  { defaultValue: "#ffffff", id: "nodeUiDevGridColor", key: "gridColor", type: "color" },
+  { defaultValue: "#ffffff", exposeDefault: true, id: "nodeUiDevGridColor", key: "gridColor", type: "color" },
   {
     defaultValue: "#0d0d0d",
     exposeDefault: true,
@@ -5960,7 +5960,7 @@ const nodeUiDevSettingControls = Object.freeze([
   },
   { defaultValue: 62, id: "nodeUiDevSettingsHeaderTopRatio", key: "settingsHeaderTopRatio", max: 100, min: 0, type: "number" },
   { defaultValue: 2, id: "nodeUiDevSettingsHeaderPadding", key: "settingsHeaderPadding", max: 20, min: 0, type: "number" },
-  { defaultValue: 4, id: "nodeUiDevSliderDotSize", key: "sliderDotSize", max: 28, min: 0, type: "number" },
+  { defaultValue: 4, exposeDefault: true, id: "nodeUiDevSliderDotSize", key: "sliderDotSize", max: 28, min: 0, type: "number" },
   {
     defaultValue: "cascadia",
     exposeDefault: true,
@@ -5969,12 +5969,12 @@ const nodeUiDevSettingControls = Object.freeze([
     options: nodeUiDevFontFamilyOptions,
     type: "select",
   },
-  { defaultValue: 26, id: "nodeUiDevModuleTitleHeight", key: "moduleTitleHeight", max: 44, min: 12, type: "number" },
-  { defaultValue: 62, id: "nodeUiDevModuleTitleTextFill", key: "moduleTitleTextFill", max: 100, min: 0, type: "number" },
-  { defaultValue: 24, id: "nodeUiDevModuleIoSectionHeight", key: "moduleIoSectionHeight", max: 44, min: 12, type: "number" },
-  { defaultValue: 16, id: "nodeUiDevModuleNodeSize", key: "moduleNodeSize", max: 28, min: 8, type: "number" },
+  { defaultValue: 26, exposeDefault: true, id: "nodeUiDevModuleTitleHeight", key: "moduleTitleHeight", max: 44, min: 12, type: "number" },
+  { defaultValue: 62, exposeDefault: true, id: "nodeUiDevModuleTitleTextFill", key: "moduleTitleTextFill", max: 100, min: 0, type: "number" },
+  { defaultValue: 24, exposeDefault: true, id: "nodeUiDevModuleIoSectionHeight", key: "moduleIoSectionHeight", max: 44, min: 12, type: "number" },
+  { defaultValue: 16, exposeDefault: true, id: "nodeUiDevModuleNodeSize", key: "moduleNodeSize", max: 28, min: 8, type: "number" },
   { defaultValue: 50, exposeDefault: true, id: "nodeUiDevNodeGlowSize", key: "nodeGlowSize", max: 200, min: 0, type: "number" },
-  { defaultValue: 36, id: "nodeUiDevWirePatchPointSize", key: "wirePatchPointSize", max: 200, min: 0, type: "number" },
+  { defaultValue: 36, exposeDefault: true, id: "nodeUiDevWirePatchPointSize", key: "wirePatchPointSize", max: 200, min: 0, type: "number" },
   { defaultValue: 19, exposeDefault: true, id: "nodeUiDevWireThickness", key: "wireThickness", max: 100, min: 0, type: "number" },
   { defaultValue: 36, id: "nodeUiDevBypassIconSize", key: "bypassIconSize", max: 100, min: 0, type: "number" },
   { defaultValue: 40, id: "nodeUiDevBypassIconGlowSpread", key: "bypassIconGlowSpread", max: 200, min: 0, type: "number" },
@@ -9543,10 +9543,7 @@ const nodeGraphTextBoxHeightLimits = Object.freeze({
 });
 
 function nodeGraphDefaultModuleGridWidthUnits(type) {
-  if (nodeGraphModuleDefinitions[type]?.layout === "textBox") {
-    return 8;
-  }
-  return nodeGraphModuleDefinitions[type]?.output ? 6 : 7;
+  return 7;
 }
 
 function normalizeNodeGraphModuleWidthUnits(type, widthGu) {
@@ -15116,17 +15113,7 @@ function handleNodeUiDevSettingsFileLoad(event) {
 async function updateDefaultNodeUiDevSettingsPreset() {
   const text = serializeNodeUiDevSettings();
   try {
-    const response = await fetch("/api/presets/useruisettings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: text,
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.ok === false) {
-      throw new Error(result.error || `HTTP ${response.status}`);
-    }
+    await postNodeUiDevSettingsPreset(text);
     saveNodeUiDevLocalDefaultSettings(text);
     setNodeUiDevSettingsStatus("default ui settings updated", true);
     return true;
@@ -15136,6 +15123,50 @@ async function updateDefaultNodeUiDevSettingsPreset() {
       return true;
     }
     setNodeUiDevSettingsStatus(`default update failed: ${error.message}`, false);
+    return false;
+  }
+}
+
+async function postNodeUiDevSettingsPreset(text) {
+  const response = await fetch("/api/presets/useruisettings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: text,
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ok === false) {
+    throw new Error(result.error || `HTTP ${response.status}`);
+  }
+  return result;
+}
+
+async function saveNodeUserUiSettingsDefaultPreset() {
+  const text = serializeNodeUiDevSettings();
+  const localSaved = saveNodeUiDevLocalDefaultSettings(text);
+  if (localSaved) {
+    setNodeUiDevSettingsStatus("ui settings saved", true);
+    postNodeUiDevSettingsPreset(text)
+      .then(() => {
+        saveNodeUiDevLocalDefaultSettings(text);
+        setNodeUiDevSettingsStatus("default ui settings updated", true);
+      })
+      .catch(() => {
+        setNodeUiDevSettingsStatus("ui settings saved", true);
+      });
+    return true;
+  }
+  try {
+    await postNodeUiDevSettingsPreset(text);
+    saveNodeUiDevLocalDefaultSettings(text);
+    setNodeUiDevSettingsStatus("default ui settings updated", true);
+    return true;
+  } catch (error) {
+    if (localSaved) {
+      return true;
+    }
+    setNodeUiDevSettingsStatus(`ui settings save failed: ${error.message}`, false);
     return false;
   }
 }
@@ -15151,9 +15182,10 @@ async function handleUpdateDefaultNodeUiDevSettingsPresetClick(event) {
 }
 
 async function handleSaveNodeUserUiSettingsDefaultClick(event) {
-  const saved = await updateDefaultNodeUiDevSettingsPreset();
-  if (saved) {
-    flashNodeGraphDefaultButtonSaved(event.currentTarget);
+  flashNodeGraphDefaultButtonSaved(event.currentTarget);
+  const saved = await saveNodeUserUiSettingsDefaultPreset();
+  if (!saved) {
+    event.currentTarget.textContent = "Save UI Settings";
   }
 }
 
@@ -15328,7 +15360,7 @@ function syncNodeUiDevSettingsHeaderControls() {
     0,
     Math.min(100, Number(minimumGridBrightnessInput.value) || 0),
   );
-  const moduleLightSpreadPercent = Math.max(40, Math.min(220, Number(moduleLightSpreadInput.value) || 100));
+  const moduleLightSpreadPercent = Math.max(40, Math.min(220, Number(moduleLightSpreadInput.value) || 78));
   const moduleGridInsetPx = Math.max(0, Math.min(20, Number(moduleGridInsetInput.value) || 0));
   const moduleRoundnessPercent = Math.max(0, Math.min(100, Number(moduleRoundnessInput.value) || 0));
   const gridColor = normalizeNodeUiDevColor(gridColorInput.value, "#ffffff");
@@ -18299,6 +18331,7 @@ async function initNodeGraphMvp() {
   document.getElementById("pasteNodeGraphScriptButton").addEventListener("click", pasteNodeGraphScriptFromClipboard);
   document.getElementById("updateDefaultPresetButton").addEventListener("click", handleUpdateDefaultNodeGraphPresetClick);
   document.getElementById("loadNodeGraphScriptButton").addEventListener("click", loadNodeGraphScript);
+  document.getElementById("nodeSettingsSaveScriptButton").addEventListener("click", saveNodeGraphScript);
   document.getElementById("copyNodeUiDevSettingsButton").addEventListener("click", copyNodeUiDevSettingsToClipboard);
   document.getElementById("loadNodeUiDevSettingsButton").addEventListener("click", loadNodeUiDevSettingsFile);
   document.getElementById("saveNodeUiDevSettingsButton").addEventListener("click", saveNodeUiDevSettingsFile);

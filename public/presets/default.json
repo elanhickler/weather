@@ -213,7 +213,6 @@
       "params": {},
       "type": "textBox",
       "alias": "START",
-      "widthGu": 6,
       "heightGu": 3,
       "layout": {
         "horizontalAlign": "center",
