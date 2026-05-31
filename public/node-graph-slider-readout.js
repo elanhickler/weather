@@ -32,21 +32,25 @@ function nodeSliderChoiceDividerBackground(choices) {
 }
 
 function nodeSliderChoiceSquareRects(readout, choices) {
-  const width = readout.clientWidth;
-  const height = readout.clientHeight;
+  const width = Math.round(readout.clientWidth);
+  const height = Math.round(readout.clientHeight);
   const count = choices.length;
   if (!count || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
     return [];
   }
 
   const inset = 2;
-  const segmentWidth = width / count;
-  const size = Math.max(0, Math.min(segmentWidth - inset * 2, height - inset * 2));
-  return choices.map((_, index) => ({
-    left: index * segmentWidth + (segmentWidth - size) / 2,
-    size,
-    top: (height - size) / 2,
-  }));
+  const size = Math.max(0, Math.floor(Math.min(width / count - inset * 2, height - inset * 2)));
+  return choices.map((_, index) => {
+    const segmentLeft = Math.round((index / count) * width);
+    const segmentRight = Math.round(((index + 1) / count) * width);
+    const segmentWidth = segmentRight - segmentLeft;
+    return {
+      left: segmentLeft + Math.round((segmentWidth - size) / 2),
+      size,
+      top: Math.round((height - size) / 2),
+    };
+  });
 }
 
 function syncNodeSliderChoiceDebugSquares(readout, choices, enabled) {
