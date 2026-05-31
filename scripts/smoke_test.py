@@ -549,6 +549,7 @@ def require_shell_contract(html: str) -> None:
             "./public/audio-utils.js",
             "./public/format-utils.js",
             "./public/node-graph-wires.js",
+            "./public/ui-label-utils.js",
         },
         f"shell scripts were {sorted(parser.scripts)!r}",
     )
@@ -1895,6 +1896,9 @@ def require_root_shell(base_url: str) -> None:
 def require_static_assets(base_url: str) -> None:
     for path, content_type, source_path in [
         ("/public/app.js", ("application/javascript", "text/javascript"), PUBLIC / "app.js"),
+        ("/public/audio-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "audio-utils.js"),
+        ("/public/format-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "format-utils.js"),
+        ("/public/ui-label-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "ui-label-utils.js"),
         (
             "/public/node-live-audio-worklet.js",
             ("application/javascript", "text/javascript"),
@@ -1929,7 +1933,8 @@ def require_waveform_seek_source_contract() -> None:
     app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
     audio_source = (PUBLIC / "audio-utils.js").read_text(encoding="utf-8")
     format_source = (PUBLIC / "format-utils.js").read_text(encoding="utf-8")
-    waveform_source = f"{app_source}\n{audio_source}\n{format_source}"
+    ui_label_source = (PUBLIC / "ui-label-utils.js").read_text(encoding="utf-8")
+    waveform_source = f"{app_source}\n{audio_source}\n{format_source}\n{ui_label_source}"
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     require(
         "function seekPrimaryAudioToFrame(frame, source = inspectionSources.waveform)" in app_source,
@@ -2964,8 +2969,9 @@ def require_node_graph_mvp_contract() -> None:
     app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
     audio_source = (PUBLIC / "audio-utils.js").read_text(encoding="utf-8")
     format_source = (PUBLIC / "format-utils.js").read_text(encoding="utf-8")
+    ui_label_source = (PUBLIC / "ui-label-utils.js").read_text(encoding="utf-8")
     wire_source = (PUBLIC / "node-graph-wires.js").read_text(encoding="utf-8")
-    node_graph_source = f"{app_source}\n{audio_source}\n{format_source}\n{wire_source}"
+    node_graph_source = f"{app_source}\n{audio_source}\n{format_source}\n{ui_label_source}\n{wire_source}"
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     tooltip_source = (PUBLIC / "tooltips.json").read_text(encoding="utf-8")
     worklet_source = (PUBLIC / "node-live-audio-worklet.js").read_text(encoding="utf-8")
