@@ -32,6 +32,7 @@ const nodeUiDevFontFamilyOptions = Object.freeze([
 ]);
 
 const nodeUiDevSettingControls = Object.freeze([
+  { defaultValue: true, exposeDefault: true, id: "nodeUiDevMouseLightEnabled", key: "mouseLightEnabled", type: "boolean" },
   { defaultValue: 100, id: "nodeUiDevSettingsHeaderTextSize", key: "settingsHeaderTextSize", max: 100, min: 0, type: "number" },
   { defaultValue: 50, id: "nodeUiDevButtonTextSize", key: "uiDevButtonTextSize", max: 100, min: 0, type: "number" },
   { defaultValue: 76, exposeDefault: true, id: "nodeUiDevLiveToggleTextSize", key: "liveToggleTextSize", max: 100, min: 0, type: "number" },
@@ -80,4 +81,73 @@ const nodeUiDevSettingControls = Object.freeze([
   { defaultValue: 60, id: "nodeUiDevMoveSymbolSize", key: "moveSymbolSize", max: 100, min: 0, type: "number" },
   { defaultValue: 50, id: "nodeUiDevCloseIconSize", key: "closeIconSize", max: 100, min: 0, type: "number" },
   { defaultValue: false, id: "nodeUiDevSettingsHeaderHighlights", key: "settingsHeaderHighlights", type: "boolean" },
+]);
+
+const nodeUiDevSettingSections = Object.freeze([
+  {
+    title: "workspace",
+    ids: [
+      "nodeUiDevMouseLightEnabled",
+      "nodeUiDevModularHeaderButtonBackground",
+      "nodeUiDevTooltipTextSize",
+      "nodeUiDevMinimumGridBrightness",
+      "nodeUiDevModuleLightSpread",
+      "nodeUiDevModuleGridInset",
+      "nodeUiDevModuleRoundness",
+      "nodeUiDevGridColor",
+      "nodeUiDevWorkspaceBackgroundColor",
+    ],
+  },
+  {
+    title: "settings header",
+    ids: [
+      "nodeUiDevSettingsHeaderTextSize",
+      "nodeUiDevButtonTextSize",
+      "nodeUiDevSettingsHeaderTopRatio",
+      "nodeUiDevSettingsHeaderPadding",
+      "nodeUiDevSettingsHeaderHighlights",
+    ],
+  },
+  {
+    title: "modules and nodes",
+    ids: [
+      "nodeUiDevModuleTitleFont",
+      "nodeUiDevModuleTitleHeight",
+      "nodeUiDevModuleTitleTextFill",
+      "nodeUiDevModuleIoSectionHeight",
+      "nodeUiDevLiveToggleTextSize",
+      "nodeUiDevModuleNodeSize",
+      "nodeUiDevNodeGlowSize",
+      "nodeUiDevSliderDotSize",
+      "nodeUiDevWirePatchPointSize",
+      "nodeUiDevWireThickness",
+    ],
+  },
+  {
+    title: "choice slider slide element",
+    ids: [
+      "nodeUiDevChoiceSlideEmptyBorder",
+      "nodeUiDevChoiceSlideEdgeBrightness",
+      "nodeUiDevChoiceSlideGlowLevel",
+      "nodeUiDevChoiceSlideColor",
+    ],
+  },
+  {
+    title: "bypass",
+    ids: [
+      "nodeUiDevBypassIconSize",
+      "nodeUiDevBypassIconGlowSpread",
+      "nodeUiDevBypassIconGlowColor",
+      "nodeUiDevBypassIconOnColor",
+      "nodeUiDevBypassOnBackgroundColor",
+      "nodeUiDevBypassOffBackgroundColor",
+    ],
+  },
+  {
+    title: "icons",
+    ids: [
+      "nodeUiDevMoveSymbolSize",
+      "nodeUiDevCloseIconSize",
+    ],
+  },
 ]);

@@ -46,6 +46,23 @@
       return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
     }
 
+    function traceCoordinate(value) {
+      return Math.round(Number(value) || 0) + 0.5;
+    }
+
+    function traceSegmentCommands(from, to) {
+      const midX = traceCoordinate((from.x + to.x) * 0.5);
+      return `H ${midX} V ${traceCoordinate(to.y)} H ${traceCoordinate(to.x)}`;
+    }
+
+    function tracePath(from, to) {
+      const start = {
+        x: traceCoordinate(from.x),
+        y: traceCoordinate(from.y),
+      };
+      return `M ${start.x} ${start.y} ${traceSegmentCommands(from, to)}`;
+    }
+
     function hexToRgb(color) {
       const match = String(color || "").trim().match(/^#([0-9a-f]{6})$/i);
       if (!match) {
@@ -115,8 +132,12 @@
         pathClass = "node-wire-path",
         to,
         wireColors = null,
+        wireType = "cable",
       } = options;
-      const pathData = path(from, to);
+      const normalizedWireType = normalizeNodeGraphWireType(wireType);
+      const isTrace = normalizedWireType === nodeGraphWireTypes.trace;
+      const isWire = normalizedWireType === nodeGraphWireTypes.wire;
+      const pathData = isTrace ? tracePath(from, to) : isWire ? straightPath(from, to) : path(from, to);
       const stroke = createGradient(svg, gradientId, from, to, gradientClass, wireColors);
       const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
       hitPath.setAttribute("class", "node-wire-hit-path");
@@ -129,7 +150,10 @@
       svg.append(hitPath);
 
       const renderedPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      renderedPath.setAttribute("class", pathClass);
+      renderedPath.setAttribute(
+        "class",
+        `${pathClass}${isTrace ? " trace-wire" : ""}${isWire ? " linear-wire" : ""}`,
+      );
       renderedPath.dataset.alias = alias;
       renderedPath.dataset.connectionIndex = String(index);
       renderedPath.dataset.connectionKind = kind;
@@ -355,6 +379,7 @@
       path,
       pointInEndpointHitbox,
       straightPath,
+      tracePath,
     };
   }
 
@@ -459,7 +484,6 @@
       if (!state.dragging) {
         return;
       }
-
       const dragging = state.dragging;
       const target = helpers.dropTargetFromPoint(event.clientX, event.clientY);
       const targetEndpoint = helpers.endpointFromElement(target);

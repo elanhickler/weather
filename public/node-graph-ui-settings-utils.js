@@ -14,7 +14,7 @@ function nodeUiDevHexColorToRgbTriplet(value, fallback = "#ffffff") {
 
 function normalizeNodeUiDevControlValue(definition, value) {
   if (definition.type === "boolean") {
-    return Boolean(value);
+    return value == null ? Boolean(definition.defaultValue) : Boolean(value);
   }
   if (definition.type === "color") {
     return normalizeNodeUiDevColor(value, definition.defaultValue);

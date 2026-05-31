@@ -103,6 +103,8 @@ function configureNodeSceneContextMenu(mode) {
   const deleteButton = document.getElementById("nodeSceneDeleteModule");
   const closeButton = document.getElementById("nodeSceneCloseMenu");
   const selectedModule = document.getElementById("nodeSceneSelectedModule");
+  const wireTypeControl = document.getElementById("nodeSceneWireTypeControl");
+  const wireTypeButtons = [...wireTypeControl.querySelectorAll("[data-wire-type]")];
   const aliasControl = document.getElementById("nodeSceneAliasControl");
   const aliasInput = document.getElementById("nodeSceneAliasInput");
   const widthControls = document.getElementById("nodeSceneWidthControls");
@@ -165,6 +167,7 @@ function configureNodeSceneContextMenu(mode) {
   copyButton.hidden = !moduleMode;
   deleteButton.hidden = !(moduleMode || wireMode);
   selectedModule.hidden = !(moduleMode || wireMode);
+  wireTypeControl.hidden = !wireMode;
   aliasControl.hidden = !moduleMode;
   widthControls.hidden = !moduleMode;
   textBoxHeightControls.hidden = !(moduleMode && targetNode?.type === "textBox");
@@ -250,6 +253,12 @@ function configureNodeSceneContextMenu(mode) {
       ? "selected modulation"
       : "selected wire";
     selectedModule.querySelector("strong").textContent = nodeGraphWireSelectionLabel(nodeGraphMvp.selected);
+    const selectedWireType = normalizeNodeGraphWireType(selectedWire?.wire?.wireType);
+    for (const button of wireTypeButtons) {
+      button.disabled = !selectedWire;
+      button.setAttribute("aria-pressed", button.dataset.wireType === selectedWireType ? "true" : "false");
+      button.title = nodeGraphTooltipText(`actions.wireType.${button.dataset.wireType}`);
+    }
     deleteButton.disabled = !canDelete;
     deleteButton.title = canDelete
       ? nodeGraphTooltipText("actions.deleteWire")
@@ -275,6 +284,10 @@ function configureNodeSceneContextMenu(mode) {
   } else {
     selectedModule.querySelector("span").textContent = "selected";
     selectedModule.querySelector("strong").textContent = "none";
+    for (const button of wireTypeButtons) {
+      button.disabled = true;
+      button.setAttribute("aria-pressed", "false");
+    }
     copyButton.disabled = true;
     copyButton.title = nodeGraphTooltipText("actions.copyUnavailableModule");
     deleteButton.disabled = true;
@@ -320,6 +333,27 @@ function openNodeModuleActionMenu(event) {
 }
 
 function openNodeSceneContextMenu(event) {
+  const contextWire = event.target.closest?.(".node-wire-hit-path, .node-wire-path");
+  if (contextWire) {
+    const index = Number(contextWire.dataset.connectionIndex);
+    const kind = contextWire.dataset.connectionKind || "signal";
+    if (Number.isFinite(index)) {
+      event.preventDefault();
+      event.stopPropagation();
+      setNodeGraphSelection({ type: "wire", kind, index });
+      nodeGraphMvp.sceneContextPoint = null;
+      nodeGraphMvp.sceneContextTargetNode = null;
+      nodeGraphMvp.sceneContextTargetWire = { index, kind };
+      configureNodeSceneContextMenu("wire");
+      positionNodeSceneContextMenuAtSavedOr(
+        document.getElementById("nodeSceneContextMenu"),
+        event.clientX,
+        event.clientY,
+      );
+    }
+    return;
+  }
+
   const contextNode = event.target.closest(".dsp-node");
   if (contextNode) {
     event.preventDefault();

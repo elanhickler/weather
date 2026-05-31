@@ -7,6 +7,7 @@
     "version": 3
   },
   "controls": {
+    "mouseLightEnabled": true,
     "settingsHeaderTextSize": 100,
     "uiDevButtonTextSize": 50,
     "liveToggleTextSize": 76,
@@ -44,6 +45,7 @@
     "settingsHeaderHighlights": false
   },
   "exposedControls": {
+    "mouseLightEnabled": true,
     "settingsHeaderTextSize": false,
     "uiDevButtonTextSize": false,
     "liveToggleTextSize": true,

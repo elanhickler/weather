@@ -1,3 +1,48 @@
+const nodeGraphWireTypes = Object.freeze({
+  cable: "cable",
+  trace: "trace",
+  wire: "wire",
+});
+
+function normalizeNodeGraphWireType(value) {
+  return Object.values(nodeGraphWireTypes).includes(value)
+    ? value
+    : nodeGraphWireTypes.cable;
+}
+
+function nodeGraphWireTypePatchValue(value) {
+  const wireType = normalizeNodeGraphWireType(value);
+  return wireType === nodeGraphWireTypes.cable ? undefined : wireType;
+}
+
+function setSelectedNodeGraphWireType(wireType) {
+  const selection = nodeGraphMvp.selected;
+  const selectedWire = nodeGraphWireFromSelection(selection);
+  if (!selectedWire) {
+    return false;
+  }
+
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const collection = selectedWire.kind === "modulation"
+    ? patch.modulations
+    : patch.connections;
+  const wire = collection[selectedWire.index];
+  if (!wire) {
+    return false;
+  }
+
+  const nextType = normalizeNodeGraphWireType(wireType);
+  if (nextType === nodeGraphWireTypes.cable) {
+    delete wire.wireType;
+  } else {
+    wire.wireType = nextType;
+  }
+  commitNodeGraphPatch(patch, { status: `wire set to ${nextType}` });
+  setNodeGraphSelection(selection);
+  configureNodeSceneContextMenu("wire");
+  return true;
+}
+
 function disconnectNodeGraphConnection(index, kind = "signal") {
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   if (kind === "modulation") {

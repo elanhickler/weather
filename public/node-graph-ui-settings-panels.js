@@ -72,77 +72,10 @@ function organizeNodeUiDevSections() {
   if (!helperBody || helperBody.dataset.sectionsOrganized === "true") {
     return;
   }
-  const sections = [
-    {
-      title: "workspace",
-      ids: [
-        "nodeUiDevModularHeaderButtonBackground",
-        "nodeUiDevTooltipTextSize",
-        "nodeUiDevMinimumGridBrightness",
-        "nodeUiDevModuleLightSpread",
-        "nodeUiDevModuleGridInset",
-        "nodeUiDevModuleRoundness",
-        "nodeUiDevGridColor",
-        "nodeUiDevWorkspaceBackgroundColor",
-      ],
-    },
-    {
-      title: "settings header",
-      ids: [
-        "nodeUiDevSettingsHeaderTextSize",
-        "nodeUiDevButtonTextSize",
-        "nodeUiDevSettingsHeaderTopRatio",
-        "nodeUiDevSettingsHeaderPadding",
-        "nodeUiDevSettingsHeaderHighlights",
-      ],
-    },
-    {
-      title: "modules and nodes",
-      ids: [
-        "nodeUiDevModuleTitleFont",
-        "nodeUiDevModuleTitleHeight",
-        "nodeUiDevModuleTitleTextFill",
-        "nodeUiDevModuleIoSectionHeight",
-        "nodeUiDevLiveToggleTextSize",
-        "nodeUiDevModuleNodeSize",
-        "nodeUiDevNodeGlowSize",
-        "nodeUiDevSliderDotSize",
-        "nodeUiDevWirePatchPointSize",
-        "nodeUiDevWireThickness",
-      ],
-    },
-    {
-      title: "choice slider slide element",
-      ids: [
-        "nodeUiDevChoiceSlideEmptyBorder",
-        "nodeUiDevChoiceSlideEdgeBrightness",
-        "nodeUiDevChoiceSlideGlowLevel",
-        "nodeUiDevChoiceSlideColor",
-      ],
-    },
-    {
-      title: "bypass",
-      ids: [
-        "nodeUiDevBypassIconSize",
-        "nodeUiDevBypassIconGlowSpread",
-        "nodeUiDevBypassIconGlowColor",
-        "nodeUiDevBypassIconOnColor",
-        "nodeUiDevBypassOnBackgroundColor",
-        "nodeUiDevBypassOffBackgroundColor",
-      ],
-    },
-    {
-      title: "icons",
-      ids: [
-        "nodeUiDevMoveSymbolSize",
-        "nodeUiDevCloseIconSize",
-      ],
-    },
-  ];
   const rowForId = (id) => document
     .getElementById(id)
     ?.closest(".node-ui-dev-control, .node-ui-dev-color-control, .node-ui-dev-check");
-  for (const section of sections) {
+  for (const section of nodeUiDevSettingSections) {
     const rows = section.ids.map(rowForId).filter(Boolean);
     if (!rows.length) {
       continue;

@@ -131,7 +131,7 @@ function nodeSliderSnapStrokeSpan(start, end, viewportOrigin, strokeWidth = 1) {
   };
 }
 
-function syncNodeSliderChoiceDebugSquares(readout, choices, enabled) {
+function syncNodeSliderChoiceDebugSquares(readout, choices, enabled, selectedIndex = 0) {
   let layer = readout.querySelector(".node-choice-debug-layer");
   if (!enabled) {
     layer?.remove();
@@ -152,6 +152,10 @@ function syncNodeSliderChoiceDebugSquares(readout, choices, enabled) {
   layer.setAttribute("viewBox", `0 0 ${layerRect.width.toFixed(3)} ${layerRect.height.toFixed(3)}`);
   layer.setAttribute("preserveAspectRatio", "none");
   const cellRects = nodeSliderChoiceCellRects(layerRect.width, layerRect.height, choices, emptyPixelBorder);
+  const activeChoiceIndex = Math.max(
+    0,
+    Math.min(cellRects.length - 1, Number.isFinite(selectedIndex) ? Math.round(selectedIndex) : 0),
+  );
   const dividers = nodeSliderChoiceDividerLinesFromCells(cellRects).map((divider, index) => {
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
     const x = nodeSliderSnapStrokeCoordinate(divider.x, layerRect.left);
@@ -163,7 +167,10 @@ function syncNodeSliderChoiceDebugSquares(readout, choices, enabled) {
     marker.setAttribute("y2", (divider.top + divider.height).toFixed(3));
     return marker;
   });
-  const cells = cellRects.map((cell, index) => {
+  const selectedCellRects = cellRects
+    .map((cell, index) => ({ cell, index }))
+    .filter(({ index }) => index === activeChoiceIndex);
+  const cells = selectedCellRects.map(({ cell, index }) => {
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     marker.setAttribute("class", "node-choice-debug-square node-choice-debug-cell node-choice-debug-cell-fill");
     marker.setAttribute("data-choice-index", String(index));
@@ -178,7 +185,7 @@ function syncNodeSliderChoiceDebugSquares(readout, choices, enabled) {
       : `drop-shadow(0 0 ${slideStyle.glowRadius.toFixed(2)}px ${nodeSliderHexToRgba(slideStyle.color, slideStyle.glowAlpha.toFixed(3))})`;
     return marker;
   });
-  const cellStrokes = cellRects.map((cell, index) => {
+  const cellStrokes = selectedCellRects.map(({ cell, index }) => {
     const strokeInset = 0.5;
     const zeroBorderOutset = emptyPixelBorder <= 0 ? 1 : 0;
     const trailingStrokeOutset = emptyPixelBorder > 0 ? 1 : zeroBorderOutset;
@@ -243,7 +250,7 @@ function syncNodeSliderReadout(slider) {
     readout.style.removeProperty("--value-start");
     readout.style.removeProperty("--value-end");
     readout.style.setProperty("--choice-divider-background", "none");
-    syncNodeSliderChoiceDebugSquares(readout, choices, true);
+    syncNodeSliderChoiceDebugSquares(readout, choices, true, Number(slider.value));
     syncNodeSliderPortalHandle(readout, slider, position, false);
   } else {
     const boundedPosition = Math.max(0, Math.min(100, position));

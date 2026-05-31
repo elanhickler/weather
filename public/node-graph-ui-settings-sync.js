@@ -21,6 +21,7 @@ function syncNodeUiDevNodeColorControls() {
 
 function syncNodeUiDevSettingsHeaderControls() {
   const settingsView = document.getElementById("nodeSettingsView");
+  const mouseLightEnabledInput = document.getElementById("nodeUiDevMouseLightEnabled");
   const textSizeInput = document.getElementById("nodeUiDevSettingsHeaderTextSize");
   const textSizeValue = document.getElementById("nodeUiDevSettingsHeaderTextSizeValue");
   const uiDevTextSizeInput = document.getElementById("nodeUiDevButtonTextSize");
@@ -96,6 +97,7 @@ function syncNodeUiDevSettingsHeaderControls() {
   const highlightInput = document.getElementById("nodeUiDevSettingsHeaderHighlights");
   if (
     !settingsView ||
+    !mouseLightEnabledInput ||
     !textSizeInput ||
     !textSizeValue ||
     !uiDevTextSizeInput ||
@@ -173,6 +175,7 @@ function syncNodeUiDevSettingsHeaderControls() {
     return;
   }
 
+  const mouseLightEnabled = Boolean(mouseLightEnabledInput.checked);
   const textPercent = Math.max(0, Math.min(100, Number(textSizeInput.value) || 0));
   const uiDevTextPercent = Math.max(0, Math.min(100, Number(uiDevTextSizeInput.value) || 0));
   const liveToggleTextPercent = Math.max(0, Math.min(100, Number(liveToggleTextSizeInput.value) || 0));
@@ -239,6 +242,15 @@ function syncNodeUiDevSettingsHeaderControls() {
   document
     .getElementById("nodeWiringPanel")
     ?.style.setProperty("--node-min-grid-brightness-alpha", String(minimumGridBrightnessPercent / 100));
+  document
+    .getElementById("nodeGraphWorkspace")
+    ?.style.setProperty("--node-mouse-light-amount", mouseLightEnabled ? "0.79" : "0");
+  document
+    .getElementById("nodeGraphWorkspace")
+    ?.style.setProperty("--node-mouse-light-spread", "0.05");
+  document
+    .getElementById("nodeGraphWorkspace")
+    ?.style.setProperty("--node-mouse-light-color-rgb", "127 199 217");
   document
     .getElementById("nodeGraphWorkspace")
     ?.style.setProperty("--node-module-light-spread", String(moduleLightSpreadPercent / 100));

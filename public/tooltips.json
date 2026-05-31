@@ -133,6 +133,11 @@
     "deleteUnavailableOneModule": "Delete unavailable: select one module",
     "deleteWire": "Delete selected wire (Delete)",
     "deleteWireMissing": "Delete unavailable: selected wire no longer exists",
+    "wireType": {
+      "cable": "Cable: draw this selected wire with the current curvy cable style.",
+      "trace": "Trace: draw this selected wire as a crisp up/down/left/right circuit trace.",
+      "wire": "Wire: draw this selected wire as a straight point-to-point line."
+    },
     "copyExecutionJson": "Mouse: click to copy the full compiled execution JSON.",
     "copyRuntimeSketch": "Mouse: click to copy the caller-owned C++ runtime sketch.",
     "widthDecrease": "Decrease this module width by one grid unit",

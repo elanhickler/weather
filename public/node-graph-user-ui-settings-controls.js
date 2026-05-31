@@ -16,6 +16,9 @@ function dispatchNodeUiDevControlInput(source, commit = false) {
 }
 
 function createNodeUserUiSettingsControl(definition) {
+  if (!definition) {
+    return null;
+  }
   const source = document.getElementById(definition.id);
   if (!source) {
     return null;
@@ -149,22 +152,54 @@ function createNodeUserUiSettingsViewControl() {
   return row;
 }
 
+function createNodeUserUiSettingsSection(title, controls) {
+  const visibleControls = controls.filter(Boolean);
+  if (!visibleControls.length) {
+    return null;
+  }
+  const details = document.createElement("details");
+  details.className = "node-ui-dev-section node-user-ui-settings-section";
+  details.open = true;
+  const summary = document.createElement("summary");
+  summary.textContent = title;
+  const body = document.createElement("div");
+  body.className = "node-ui-dev-section-body";
+  body.append(...visibleControls);
+  details.append(summary, body);
+  return details;
+}
+
 function renderNodeUserUiSettingsControls() {
   const container = document.getElementById("nodeUserUiSettingsControls");
   if (!container) {
     return;
   }
   container.textContent = "";
-  container.append(createNodeUserUiSettingsViewControl());
-  const exposedDefinitions = nodeUiDevSettingControls.filter((definition) => nodeUiDevControlIsExposed(definition.key));
-  if (!exposedDefinitions.length) {
-    return;
-  }
-  for (const definition of exposedDefinitions) {
-    const control = createNodeUserUiSettingsControl(definition);
-    if (control) {
-      container.append(control);
+  const definitionsById = new Map(nodeUiDevSettingControls.map((definition) => [definition.id, definition]));
+  let renderedAnySection = false;
+  for (const section of nodeUiDevSettingSections) {
+    const controls = [];
+    if (section.title === "workspace") {
+      controls.push(createNodeUserUiSettingsViewControl());
     }
+    for (const id of section.ids) {
+      const definition = definitionsById.get(id);
+      if (!definition || !nodeUiDevControlIsExposed(definition.key)) {
+        continue;
+      }
+      controls.push(createNodeUserUiSettingsControl(definition));
+    }
+    const sectionElement = createNodeUserUiSettingsSection(section.title, controls);
+    if (sectionElement) {
+      container.append(sectionElement);
+      renderedAnySection = true;
+    }
+  }
+  if (!renderedAnySection) {
+    const empty = document.createElement("div");
+    empty.className = "node-user-ui-settings-empty";
+    empty.textContent = "no ui settings exposed";
+    container.append(empty);
   }
 }
 

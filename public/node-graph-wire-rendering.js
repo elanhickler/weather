@@ -58,6 +58,7 @@ function drawNodeGraphWires() {
         isInactive ? "inactive-wire" : "",
       ].filter(Boolean).join(" "),
       to,
+      wireType: connection.wireType,
       wireColors: [
         nodeGraphPortWireColor(connection.sourceNode, connection.sourcePort, "output"),
         nodeGraphPortWireColor(connection.destinationNode, connection.destinationPort, "input"),
@@ -105,6 +106,7 @@ function drawNodeGraphWires() {
         isInactive ? "inactive-wire" : "",
       ].filter(Boolean).join(" "),
       to,
+      wireType: modulation.wireType,
       wireColors: [
         nodeGraphPortWireColor(modulation.sourceNode, modulation.sourcePort, "output"),
         nodeGraphPortWireColor(modulation.destinationNode, modulation.destinationParam, "modulation"),

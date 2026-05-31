@@ -106,23 +106,22 @@ function nodeGraphNodeBounds(node) {
   };
 }
 
+function nodeGraphWorkspaceFloatProperty(element, property, fallback = 0) {
+  const value = Number.parseFloat(getComputedStyle(element).getPropertyValue(property));
+  return Number.isFinite(value) ? value : fallback;
+}
+
 function updateNodeGraphGridHeatmap() {
   const heatmap = document.getElementById("nodeGridHeatmap");
   const surface = nodeGraphZoomSurface();
-  if (!heatmap || !surface) {
-    return;
-  }
-
-  const visibleNodes = [...surface.querySelectorAll(".dsp-node:not(.removed):not([hidden])")];
-  if (!visibleNodes.length) {
-    heatmap.style.setProperty("--node-grid-heatmap", "none");
-    heatmap.style.setProperty("--node-grid-heatmap-mask", "none");
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  if (!heatmap || !surface || !workspace) {
     return;
   }
 
   const glowLayers = [];
   const maskLayers = [];
-  const workspace = document.getElementById("nodeGraphWorkspace");
+  const visibleNodes = [...surface.querySelectorAll(".dsp-node:not(.removed):not([hidden])")];
   const zoom = nodeGraphZoom();
   const pan = nodeGraphMvp.pan || { x: 0, y: 0 };
   heatmap.style.setProperty("--node-grid-heatmap-grid-position", `${Number(pan.x) || 0}px ${Number(pan.y) || 0}px`);
@@ -150,8 +149,48 @@ function updateNodeGraphGridHeatmap() {
       `radial-gradient(ellipse ${radiusX.toFixed(2)}px ${radiusY.toFixed(2)}px at ${centerX.toFixed(2)}px ${centerY.toFixed(2)}px, black 0%, rgb(0 0 0 / 0.95) 22%, rgb(0 0 0 / 0.72) 48%, rgb(0 0 0 / 0.28) 74%, transparent 94%)`,
     );
   }
-  heatmap.style.setProperty("--node-grid-heatmap", glowLayers.join(", "));
-  heatmap.style.setProperty("--node-grid-heatmap-mask", maskLayers.join(", "));
+  const mouseAmount = Math.max(0, Math.min(2, nodeGraphWorkspaceFloatProperty(workspace, "--node-mouse-light-amount")));
+  const mouseSpread = Math.max(0, Math.min(2, nodeGraphWorkspaceFloatProperty(workspace, "--node-mouse-light-spread")));
+  const mousePoint = nodeGraphMvp.mouseLightPoint;
+  if (mouseAmount > 0 && mouseSpread > 0 && mousePoint) {
+    const radius = Math.max(nodeGraphGridWidth(), nodeGraphGridHeight()) * (3 + 10.5 * mouseSpread) * zoom;
+    maskLayers.push(
+      `radial-gradient(circle ${radius.toFixed(2)}px at ${mousePoint.x.toFixed(2)}px ${mousePoint.y.toFixed(2)}px, rgb(0 0 0 / ${(0.92 * mouseAmount).toFixed(3)}) 0%, rgb(0 0 0 / ${(0.68 * mouseAmount).toFixed(3)}) 32%, rgb(0 0 0 / ${(0.24 * mouseAmount).toFixed(3)}) 72%, transparent 96%)`,
+    );
+  }
+  heatmap.style.setProperty("--node-grid-heatmap", glowLayers.length ? glowLayers.join(", ") : "none");
+  heatmap.style.setProperty(
+    "--node-grid-heatmap-mask",
+    maskLayers.length ? maskLayers.join(", ") : "linear-gradient(transparent, transparent)",
+  );
+}
+
+function scheduleNodeGraphGridHeatmapUpdate() {
+  if (nodeGraphMvp.mouseLightFrame) {
+    return;
+  }
+  nodeGraphMvp.mouseLightFrame = window.requestAnimationFrame(() => {
+    nodeGraphMvp.mouseLightFrame = 0;
+    updateNodeGraphGridHeatmap();
+  });
+}
+
+function updateNodeGraphMouseLight(event) {
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  if (!workspace) {
+    return;
+  }
+  const rect = workspace.getBoundingClientRect();
+  nodeGraphMvp.mouseLightPoint = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+  scheduleNodeGraphGridHeatmapUpdate();
+}
+
+function clearNodeGraphMouseLight() {
+  nodeGraphMvp.mouseLightPoint = null;
+  updateNodeGraphGridHeatmap();
 }
 
 function nodeGraphRectsIntersect(a, b) {

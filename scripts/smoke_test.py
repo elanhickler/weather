@@ -3908,6 +3908,14 @@ def require_node_graph_mvp_contract() -> None:
         "function updateNodeGraphGridHeatmap()",
         "nodeGridHeatmap",
         "radial-gradient(ellipse",
+        "--node-mouse-light-spread",
+        "--node-mouse-light-color-rgb",
+        "const mousePoint = nodeGraphMvp.mouseLightPoint",
+        "maskLayers.push(",
+        "function scheduleNodeGraphGridHeatmapUpdate()",
+        "nodeGraphMvp.mouseLightFrame = window.requestAnimationFrame",
+        "function updateNodeGraphMouseLight(event)",
+        "scheduleNodeGraphGridHeatmapUpdate();",
         "function dragNodeGraphWorkspacePan(event)",
         "function endNodeGraphWorkspacePan(event)",
         "function preventNodeGraphMiddleMouseAuxClick(event)",
@@ -4947,6 +4955,7 @@ def require_node_graph_mvp_contract() -> None:
         "window.nodeUiDevBundledDefaultSettings",
         "document.documentElement.dataset.nodeUiDevBundledDefaultSettings",
         "./public/presets/useruisettings.js",
+        "const nodeUiDevSettingSections = Object.freeze([",
         "function loadNodeUiDevDefaultSettings()",
         "function copyNodeUiDevSettingsToClipboard()",
         "function saveNodeUiDevSettingsFile()",
@@ -4964,8 +4973,11 @@ def require_node_graph_mvp_contract() -> None:
         "function scheduleNodeLiveToggleTextFit()",
         "function installNodeLiveToggleTextFitObserver()",
         "function organizeNodeUiDevSections()",
+        "for (const section of nodeUiDevSettingSections)",
         'title: "modules and nodes"',
-        '"nodeUiDevModuleIoSectionHeight",\n        "nodeUiDevLiveToggleTextSize",\n        "nodeUiDevModuleNodeSize"',
+        '"nodeUiDevModuleIoSectionHeight"',
+        '"nodeUiDevLiveToggleTextSize"',
+        '"nodeUiDevModuleNodeSize"',
         "function syncNodeUiDevNodeColorControls()",
         "workspace.style.setProperty(property, color)",
         "document.querySelectorAll(\"[data-node-color-var]\")",
@@ -4975,6 +4987,7 @@ def require_node_graph_mvp_contract() -> None:
         'getElementById("nodeUiDevModularHeaderButtonBackground")',
         'getElementById("nodeUiDevTooltipTextSize")',
         'getElementById("nodeUiDevMinimumGridBrightness")',
+        'getElementById("nodeUiDevMouseLightEnabled")',
         "controls.showGrid ?? nodeGraphMvp.gridVisible",
         'getElementById("nodeUiDevGridColor")',
         'getElementById("nodeUiDevWorkspaceBackgroundColor")',
@@ -5071,6 +5084,12 @@ def require_node_graph_mvp_contract() -> None:
     require(
         "Array.from({ length: Math.max(0, choices.length - 1)" in choice_divider_helper_source,
         "choice slider dividers should be generated only for internal choice boundaries",
+    )
+    require(
+        "const selectedCellRects = cellRects" in slider_readout_source
+        and "index === activeChoiceIndex" in slider_readout_source
+        and "syncNodeSliderChoiceDebugSquares(readout, choices, true, Number(slider.value))" in slider_readout_source,
+        "choice slider should draw only the selected choice cell",
     )
     require(
         "((index + 1) / choices.length) * 100" in choice_divider_helper_source,
@@ -5258,7 +5277,7 @@ def require_node_graph_mvp_contract() -> None:
         "background-image:",
         "var(--node-min-grid-brightness-alpha)",
         "rgb(var(--node-grid-color-rgb) / var(--node-min-grid-brightness-alpha))",
-        "rgb(var(--node-grid-color-rgb) / 0.2)",
+        "rgb(var(--node-mouse-light-color-rgb) / 0.2)",
         "background-position: var(--node-graph-pan-x) var(--node-graph-pan-y)",
         "calc(var(--node-grid-width) * var(--node-graph-zoom))",
         "calc(var(--node-grid-height) * var(--node-graph-zoom))",

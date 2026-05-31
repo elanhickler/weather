@@ -5809,7 +5809,15 @@ function validateNodeGraphPatch(patch) {
       throw new Error(`duplicate connection ${key}`);
     }
     connectionKeys.add(key);
-    return { destinationNode, destinationPort, sourceNode, sourcePort };
+    return {
+      destinationNode,
+      destinationPort,
+      sourceNode,
+      sourcePort,
+      ...(nodeGraphWireTypePatchValue(connection.wireType)
+        ? { wireType: nodeGraphWireTypePatchValue(connection.wireType) }
+        : {}),
+    };
   }) : [];
 
   const modulationKeys = new Set();
@@ -5837,7 +5845,15 @@ function validateNodeGraphPatch(patch) {
       throw new Error(`duplicate modulation ${key}`);
     }
     modulationKeys.add(key);
-    return { destinationNode, destinationParam, sourceNode, sourcePort };
+    return {
+      destinationNode,
+      destinationParam,
+      sourceNode,
+      sourcePort,
+      ...(nodeGraphWireTypePatchValue(modulation.wireType)
+        ? { wireType: nodeGraphWireTypePatchValue(modulation.wireType) }
+        : {}),
+    };
   }) : [];
 
   const view = normalizeNodeGraphPatchView(patch.view);
@@ -7853,7 +7869,13 @@ async function initNodeGraphMvp() {
     .addEventListener("pointermove", beginNodeGraphMarqueeSelectionOnEntry);
   document
     .getElementById("nodeGraphWorkspace")
-    .addEventListener("pointerleave", nodeGraphWireInteractions.clearHover);
+    .addEventListener("pointermove", updateNodeGraphMouseLight);
+  document
+    .getElementById("nodeGraphWorkspace")
+    .addEventListener("pointerleave", () => {
+      nodeGraphWireInteractions.clearHover();
+      clearNodeGraphMouseLight();
+    });
   document
     .getElementById("nodeGraphWorkspace")
     .addEventListener("pointermove", dragNodeGraphMarqueeSelection);
@@ -8005,6 +8027,9 @@ async function initNodeGraphMvp() {
   document
     .getElementById("nodeUiDevMinimumGridBrightness")
     .addEventListener("input", syncNodeUiDevSettingsHeaderControls);
+  document
+    .getElementById("nodeUiDevMouseLightEnabled")
+    .addEventListener("change", syncNodeUiDevSettingsHeaderControls);
   document
     .getElementById("nodeUiDevModuleLightSpread")
     .addEventListener("input", syncNodeUiDevSettingsHeaderControls);
@@ -8167,6 +8192,11 @@ async function initNodeGraphMvp() {
   document
     .getElementById("nodeSceneDeleteModule")
     .addEventListener("click", deleteNodeGraphSelectionFromContext);
+  document
+    .querySelectorAll("#nodeSceneWireTypeControl [data-wire-type]")
+    .forEach((button) => {
+      button.addEventListener("click", () => setSelectedNodeGraphWireType(button.dataset.wireType));
+    });
   document
     .getElementById("nodeSceneCopyModule")
     .addEventListener("click", copyNodeGraphModuleFromContext);

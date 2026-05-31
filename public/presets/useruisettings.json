@@ -1,7 +1,7 @@
 {
   "format": {
     "kind": "soemdsp-sandbox-user-ui-settings",
-    "version": 3
+    "version": 2
   },
   "controls": {
     "settingsHeaderTextSize": 100,
@@ -22,14 +22,10 @@
     "moduleTitleHeight": 26,
     "moduleTitleTextFill": 62,
     "moduleIoSectionHeight": 24,
-    "moduleNodeSize": 57,
+    "moduleNodeSize": 16,
     "nodeGlowSize": 50,
     "wirePatchPointSize": 36,
     "wireThickness": 19,
-    "choiceSlideEmptyBorder": 0,
-    "choiceSlideEdgeBrightness": 82,
-    "choiceSlideGlowLevel": 45,
-    "choiceSlideColor": "#7fc7d9",
     "bypassIconSize": 36,
     "bypassIconGlowSpread": 40,
     "bypassIconGlowColor": "#f25d5d",
@@ -63,10 +59,6 @@
     "nodeGlowSize": true,
     "wirePatchPointSize": true,
     "wireThickness": true,
-    "choiceSlideEmptyBorder": false,
-    "choiceSlideEdgeBrightness": false,
-    "choiceSlideGlowLevel": false,
-    "choiceSlideColor": false,
     "bypassIconSize": false,
     "bypassIconGlowSpread": false,
     "bypassIconGlowColor": false,
