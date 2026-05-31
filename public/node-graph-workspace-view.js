@@ -162,9 +162,13 @@ function applyNodeGraphZoom() {
   applyNodeGraphWorkspaceView();
   updateNodeGraphGridHeatmap();
   const zoomOutButton = document.getElementById("nodeZoomOutButton");
+  const zoomResetButton = document.getElementById("nodeZoomResetButton");
   const zoomInButton = document.getElementById("nodeZoomInButton");
   if (zoomOutButton) {
     zoomOutButton.disabled = nodeGraphZoom() <= nodeGraphZoomLimits.min + 0.001;
+  }
+  if (zoomResetButton) {
+    zoomResetButton.disabled = Math.abs(nodeGraphZoom() - 1) < 0.001;
   }
   if (zoomInButton) {
     zoomInButton.disabled = nodeGraphZoom() >= nodeGraphZoomLimits.max - 0.001;

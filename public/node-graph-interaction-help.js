@@ -97,7 +97,7 @@ function nodeInteractionMouseHint(element) {
   if (element.matches("input, textarea, select")) {
     return nodeGraphTooltipText("common.editText");
   }
-  if (element.id === "nodeZoomOutButton" || element.id === "nodeZoomInButton") {
+  if (element.id === "nodeZoomOutButton" || element.id === "nodeZoomResetButton" || element.id === "nodeZoomInButton") {
     return nodeGraphTooltipText("view.zoomHelp");
   }
   if (element.id === "nodeGraphResizeHandle") {

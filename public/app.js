@@ -7936,6 +7936,9 @@ async function initNodeGraphMvp() {
     .getElementById("nodeZoomOutButton")
     .addEventListener("click", () => zoomNodeGraphBy(-nodeGraphZoomLimits.step));
   document
+    .getElementById("nodeZoomResetButton")
+    .addEventListener("click", () => setNodeGraphZoom(1));
+  document
     .getElementById("nodeZoomInButton")
     .addEventListener("click", () => zoomNodeGraphBy(nodeGraphZoomLimits.step));
   document

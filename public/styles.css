@@ -346,6 +346,7 @@ audio {
 
 .node-zoom-controls {
   grid-template-rows: minmax(18px, 0.56fr) minmax(0, 1.44fr);
+  grid-column: span 2;
   border-width: 0 0 0 1px;
   border-radius: 0;
 }
@@ -362,7 +363,7 @@ audio {
 
 .node-zoom-buttons {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   min-height: 0;
 }
 
