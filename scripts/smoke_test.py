@@ -590,6 +590,7 @@ def require_shell_contract(html: str) -> None:
             "./public/node-graph-metadata-editor.js",
             "./public/node-graph-render-settings.js",
             "./public/node-graph-rendered-audio.js",
+            "./public/node-graph-rendered-visual-output.js",
             "./public/node-graph-render-output.js",
             "./public/node-graph-debug-copy.js",
             "./public/node-graph-execution-debug-view.js",
@@ -2040,6 +2041,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/node-graph-metadata-editor.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-metadata-editor.js"),
         ("/public/node-graph-render-settings.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-render-settings.js"),
         ("/public/node-graph-rendered-audio.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-rendered-audio.js"),
+        ("/public/node-graph-rendered-visual-output.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-rendered-visual-output.js"),
         ("/public/node-graph-render-output.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-render-output.js"),
         ("/public/node-graph-debug-copy.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-debug-copy.js"),
         ("/public/node-graph-execution-debug-view.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-execution-debug-view.js"),
@@ -3172,6 +3174,7 @@ def require_node_graph_mvp_contract() -> None:
     metadata_editor_source = (PUBLIC / "node-graph-metadata-editor.js").read_text(encoding="utf-8")
     render_settings_source = (PUBLIC / "node-graph-render-settings.js").read_text(encoding="utf-8")
     rendered_audio_source = (PUBLIC / "node-graph-rendered-audio.js").read_text(encoding="utf-8")
+    rendered_visual_output_source = (PUBLIC / "node-graph-rendered-visual-output.js").read_text(encoding="utf-8")
     render_output_source = (PUBLIC / "node-graph-render-output.js").read_text(encoding="utf-8")
     debug_copy_source = (PUBLIC / "node-graph-debug-copy.js").read_text(encoding="utf-8")
     execution_debug_view_source = (PUBLIC / "node-graph-execution-debug-view.js").read_text(encoding="utf-8")
@@ -3207,7 +3210,7 @@ def require_node_graph_mvp_contract() -> None:
         f"{slider_readout_source}\n{slider_readout_controls_source}\n"
         f"{ghost_sliders_source}\n"
         f"{metadata_kinds_source}\n{metadata_editor_source}\n{render_settings_source}\n"
-        f"{rendered_audio_source}\n{render_output_source}\n{debug_copy_source}\n"
+        f"{rendered_audio_source}\n{rendered_visual_output_source}\n{render_output_source}\n{debug_copy_source}\n"
         f"{execution_debug_view_source}\n"
         f"{text_box_utils_source}\n{text_box_rendering_source}\n"
         f"{tooltip_utils_source}\n{visual_utils_source}\n"
