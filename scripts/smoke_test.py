@@ -5061,6 +5061,45 @@ def require_node_graph_mvp_contract() -> None:
     ]:
         require(snippet in node_graph_source, f"node graph source missing {snippet}")
 
+    choice_divider_source = slider_readout_source[
+        slider_readout_source.index("if (dividesChoices)"):
+        slider_readout_source.index("syncNodeSliderPortalHandle(readout, slider, position, false);")
+    ]
+    require(
+        "Array.from({ length: Math.max(0, choices.length - 1)" in choice_divider_source,
+        "choice slider dividers should be generated only for internal choice boundaries",
+    )
+    require(
+        "((index + 1) / choices.length) * 100" in choice_divider_source,
+        "choice slider dividers should skip the leftmost and rightmost edges",
+    )
+    require(
+        "--choice-divider-width" not in slider_readout_source,
+        "choice slider should not use edge-prone repeating divider widths",
+    )
+
+    choice_divider_style = style_source[
+        style_source.index(".node-slider-readout.choices-divided {"):
+        style_source.index(".node-slider-readout.choices-divided::before")
+    ]
+    require(
+        "repeating-linear-gradient" not in choice_divider_style,
+        "choice slider should not use a repeating gradient that paints the outer edge",
+    )
+    require(
+        "var(--choice-divider-background, none)" in choice_divider_style,
+        "choice slider should draw only explicit internal divider layers",
+    )
+    choice_selected_marker_start = style_source.index("\n.node-slider-readout.choices-divided::before")
+    choice_selected_marker_style = style_source[
+        choice_selected_marker_start:
+        style_source.index("\n.node-slider-readout-label", choice_selected_marker_start)
+    ]
+    require(
+        "display: none;" in choice_selected_marker_style,
+        "choice slider selected marker should not draw an extra rectangle stroke",
+    )
+
     action_menu_source = node_graph_source[
         node_graph_source.index("function openNodeModuleActionMenu(event)"):
         node_graph_source.index("function openNodeSceneContextMenu(event)")
