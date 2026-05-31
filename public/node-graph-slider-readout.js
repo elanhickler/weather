@@ -44,20 +44,23 @@ function nodeSliderChoiceCellRects(width, height, choices) {
     return [];
   }
 
-  const paintedPadding = 2;
+  const leftPaintedPadding = 2;
+  const rightPaintedPadding = 1;
   const strokeWidth = 1;
   const strokeInset = strokeWidth / 2;
-  const rectPadding = paintedPadding + strokeInset;
-  const contentHeight = Math.max(0, layoutHeight - rectPadding * 2);
+  const leftRectPadding = leftPaintedPadding + strokeInset;
+  const rightRectPadding = rightPaintedPadding + strokeInset;
+  const verticalRectPadding = leftRectPadding;
+  const contentHeight = Math.max(0, layoutHeight - verticalRectPadding * 2);
   return choices.map((_, index) => {
     const segmentLeft = Math.round((index / count) * layoutWidth);
     const segmentRight = Math.round(((index + 1) / count) * layoutWidth);
-    const contentLeft = segmentLeft + rectPadding;
-    const contentRight = segmentRight - rectPadding;
+    const contentLeft = segmentLeft + leftRectPadding;
+    const contentRight = segmentRight - rightRectPadding;
     return {
       height: contentHeight,
       left: contentLeft,
-      top: rectPadding,
+      top: verticalRectPadding,
       width: Math.max(0, contentRight - contentLeft),
     };
   });
