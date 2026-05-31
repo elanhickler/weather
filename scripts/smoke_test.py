@@ -564,6 +564,7 @@ def require_shell_contract(html: str) -> None:
             "./public/node-graph-script-status.js",
             "./public/node-graph-view-controls.js",
             "./public/node-graph-history.js",
+            "./public/node-graph-keyboard-shortcuts.js",
             "./public/node-graph-default-buttons.js",
             "./public/node-graph-file-actions.js",
             "./public/node-graph-module-definitions.js",
@@ -2006,6 +2007,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/node-graph-script-status.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-script-status.js"),
         ("/public/node-graph-view-controls.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-view-controls.js"),
         ("/public/node-graph-history.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-history.js"),
+        ("/public/node-graph-keyboard-shortcuts.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-keyboard-shortcuts.js"),
         ("/public/node-graph-default-buttons.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-default-buttons.js"),
         ("/public/node-graph-file-actions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-file-actions.js"),
         ("/public/node-graph-module-definitions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-module-definitions.js"),
@@ -3130,6 +3132,7 @@ def require_node_graph_mvp_contract() -> None:
     script_status_source = (PUBLIC / "node-graph-script-status.js").read_text(encoding="utf-8")
     view_controls_source = (PUBLIC / "node-graph-view-controls.js").read_text(encoding="utf-8")
     history_source = (PUBLIC / "node-graph-history.js").read_text(encoding="utf-8")
+    keyboard_shortcuts_source = (PUBLIC / "node-graph-keyboard-shortcuts.js").read_text(encoding="utf-8")
     wire_source = (PUBLIC / "node-graph-wires.js").read_text(encoding="utf-8")
     file_actions_source = (PUBLIC / "node-graph-file-actions.js").read_text(encoding="utf-8")
     default_buttons_source = (PUBLIC / "node-graph-default-buttons.js").read_text(encoding="utf-8")
@@ -3170,7 +3173,7 @@ def require_node_graph_mvp_contract() -> None:
         f"{audio_derivation_source}\n{grid_utils_source}\n{patch_runtime_source}\n"
         f"{patch_serialization_source}\n{settings_fields_source}\n{settings_view_source}\n"
         f"{settings_text_fit_source}\n{default_preset_source}\n{script_status_source}\n{view_controls_source}\n"
-        f"{history_source}\n{wire_source}\n"
+        f"{history_source}\n{keyboard_shortcuts_source}\n{wire_source}\n"
         f"{file_actions_source}\n{default_buttons_source}\n"
         f"{module_definitions_source}\n{module_sizing_source}\n"
         f"{parameter_metadata_source}\n{metadata_defaults_source}\n"
