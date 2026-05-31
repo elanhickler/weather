@@ -3467,7 +3467,7 @@ button.saved-default,
   overflow: visible;
 }
 
-.node-port.connected-port::before {
+.node-port:not(.node-param-port).connected-port::before {
   display: none;
 }
 

@@ -544,7 +544,12 @@ def require_shell_contract(html: str) -> None:
     require(not missing_ids, f"shell missing required ids: {missing_ids}")
     require(parser.inline_script_count == 0, "shell includes inline script")
     require(
-        script_paths == {"./public/app.js", "./public/node-graph-wires.js"},
+        script_paths == {
+            "./public/app.js",
+            "./public/audio-utils.js",
+            "./public/format-utils.js",
+            "./public/node-graph-wires.js",
+        },
         f"shell scripts were {sorted(parser.scripts)!r}",
     )
     require(
@@ -1922,6 +1927,9 @@ def require_static_assets(base_url: str) -> None:
 
 def require_waveform_seek_source_contract() -> None:
     app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
+    audio_source = (PUBLIC / "audio-utils.js").read_text(encoding="utf-8")
+    format_source = (PUBLIC / "format-utils.js").read_text(encoding="utf-8")
+    waveform_source = f"{app_source}\n{audio_source}\n{format_source}"
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     require(
         "function seekPrimaryAudioToFrame(frame, source = inspectionSources.waveform)" in app_source,
@@ -2747,7 +2755,7 @@ def require_waveform_seek_source_contract() -> None:
         '["focus peak", formatCompactNumber(focusStats.peak)]',
         '["focus rms", formatCompactNumber(focusStats.rms)]',
     ]:
-        require(snippet in app_source, f"waveform analysis source missing {snippet}")
+        require(snippet in waveform_source, f"waveform analysis source missing {snippet}")
     for snippet in [
         "function beginWaveformDrag(event)",
         "function dragWaveform(event)",
@@ -2954,8 +2962,10 @@ def require_follow_free_seek_contract() -> None:
 def require_node_graph_mvp_contract() -> None:
     index_source = (PUBLIC / "index.html").read_text(encoding="utf-8")
     app_source = (PUBLIC / "app.js").read_text(encoding="utf-8")
+    audio_source = (PUBLIC / "audio-utils.js").read_text(encoding="utf-8")
+    format_source = (PUBLIC / "format-utils.js").read_text(encoding="utf-8")
     wire_source = (PUBLIC / "node-graph-wires.js").read_text(encoding="utf-8")
-    node_graph_source = f"{app_source}\n{wire_source}"
+    node_graph_source = f"{app_source}\n{audio_source}\n{format_source}\n{wire_source}"
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     tooltip_source = (PUBLIC / "tooltips.json").read_text(encoding="utf-8")
     worklet_source = (PUBLIC / "node-live-audio-worklet.js").read_text(encoding="utf-8")
@@ -3718,6 +3728,13 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphTextBoxWidthFitScale(field",
         "function syncNodeGraphTextBoxVisualFit(field",
         "lineCount * lineHeight",
+        "const nodeGraphTextBoxFitLayouts = new WeakMap()",
+        "function scheduleNodeGraphTextBoxVisualFit(field, layout = normalizeNodeGraphTextBoxLayout())",
+        "requestAnimationFrame(syncIfConnected)",
+        "document.fonts?.ready?.then(() => requestAnimationFrame(syncIfConnected))",
+        "function observeNodeGraphTextBoxVisualFit(field, layout = normalizeNodeGraphTextBoxLayout())",
+        "nodeGraphTextBoxResizeObserver = new ResizeObserver",
+        "observeNodeGraphTextBoxVisualFit(field, layout)",
         "function handleNodeGraphTextBoxWheel(event)",
         'replacement.addEventListener("pointerdown", (event) => {',
         "event.preventDefault();\n      event.stopPropagation();",
@@ -5043,7 +5060,7 @@ def require_node_graph_mvp_contract() -> None:
         ".node-port.input.connected-port",
         ".node-port.connected-port::after",
         ".node-param-port.connected-port::after",
-        ".node-port.connected-port::before",
+        ".node-port:not(.node-param-port).connected-port::before",
         ".node-param-port.connected-port::before",
         "display: none",
         "--node-patch-point-color",
