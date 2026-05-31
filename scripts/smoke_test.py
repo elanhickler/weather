@@ -560,6 +560,7 @@ def require_shell_contract(html: str) -> None:
             "./public/node-graph-patch-normalizers.js",
             "./public/node-graph-patch-clone.js",
             "./public/node-graph-text-box-utils.js",
+            "./public/node-graph-tooltips.js",
             "./public/node-graph-ui-settings-definitions.js",
             "./public/node-graph-ui-settings-utils.js",
             "./public/node-graph-visual-utils.js",
@@ -1970,6 +1971,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/node-graph-patch-normalizers.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-patch-normalizers.js"),
         ("/public/node-graph-patch-clone.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-patch-clone.js"),
         ("/public/node-graph-text-box-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-text-box-utils.js"),
+        ("/public/node-graph-tooltips.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-tooltips.js"),
         ("/public/node-graph-ui-settings-definitions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-ui-settings-definitions.js"),
         ("/public/node-graph-ui-settings-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-ui-settings-utils.js"),
         ("/public/node-graph-visual-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-visual-utils.js"),
@@ -3063,6 +3065,7 @@ def require_node_graph_mvp_contract() -> None:
     patch_clone_source = (PUBLIC / "node-graph-patch-clone.js").read_text(encoding="utf-8")
     patch_normalizers_source = (PUBLIC / "node-graph-patch-normalizers.js").read_text(encoding="utf-8")
     text_box_utils_source = (PUBLIC / "node-graph-text-box-utils.js").read_text(encoding="utf-8")
+    tooltip_utils_source = (PUBLIC / "node-graph-tooltips.js").read_text(encoding="utf-8")
     ui_settings_definitions_source = (PUBLIC / "node-graph-ui-settings-definitions.js").read_text(encoding="utf-8")
     ui_settings_utils_source = (PUBLIC / "node-graph-ui-settings-utils.js").read_text(encoding="utf-8")
     visual_utils_source = (PUBLIC / "node-graph-visual-utils.js").read_text(encoding="utf-8")
@@ -3074,7 +3077,7 @@ def require_node_graph_mvp_contract() -> None:
         f"{file_actions_source}\n{default_buttons_source}\n"
         f"{module_definitions_source}\n{parameter_metadata_source}\n{metadata_defaults_source}\n"
         f"{patch_normalizers_source}\n{patch_clone_source}\n{text_box_utils_source}\n"
-        f"{visual_utils_source}\n"
+        f"{tooltip_utils_source}\n{visual_utils_source}\n"
         f"{ui_settings_definitions_source}\n{ui_settings_utils_source}\n"
         f"{user_ui_settings_source}\n{server_source}"
     )
