@@ -199,7 +199,8 @@ function syncNodeUiDevSettingsHeaderControls() {
   );
   const moduleTitleHeightPx = Math.max(12, Math.min(44, Number(moduleTitleHeightInput.value) || 26));
   const moduleTitleTextFillPercent = Math.max(0, Math.min(100, Number(moduleTitleTextFillInput.value) || 0));
-  const moduleIoSectionHeightPx = Math.max(12, Math.min(44, Number(moduleIoSectionHeightInput.value) || 24));
+  const moduleIoSectionHeightPx = 24;
+  moduleIoSectionHeightInput.value = String(moduleIoSectionHeightPx);
   const moduleNodeSizePercent = Math.max(0, Math.min(100, Number(moduleNodeSizeInput.value) || 0));
   const nodeGlowSizePercent = Math.max(0, Math.min(200, Number(nodeGlowSizeInput.value) || 0));
   const wirePatchPointSizePercent = Math.max(0, Math.min(200, Number(wirePatchPointSizeInput.value) || 0));

@@ -54,6 +54,8 @@ function readNodeUiDevSettingsFromControls() {
     const input = document.getElementById(definition.id);
     if (!input) {
       controls[definition.key] = definition.defaultValue;
+    } else if (definition.locked) {
+      controls[definition.key] = definition.defaultValue;
     } else if (definition.type === "boolean") {
       controls[definition.key] = input.checked;
     } else {
@@ -112,6 +114,7 @@ function applyNodeUiDevSettings(settings) {
     } else {
       input.value = String(value);
     }
+    input.disabled = Boolean(definition.locked);
     const exposeInput = document.getElementById(nodeUiDevExposeCheckboxId(definition.key));
     if (exposeInput) {
       exposeInput.checked = Boolean(normalized.exposedControls[definition.key]);

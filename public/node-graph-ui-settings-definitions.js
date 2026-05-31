@@ -62,7 +62,7 @@ const nodeUiDevSettingControls = Object.freeze([
   },
   { defaultValue: 26, exposeDefault: true, id: "nodeUiDevModuleTitleHeight", key: "moduleTitleHeight", max: 44, min: 12, type: "number" },
   { defaultValue: 62, exposeDefault: true, id: "nodeUiDevModuleTitleTextFill", key: "moduleTitleTextFill", max: 100, min: 0, type: "number" },
-  { defaultValue: 24, exposeDefault: true, id: "nodeUiDevModuleIoSectionHeight", key: "moduleIoSectionHeight", max: 44, min: 12, type: "number" },
+  { defaultValue: 24, exposeDefault: true, id: "nodeUiDevModuleIoSectionHeight", key: "moduleIoSectionHeight", locked: true, max: 24, min: 24, type: "number" },
   { defaultValue: 57, exposeDefault: true, id: "nodeUiDevModuleNodeSize", key: "moduleNodeSize", max: 100, min: 0, type: "number" },
   { defaultValue: 50, exposeDefault: true, id: "nodeUiDevNodeGlowSize", key: "nodeGlowSize", max: 200, min: 0, type: "number" },
   { defaultValue: 36, exposeDefault: true, id: "nodeUiDevWirePatchPointSize", key: "wirePatchPointSize", max: 200, min: 0, type: "number" },
