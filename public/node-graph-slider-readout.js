@@ -61,9 +61,14 @@ function syncNodeSliderReadout(slider) {
   readout.removeAttribute("title");
   if (dividesChoices) {
     const choiceIndex = Math.max(0, Math.min(choices.length - 1, Math.round(Number(slider.value))));
+    const dividerColor = "rgba(243, 241, 236, 0.2)";
+    const dividerLayers = Array.from({ length: Math.max(0, choices.length - 1) }, (_, index) => {
+      const position = ((index + 1) / choices.length) * 100;
+      return `linear-gradient(90deg, transparent 0 calc(${position}% - 0.5px), ${dividerColor} calc(${position}% - 0.5px) calc(${position}% + 0.5px), transparent calc(${position}% + 0.5px) 100%)`;
+    });
     readout.style.setProperty("--value-start", `${(choiceIndex / choices.length) * 100}%`);
     readout.style.setProperty("--value-end", `${((choiceIndex + 1) / choices.length) * 100}%`);
-    readout.style.setProperty("--choice-divider-width", `${100 / choices.length}%`);
+    readout.style.setProperty("--choice-divider-background", dividerLayers.join(", ") || "none");
     syncNodeSliderPortalHandle(readout, slider, position, false);
   } else {
     const boundedPosition = Math.max(0, Math.min(100, position));
@@ -75,7 +80,7 @@ function syncNodeSliderReadout(slider) {
       "--value-end",
       `calc(${boundedPosition}% + ${nodeSliderHandleHalfWidthPx}px)`,
     );
-    readout.style.setProperty("--choice-divider-width", "100%");
+    readout.style.setProperty("--choice-divider-background", "none");
     syncNodeSliderPortalHandle(readout, slider, boundedPosition, usesPortalWrap);
   }
   syncNodeSliderMetadataTooltip(slider);

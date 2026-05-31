@@ -2727,11 +2727,7 @@ audio {
 
 .node-slider-readout.choices-divided {
   background:
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 calc(var(--choice-divider-width, 100%) - 1px),
-      rgba(243, 241, 236, 0.2) calc(var(--choice-divider-width, 100%) - 1px) var(--choice-divider-width, 100%)
-    ),
+    var(--choice-divider-background, none),
     #080b0d;
 }
 
