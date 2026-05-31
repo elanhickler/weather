@@ -44,7 +44,7 @@ function nodeSliderChoiceCellRects(width, height, choices) {
     return [];
   }
 
-  const emptyPixelBorder = 1;
+  const emptyPixelBorder = 0;
   const strokeWidth = 1;
   const strokeInset = strokeWidth / 2;
   const wallRectPadding = emptyPixelBorder + strokeInset;
