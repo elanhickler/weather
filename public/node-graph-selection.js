@@ -1,0 +1,300 @@
+function setNodeGraphSelection(selection) {
+  nodeGraphMvp.selected = selection;
+  renderNodeGraphSelection();
+}
+
+function clearNodeGraphSelection() {
+  setNodeGraphSelection(null);
+}
+
+function handleNodeGraphEnvironmentCommand(event) {
+  if (event.detail?.command === "clear-selection") {
+    clearNodeGraphSelection();
+  }
+}
+
+function sendNodeGraphEnvironmentCommand(command) {
+  document.getElementById("nodeGraphWorkspace")?.dispatchEvent(
+    new CustomEvent("nodegraph:environment-command", {
+      bubbles: false,
+      detail: { command },
+    }),
+  );
+}
+
+function handleNodeGraphDocumentClick(event) {
+  const target = event.target;
+  if (
+    !(target instanceof Element) ||
+    target.closest("#nodeGraphWorkspace, #nodeSceneContextMenu, #nodeParameterMetadataPopover")
+  ) {
+    return;
+  }
+  sendNodeGraphEnvironmentCommand("clear-selection");
+}
+
+function nodeGraphSelectedNodeIds(selection = nodeGraphMvp.selected) {
+  if (selection?.type === "node" && selection.id) {
+    return new Set([selection.id]);
+  }
+  if (selection?.type === "nodes" && Array.isArray(selection.ids)) {
+    return new Set(selection.ids);
+  }
+  return new Set();
+}
+
+function nodeGraphSingleSelectedNodeId(selection = nodeGraphMvp.selected) {
+  const selectedNodeIds = [...nodeGraphSelectedNodeIds(selection)];
+  return selectedNodeIds.length === 1 ? selectedNodeIds[0] : null;
+}
+
+function nodeGraphModuleActionTargetNodeId() {
+  const contextNode = nodeGraphMvp.sceneContextTargetNode;
+  if (contextNode && nodeGraphPatchNode(contextNode)) {
+    return contextNode;
+  }
+  const selectedNode = nodeGraphSingleSelectedNodeId();
+  if (selectedNode && nodeGraphPatchNode(selectedNode)) {
+    return selectedNode;
+  }
+  return null;
+}
+
+function syncNodeGraphModuleActionTargetFromSelection() {
+  const menu = document.getElementById("nodeSceneContextMenu");
+  if (!menu || menu.hidden || menu.dataset.mode === "add") {
+    return;
+  }
+  const selectedWire = nodeGraphWireFromSelection();
+  if (selectedWire) {
+    nodeGraphMvp.sceneContextTargetWire = {
+      index: selectedWire.index,
+      kind: selectedWire.kind,
+    };
+    nodeGraphMvp.sceneContextTargetNode = null;
+    configureNodeSceneContextMenu("wire");
+    return;
+  }
+  const selectedNode = nodeGraphSingleSelectedNodeId();
+  if (selectedNode && nodeGraphPatchNode(selectedNode)) {
+    nodeGraphMvp.sceneContextTargetNode = selectedNode;
+    nodeGraphMvp.sceneContextTargetWire = null;
+    configureNodeSceneContextMenu("module");
+  } else {
+    const selectedNodeIds = nodeGraphSelectedNodeIds();
+    if (selectedNodeIds.size > 1) {
+      nodeGraphMvp.sceneContextTargetNode = null;
+      nodeGraphMvp.sceneContextTargetWire = null;
+      configureNodeSceneContextMenu("module");
+    }
+  }
+}
+
+function setNodeGraphNodeSelection(ids) {
+  const uniqueIds = [...new Set(ids)].filter((id) => nodeGraphMvp.activeNodes.has(id));
+  if (!uniqueIds.length) {
+    setNodeGraphSelection(null);
+    return;
+  }
+  if (uniqueIds.length === 1) {
+    setNodeGraphSelection({ type: "node", id: uniqueIds[0] });
+    return;
+  }
+  setNodeGraphSelection({ type: "nodes", ids: uniqueIds });
+}
+
+function selectAllNodeGraphModules() {
+  setNodeGraphNodeSelection(nodeGraphMvp.patch.nodes.map((node) => node.id));
+}
+
+function toggleNodeGraphNodeSelection(id, additive = false) {
+  if (!nodeGraphMvp.activeNodes.has(id)) {
+    return;
+  }
+  if (!additive) {
+    if (nodeGraphSelectedNodeIds().has(id)) {
+      setNodeGraphSelection(null);
+    } else {
+      setNodeGraphNodeSelection([id]);
+    }
+    return;
+  }
+
+  const selectedNodeIds = nodeGraphSelectedNodeIds();
+  if (selectedNodeIds.has(id)) {
+    selectedNodeIds.delete(id);
+  } else {
+    selectedNodeIds.add(id);
+  }
+  setNodeGraphNodeSelection([...selectedNodeIds]);
+}
+
+function sameNodeGraphSelection(a, b) {
+  if (a?.type !== b?.type) {
+    return false;
+  }
+  if (a?.type === "wire") {
+    return (
+      (a.kind || "signal") === (b.kind || "signal") &&
+      a.index === b.index
+    );
+  }
+  if (a?.type === "nodes") {
+    return (
+      Array.isArray(a.ids) &&
+      Array.isArray(b.ids) &&
+      a.ids.length === b.ids.length &&
+      a.ids.every((id, index) => id === b.ids[index])
+    );
+  }
+  return a?.id === b?.id && a?.index === b?.index;
+}
+
+function nodeGraphWireSelectionExists(selection = nodeGraphMvp.selected) {
+  if (selection?.type !== "wire") {
+    return false;
+  }
+  const index = Number(selection.index);
+  const wires = (selection.kind || "signal") === "modulation"
+    ? nodeGraphMvp.modulations
+    : nodeGraphMvp.connections;
+  return Number.isInteger(index) && index >= 0 && index < wires.length;
+}
+
+function nodeGraphWireFromSelection(selection = nodeGraphMvp.selected) {
+  if (!nodeGraphWireSelectionExists(selection)) {
+    return null;
+  }
+  const kind = selection.kind || "signal";
+  const wire = kind === "modulation"
+    ? nodeGraphMvp.modulations[selection.index]
+    : nodeGraphMvp.connections[selection.index];
+  return { kind, index: selection.index, wire };
+}
+
+function nodeGraphWireSelectionLabel(selection = nodeGraphMvp.selected) {
+  const selectedWire = nodeGraphWireFromSelection(selection);
+  if (!selectedWire) {
+    return "none";
+  }
+  const { kind, wire } = selectedWire;
+  if (kind === "modulation") {
+    return `${nodeGraphLabel(wire.sourceNode, wire.sourcePort)} -> ${nodeGraphLabel(
+      wire.destinationNode,
+      wire.destinationParam,
+    )} mod`;
+  }
+  return `${nodeGraphLabel(wire.sourceNode, wire.sourcePort)} -> ${nodeGraphLabel(
+    wire.destinationNode,
+    wire.destinationPort,
+  )}`;
+}
+
+function nodeGraphNodeCanBeDeleted(node) {
+  return Boolean(node && node.type !== "output");
+}
+
+function nodeGraphNodeDeleteHidesOnly(node) {
+  return node?.type === "audioInput";
+}
+
+function nodeGraphSelectionCanDelete(selection = nodeGraphMvp.selected) {
+  if (!selection) {
+    return false;
+  }
+  if (selection.type === "wire") {
+    return nodeGraphWireSelectionExists(selection);
+  }
+  return [...nodeGraphSelectedNodeIds(selection)].some((id) => {
+    const node = nodeGraphPatchNode(id);
+    return nodeGraphMvp.activeNodes.has(id) && nodeGraphNodeCanBeDeleted(node);
+  });
+}
+
+function nodeGraphDeleteTitle(selection = nodeGraphMvp.selected) {
+  if (!selection) {
+    return nodeGraphTooltipText("actions.deleteNothing");
+  }
+  if (selection.type === "wire") {
+    return nodeGraphWireSelectionExists(selection)
+      ? nodeGraphTooltipText("actions.deleteWireShort")
+      : nodeGraphTooltipText("actions.deleteWireMissing");
+  }
+  const selectedNodeIds = nodeGraphSelectedNodeIds(selection);
+  if (!selectedNodeIds.size) {
+    return nodeGraphTooltipText("actions.deleteNothing");
+  }
+  if ([...selectedNodeIds].every((id) => id === "output")) {
+    return nodeGraphTooltipText("actions.deleteUnavailableOutput");
+  }
+  return selectedNodeIds.size === 1
+    ? nodeGraphTooltipText("actions.deleteModuleShort")
+    : nodeGraphTooltipText("actions.deleteModulesShort");
+}
+
+function pruneNodeGraphSelectionAfterPatch() {
+  const selection = nodeGraphMvp.selected;
+  if (!selection) {
+    return;
+  }
+  if (selection.type === "wire") {
+    if (!nodeGraphWireSelectionExists(selection)) {
+      setNodeGraphSelection(null);
+    }
+    return;
+  }
+
+  const selectedNodeIds = nodeGraphSelectedNodeIds(selection);
+  if (!selectedNodeIds.size) {
+    setNodeGraphSelection(null);
+    return;
+  }
+  const activeSelectedNodes = [...selectedNodeIds].filter((id) =>
+    nodeGraphMvp.activeNodes.has(id),
+  );
+  if (activeSelectedNodes.length !== selectedNodeIds.size) {
+    setNodeGraphNodeSelection(activeSelectedNodes);
+  }
+}
+
+function renderNodeGraphSelection() {
+  const selectedNodeIds = nodeGraphSelectedNodeIds();
+  for (const node of document.querySelectorAll(".dsp-node")) {
+    node.classList.toggle("selected", selectedNodeIds.has(node.dataset.node));
+  }
+
+  for (const path of document.querySelectorAll(".node-wire-path")) {
+    path.classList.toggle(
+      "selected",
+      sameNodeGraphSelection(nodeGraphMvp.selected, {
+        type: "wire",
+        kind: path.dataset.connectionKind || "signal",
+        index: Number(path.dataset.connectionIndex),
+      }),
+    );
+  }
+
+  for (const item of document.querySelectorAll("[data-connection-row-index]")) {
+    item.classList.toggle(
+      "selected",
+      sameNodeGraphSelection(nodeGraphMvp.selected, {
+        type: "wire",
+        kind: item.dataset.connectionRowKind || "signal",
+        index: Number(item.dataset.connectionRowIndex),
+      }),
+    );
+  }
+  renderNodeGraphExecutionSummarySelection();
+
+  const button = document.getElementById("nodeDeleteButton");
+  button.disabled = !nodeGraphSelectionCanDelete();
+  button.title = nodeGraphDeleteTitle();
+
+  syncNodeGraphModuleActionTargetFromSelection();
+  setNodeInteractionHelp(nodeInteractionHelpText(document.activeElement));
+}
+
+function selectNodeGraphWire(event, index, kind = "signal") {
+  event.stopPropagation();
+  setNodeGraphSelection({ type: "wire", kind, index });
+}
