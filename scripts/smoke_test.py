@@ -553,6 +553,7 @@ def require_shell_contract(html: str) -> None:
             "./public/format-utils.js",
             "./public/node-graph-default-buttons.js",
             "./public/node-graph-file-actions.js",
+            "./public/node-graph-ui-settings-definitions.js",
             "./public/node-graph-ui-settings-utils.js",
             "./public/node-graph-wires.js",
             "./public/presets/useruisettings.js",
@@ -1954,6 +1955,7 @@ def require_static_assets(base_url: str) -> None:
         ("/public/format-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "format-utils.js"),
         ("/public/node-graph-default-buttons.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-default-buttons.js"),
         ("/public/node-graph-file-actions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-file-actions.js"),
+        ("/public/node-graph-ui-settings-definitions.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-ui-settings-definitions.js"),
         ("/public/node-graph-ui-settings-utils.js", ("application/javascript", "text/javascript"), PUBLIC / "node-graph-ui-settings-utils.js"),
         ("/public/presets/useruisettings.js", ("application/javascript", "text/javascript"), DEFAULT_UI_SETTINGS_SCRIPT),
         ("/public/signal-plot-settings.js", ("application/javascript", "text/javascript"), PUBLIC / "signal-plot-settings.js"),
@@ -3035,13 +3037,15 @@ def require_node_graph_mvp_contract() -> None:
     wire_source = (PUBLIC / "node-graph-wires.js").read_text(encoding="utf-8")
     file_actions_source = (PUBLIC / "node-graph-file-actions.js").read_text(encoding="utf-8")
     default_buttons_source = (PUBLIC / "node-graph-default-buttons.js").read_text(encoding="utf-8")
+    ui_settings_definitions_source = (PUBLIC / "node-graph-ui-settings-definitions.js").read_text(encoding="utf-8")
     ui_settings_utils_source = (PUBLIC / "node-graph-ui-settings-utils.js").read_text(encoding="utf-8")
     user_ui_settings_source = DEFAULT_UI_SETTINGS_SCRIPT.read_text(encoding="utf-8")
     server_source = (ROOT / "server.py").read_text(encoding="utf-8")
     node_graph_source = (
         f"{app_source}\n{audio_source}\n{format_source}\n"
         f"{signal_plot_settings_source}\n{ui_label_source}\n{wire_source}\n"
-        f"{file_actions_source}\n{default_buttons_source}\n{ui_settings_utils_source}\n"
+        f"{file_actions_source}\n{default_buttons_source}\n"
+        f"{ui_settings_definitions_source}\n{ui_settings_utils_source}\n"
         f"{user_ui_settings_source}\n{server_source}"
     )
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
