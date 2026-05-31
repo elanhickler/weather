@@ -4703,7 +4703,7 @@ def require_node_graph_mvp_contract() -> None:
         "function dragNodeUserUiSettings(event)",
         "function endNodeUserUiSettingsDrag(event)",
         "const nodeUiDevDefaultSettingsUrl = \"./public/presets/useruisettings.json\"",
-        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v4\"",
+        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v5\"",
         "soemdsp-sandbox-user-ui-settings",
         "settings_format.get(\"version\") not in (1, 2)",
         "ui settings view must be an object",

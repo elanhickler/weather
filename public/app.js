@@ -5903,9 +5903,9 @@ const nodeGraphDefaultPatch = Object.freeze({
 });
 
 const nodeGraphDefaultPresetUrl = "./public/presets/default.json";
-const nodeGraphDefaultPresetStorageKey = "soemdsp-sandbox.defaultPatch";
+const nodeGraphDefaultPresetStorageKey = "soemdsp-sandbox.defaultPatch.live.v2";
 const nodeUiDevDefaultSettingsUrl = "./public/presets/useruisettings.json";
-const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v4";
+const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v5";
 
 const nodeUiDevFontFamilyOptions = Object.freeze([
   {
