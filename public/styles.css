@@ -2818,6 +2818,14 @@ audio {
   shape-rendering: crispEdges;
 }
 
+.node-choice-debug-cell-fill {
+  stroke: none;
+}
+
+.node-choice-debug-cell-stroke {
+  fill: none;
+}
+
 .node-slider-readout-label {
   position: relative;
   z-index: 1;

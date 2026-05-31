@@ -164,9 +164,10 @@ function syncNodeSliderChoiceDebugSquares(readout, choices, enabled) {
     marker.setAttribute("y2", divider.height.toFixed(3));
     return marker;
   });
-  const cells = nodeSliderChoiceCellRects(layerRect.width, layerRect.height, choices, emptyPixelBorder).map((cell, index) => {
+  const cellRects = nodeSliderChoiceCellRects(layerRect.width, layerRect.height, choices, emptyPixelBorder);
+  const cells = cellRects.map((cell, index) => {
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    marker.setAttribute("class", "node-choice-debug-square node-choice-debug-cell");
+    marker.setAttribute("class", "node-choice-debug-square node-choice-debug-cell node-choice-debug-cell-fill");
     marker.setAttribute("data-choice-index", String(index));
     marker.setAttribute("x", cell.left.toFixed(3));
     marker.setAttribute("y", cell.top.toFixed(3));
@@ -174,14 +175,25 @@ function syncNodeSliderChoiceDebugSquares(readout, choices, enabled) {
     marker.setAttribute("height", cell.height.toFixed(3));
     marker.style.fill = slideStyle.color;
     marker.style.fillOpacity = String(slideStyle.fillOpacity);
-    marker.style.stroke = slideStyle.color;
-    marker.style.strokeOpacity = String(slideStyle.edgeBrightness);
     marker.style.filter = slideStyle.glowLevel <= 0
       ? "none"
       : `drop-shadow(0 0 ${slideStyle.glowRadius.toFixed(2)}px ${nodeSliderHexToRgba(slideStyle.color, slideStyle.glowAlpha.toFixed(3))})`;
     return marker;
   });
-  layer.replaceChildren(...dividers, ...cells);
+  const cellStrokes = cellRects.map((cell, index) => {
+    const strokeInset = 0.5;
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    marker.setAttribute("class", "node-choice-debug-square node-choice-debug-cell node-choice-debug-cell-stroke");
+    marker.setAttribute("data-choice-index", String(index));
+    marker.setAttribute("x", (cell.left + strokeInset).toFixed(3));
+    marker.setAttribute("y", (cell.top + strokeInset).toFixed(3));
+    marker.setAttribute("width", Math.max(0, cell.width - strokeInset * 2).toFixed(3));
+    marker.setAttribute("height", Math.max(0, cell.height - strokeInset * 2).toFixed(3));
+    marker.style.stroke = slideStyle.color;
+    marker.style.strokeOpacity = String(slideStyle.edgeBrightness);
+    return marker;
+  });
+  layer.replaceChildren(...dividers, ...cells, ...cellStrokes);
 }
 
 function syncNodeSliderReadout(slider) {
