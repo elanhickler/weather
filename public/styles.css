@@ -395,6 +395,27 @@ audio {
   color: var(--node-front-button-hover-color);
 }
 
+.node-under-construction-control {
+  border-color: rgba(127, 199, 217, 0.12);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(243, 241, 236, 0.045) 0 6px,
+      transparent 6px 12px
+    ),
+    rgba(17, 20, 24, 0.58);
+  color: rgba(160, 167, 176, 0.78);
+  cursor: not-allowed;
+}
+
+.node-under-construction-control:hover,
+.node-under-construction-control:focus-visible {
+  border-color: var(--node-front-button-hover-border);
+  background: var(--node-front-construction-hover-bg);
+  box-shadow: none;
+  color: var(--node-front-button-hover-color);
+}
+
 .node-patch-header-field {
   width: 100%;
   min-width: 0;

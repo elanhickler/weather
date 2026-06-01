@@ -245,7 +245,19 @@ function nodeGraphLiveOutputStartCancelled(serial) {
   return serial !== nodeGraphMvp.live.outputToggleSerial || !nodeGraphMvp.live.outputEnabled;
 }
 
+function nodeGraphLiveInputIsUnderConstruction() {
+  return true;
+}
+
 function toggleNodeGraphLiveInput() {
+  if (nodeGraphLiveInputIsUnderConstruction()) {
+    nodeGraphMvp.live.inputActive = false;
+    stopNodeGraphLiveInputSource();
+    setNodeGraphLiveInputStatus("off", "Live INPUT is under construction.");
+    setNodeGraphLiveMicStatus("off", "Live INPUT is under construction.");
+    renderNodeGraphLiveControls();
+    return;
+  }
   nodeGraphMvp.live.inputActive = !nodeGraphMvp.live.inputActive;
   const addedInputModule = nodeGraphMvp.live.inputActive
     ? ensureNodeGraphLiveInputModule()
