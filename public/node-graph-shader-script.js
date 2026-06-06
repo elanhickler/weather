@@ -10,8 +10,15 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
 const nodeGraphShaderScriptUtilityCameraPadding = 18;
 const nodeGraphShaderScriptColorWidgetModuleUrl = "./public/color-widget.js?v=shader-token-color-widget-1";
 const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
-const nodeGraphShaderScriptHighlightTokenPattern = /#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]\.(?:global|globals)\.(?:size|brightness|color)|(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*|globalsize|global\.size)\b|\b(?:laser|led|light|paint|solid|none|output\d+)\b|~|-?\d+(?:\.\d+)?\b|[=*]/g;
-const nodeGraphShaderScriptEditableTokenPattern = /#[0-9a-fA-F]{3,8}\b|-?\d+(?:\.\d+)?\b|\b(?:laser|led|light|paint|solid)\b/g;
+const nodeGraphShaderScriptBlendModePatternSource = nodeGraphShaderScriptBlendModes.join("|");
+const nodeGraphShaderScriptHighlightTokenPattern = new RegExp(
+  `#[0-9a-fA-F]{3,8}\\b|\\b(?:dot[12]\\.(?:global|globals)\\.(?:size|brightness|color)|(?:dot[12]|blend|video)\\.[a-zA-Z_]\\w*|globalsize|global\\.size)\\b|\\b(?:${nodeGraphShaderScriptBlendModePatternSource}|none|output\\d+)\\b|~|-?\\d+(?:\\.\\d+)?\\b|[=*]`,
+  "g",
+);
+const nodeGraphShaderScriptEditableTokenPattern = new RegExp(
+  `#[0-9a-fA-F]{3,8}\\b|-?\\d+(?:\\.\\d+)?\\b|\\b(?:${nodeGraphShaderScriptBlendModePatternSource})\\b`,
+  "g",
+);
 const nodeGraphShaderScriptDefaultSyntaxColors = Object.freeze({
   assignment: "#d6a35f",
   comment: "#9ca4a6",
