@@ -9208,7 +9208,7 @@ button.saved-default,
   left: auto !important;
   top: auto !important;
   z-index: 1;
-  transform: scale(var(--node-shader-model-preview-scale, 1.08)) !important;
+  transform: scale(var(--node-shader-model-preview-scale, 1)) !important;
   transform-origin: center center !important;
   pointer-events: none;
 }

@@ -948,9 +948,17 @@ function syncNodeGraphShaderScriptModelPreview(slot) {
   clone.style.left = "";
   clone.style.top = "";
   clone.style.transform = "";
+  clone.style.setProperty("--node-shader-model-preview-scale", "1");
   const sourceRect = sourceModule.getBoundingClientRect();
   const sourceScopeRect = slot.scopeElement?.getBoundingClientRect?.();
   const previewRect = preview.getBoundingClientRect();
+  const baseCloneWidth = Math.max(1, clone.offsetWidth || sourceRect.width || 1);
+  const baseCloneHeight = Math.max(1, clone.offsetHeight || sourceRect.height || 1);
+  const previewScale = Math.max(0.1, Math.min(
+    previewRect.width / baseCloneWidth,
+    previewRect.height / baseCloneHeight
+  ));
+  clone.style.setProperty("--node-shader-model-preview-scale", `${previewScale}`);
   const cloneRect = clone.getBoundingClientRect();
   const cloneScopeElement = clone.querySelector(".node-module-scope-window, .node-led-face");
   const cloneScopeRect = cloneScopeElement?.getBoundingClientRect?.();
