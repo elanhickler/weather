@@ -134,6 +134,10 @@ function handleNodeGraphKeydown(event) {
     }
     return;
   }
+  if (nudgeFocusedNodeGraphGraphNode(event)) {
+    event.preventDefault();
+    return;
+  }
   if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
     const shiftArrowSizeActions = {
       ArrowDown: ["height", 1],

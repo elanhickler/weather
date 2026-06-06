@@ -518,3 +518,44 @@ function removeFocusedNodeGraphGraphNode() {
     document.activeElement?.closest?.(".node-module-graph-display"),
   );
 }
+
+function nudgeFocusedNodeGraphGraphNode(event) {
+  const display = document.activeElement?.closest?.(".node-module-graph-display");
+  const moves = {
+    ArrowDown: { x: 0, y: -1 },
+    ArrowLeft: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 },
+    ArrowUp: { x: 0, y: 1 },
+  };
+  const move = moves[event?.key];
+  if (!display || !move || event.ctrlKey || event.metaKey) {
+    return false;
+  }
+  const moduleElement = display.closest(".dsp-node");
+  const nodeId = moduleElement?.dataset.node || "";
+  const sourceNode = nodeGraphPatchNode(nodeId);
+  if (!sourceNode || sourceNode.type !== "graph") {
+    return false;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === nodeId);
+  if (!targetNode || targetNode.type !== "graph") {
+    return false;
+  }
+  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  const index = nodeGraphGraphSelectedNodeIndex(nodeId, graph, graph.nodes.length - 1);
+  const current = graph.nodes[index];
+  const step = event.altKey ? 0.001 : event.shiftKey ? 0.05 : 0.01;
+  graph.nodes[index] = normalizeNodeGraphGraphNode({
+    ...current,
+    ...nodeGraphGraphConstrainedNodePoint(graph, index, {
+      x: current.x + move.x * step,
+      y: current.y + move.y * step,
+    }),
+  }, index);
+  targetNode.graph = normalizeNodeGraphGraph(graph);
+  setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, index);
+  commitNodeGraphPatch(patch, { status: "graph node nudged" });
+  syncNodeGraphGraphControls(targetNode.graph, index);
+  return true;
+}
