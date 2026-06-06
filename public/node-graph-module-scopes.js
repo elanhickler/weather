@@ -1702,7 +1702,6 @@ function nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer = null
   return {
     length: 1,
     nodeGraphScopeLightDisplay: true,
-    nodeGraphScopeLightCenterRadiusInsetPx: 1,
     nodeGraphScopeLightShape: nodeGraphModuleScopeSetting(slot.nodeId).blinkLightShape,
     nodeGraphScopeLightTarget: capturedTarget ?? (on ? level : 0),
   };
@@ -3616,10 +3615,6 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
     Number(buffer.nodeGraphScopeLightCenterMinRatio) || 0,
     clampNodeSliderValue(core1Size / outerCoreSize, 0.05, 1),
   );
-  const centerRadiusInsetPx = Number(buffer.nodeGraphScopeLightCenterRadiusInsetPx);
-  const centerRadius = Number.isFinite(centerRadiusInsetPx)
-    ? Math.max(0, radius - Math.max(0, centerRadiusInsetPx) * pixelRatio)
-    : radius * centerRatio;
   const outerAlphaScale = Number.isFinite(Number(buffer.nodeGraphScopeLightOuterAlphaScale))
     ? clampNodeSliderValue(Number(buffer.nodeGraphScopeLightOuterAlphaScale), 0, 4)
     : 0.38;
@@ -3633,7 +3628,7 @@ function drawNodeGraphModuleScopeLightDisplay(context, rect, buffer, pixelRatio,
   drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);
   context.fill();
   context.fillStyle = `rgba(${centerRgb[0]}, ${centerRgb[1]}, ${centerRgb[2]}, ${clampNodeSliderValue(alpha * core1Brightness * centerAlphaScale, 0, 1)})`;
-  drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, centerRadius);
+  drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius * centerRatio);
   context.fill();
   context.restore();
 }
