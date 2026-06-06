@@ -1,4 +1,4 @@
-const nodeGraphGraphShapes = Object.freeze(["linear", "rational", "exponential"]);
+const nodeGraphGraphShapes = Object.freeze(["linear", "rational", "exponential", "hold"]);
 
 const nodeGraphDefaultGraphData = Object.freeze({
   cursorX: 0.5,
@@ -30,13 +30,10 @@ const nodeGraphGraphPresets = Object.freeze({
     cursorX: 0,
     nodes: Object.freeze([
       Object.freeze({ c: 0, shape: "linear", x: 0, y: 0.2 }),
-      Object.freeze({ c: -0.999, shape: "rational", x: 0.25, y: 0.2 }),
-      Object.freeze({ c: 0.999, shape: "rational", x: 0.25, y: 0.72 }),
-      Object.freeze({ c: -0.999, shape: "rational", x: 0.5, y: 0.72 }),
-      Object.freeze({ c: 0.999, shape: "rational", x: 0.5, y: 0.4 }),
-      Object.freeze({ c: -0.999, shape: "rational", x: 0.75, y: 0.4 }),
-      Object.freeze({ c: 0.999, shape: "rational", x: 0.75, y: 0.88 }),
-      Object.freeze({ c: 0, shape: "linear", x: 1, y: 0.88 }),
+      Object.freeze({ c: 0, shape: "hold", x: 0.25, y: 0.72 }),
+      Object.freeze({ c: 0, shape: "hold", x: 0.5, y: 0.4 }),
+      Object.freeze({ c: 0, shape: "hold", x: 0.75, y: 0.88 }),
+      Object.freeze({ c: 0, shape: "hold", x: 1, y: 0.88 }),
     ]),
   }),
   triangle: Object.freeze({
@@ -240,6 +237,8 @@ function nodeGraphGraphSegmentValue(graph, x, index) {
   const contour = normalizeNodeGraphGraphNumber(right.c, 0, -0.999, 0.999);
   const shaped = right.shape === "exponential"
     ? nodeGraphGraphExponentialCurve(p, contour)
+    : right.shape === "hold"
+      ? (p >= 1 ? 1 : 0)
     : right.shape === "linear"
       ? p
       : nodeGraphGraphRationalCurve(p, contour);

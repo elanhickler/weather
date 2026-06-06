@@ -3476,6 +3476,7 @@ def require_node_graph_mvp_contract() -> None:
             graph_contract_sources["utils"],
             [
                 "const nodeGraphGraphShapes",
+                '"hold"',
                 "const nodeGraphDefaultGraphData",
                 "const nodeGraphGraphPresets",
                 "function nodeGraphGraphPresetData",
@@ -3488,6 +3489,7 @@ def require_node_graph_mvp_contract() -> None:
                 "envelope: Object.freeze",
                 "triangle: Object.freeze",
                 "steps: Object.freeze",
+                'shape: "hold"',
                 "function normalizeNodeGraphGraph(value = {})",
                 "function nodeGraphGraphNextShape",
                 "function nodeGraphGraphValueAt(graphValue, xValue)",
@@ -3538,6 +3540,8 @@ def require_node_graph_mvp_contract() -> None:
                 "event.altKey ? 0.001 : event.shiftKey ? 0.05 : 0.01",
                 "nodeGraphGraphRationalCurve(p, contour)",
                 "nodeGraphGraphExponentialCurve(p, contour)",
+                'right.shape === "hold"',
+                "? (p >= 1 ? 1 : 0)",
                 "cursorX: normalizeNodeGraphGraphNumber",
                 ".sort((left, right) => left.x - right.x)",
             ],
@@ -3758,6 +3762,7 @@ def require_node_graph_mvp_contract() -> None:
                 "editable-graph-duplicate-2",
                 "editable-graph-shape-key-1",
                 "editable-graph-cursor-drag-1",
+                "editable-graph-hold-shape-1",
                 "node-graph-graph-utils.js",
                 "graphNodeDragging: null",
                 "graphClipboard: null",
@@ -9840,7 +9845,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneLedColor",
         'node?.type === "led"',
         '"led input"',
-        "./public/node-live-audio-worklet.js?v=editable-graph-range-1",
+        "./public/node-live-audio-worklet.js?v=editable-graph-hold-shape-1",
     ]:
         require(snippet in node_graph_source, f"LED module contract missing {snippet}")
 
@@ -11323,8 +11328,11 @@ def require_node_graph_mvp_contract() -> None:
         'node?.type === "badvalMonitor"',
         "this.monitorBadValueSample(mixInput(nodeId), nodeId)",
         "normalizeGraph(value = {})",
+        'shape === "hold"',
         "graphRationalCurve(position, contour = 0)",
         "graphExponentialCurve(position, contour = 0)",
+        'right.shape === "hold"',
+        "? (p >= 1 ? 1 : 0)",
         "graphValueAt(graphValue, xValue)",
         'node?.type === "graph"',
         "const graphSampleX = (node, nodeId) => {",
