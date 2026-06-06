@@ -8,6 +8,14 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
 });
 const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
 const nodeGraphShaderScriptDefaultSyntaxColors = Object.freeze({
+  assignment: "#d6a35f",
+  color: "#dfe7e3",
+  comment: "#9ca4a6",
+  mode: "#d3a070",
+  number: "#a9cda6",
+  property: "#7fc7d9",
+});
+const nodeGraphShaderScriptLegacySyntaxColors = Object.freeze({
   assignment: "#ffd87f",
   color: "#ffffff",
   comment: "#9ca4a6",
@@ -333,10 +341,13 @@ function normalizeNodeGraphShaderScriptSyntaxColor(value, fallback) {
 function normalizeNodeGraphShaderScriptSyntaxColors(value = {}) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return Object.fromEntries(
-    Object.entries(nodeGraphShaderScriptDefaultSyntaxColors).map(([key, fallback]) => [
-      key,
-      normalizeNodeGraphShaderScriptSyntaxColor(source[key], fallback),
-    ]),
+    Object.entries(nodeGraphShaderScriptDefaultSyntaxColors).map(([key, fallback]) => {
+      const normalized = normalizeNodeGraphShaderScriptSyntaxColor(source[key], fallback);
+      return [
+        key,
+        normalized === nodeGraphShaderScriptLegacySyntaxColors[key] ? fallback : normalized,
+      ];
+    }),
   );
 }
 

@@ -9126,11 +9126,11 @@ button.saved-default,
   height: 34px;
   padding: 0 9px;
   place-items: center;
-  border: 1px solid rgba(127, 199, 217, 0.28);
+  border: 1px solid rgba(127, 199, 217, 0.18);
   border-radius: 6px;
   background:
-    linear-gradient(180deg, rgba(20, 32, 36, 0.96), rgba(5, 12, 14, 0.98));
-  color: rgba(235, 255, 246, 0.96);
+    linear-gradient(180deg, rgba(13, 24, 28, 0.88), rgba(4, 10, 12, 0.94));
+  color: rgba(190, 211, 209, 0.74);
   font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
   font-size: 1.36rem;
   font-weight: 800;
@@ -9139,8 +9139,8 @@ button.saved-default,
 }
 
 .node-shader-script-size-controls button:hover {
-  border-color: rgba(127, 199, 217, 0.62);
-  color: #ffffff;
+  border-color: rgba(127, 199, 217, 0.34);
+  color: rgba(226, 238, 234, 0.9);
 }
 
 .node-shader-script-size-controls button:disabled {
@@ -9249,24 +9249,24 @@ button.saved-default,
 }
 
 .node-shader-token-property {
-  color: var(--node-shader-token-property, #84e6ff);
+  color: var(--node-shader-token-property, #7fc7d9);
 }
 
 .node-shader-token-assignment {
-  color: var(--node-shader-token-assignment, #ffd87f);
+  color: var(--node-shader-token-assignment, #d6a35f);
 }
 
 .node-shader-token-color {
-  color: var(--node-shader-token-color, #ffffff);
-  text-shadow: 0 0 10px currentColor;
+  color: var(--node-shader-token-color, #dfe7e3);
+  text-shadow: 0 0 6px color-mix(in srgb, currentColor 36%, transparent);
 }
 
 .node-shader-token-number {
-  color: var(--node-shader-token-number, #b4ffb2);
+  color: var(--node-shader-token-number, #a9cda6);
 }
 
 .node-shader-token-mode {
-  color: var(--node-shader-token-mode, #ffae6e);
+  color: var(--node-shader-token-mode, #d3a070);
 }
 
 .node-shader-token-comment {
@@ -9355,10 +9355,10 @@ button.saved-default,
   min-width: 28px;
   height: 28px;
   padding: 0 7px;
-  border: 1px solid rgba(127, 199, 217, 0.24);
+  border: 1px solid rgba(127, 199, 217, 0.18);
   border-radius: 4px;
-  background: rgba(9, 24, 30, 0.9);
-  color: rgba(236, 251, 246, 0.94);
+  background: rgba(7, 18, 22, 0.82);
+  color: rgba(190, 211, 209, 0.76);
   font: inherit;
 }
 
@@ -9416,10 +9416,10 @@ button.saved-default,
 
 .node-shader-script-syntax-colors-panel button {
   min-height: 26px;
-  border: 1px solid rgba(127, 199, 217, 0.22);
+  border: 1px solid rgba(127, 199, 217, 0.16);
   border-radius: 4px;
-  background: rgba(9, 24, 30, 0.9);
-  color: rgba(236, 251, 246, 0.94);
+  background: rgba(7, 18, 22, 0.82);
+  color: rgba(190, 211, 209, 0.76);
   font: inherit;
 }
 
@@ -9432,22 +9432,23 @@ button.saved-default,
 
 .node-shader-script-actions button {
   min-height: 30px;
-  border: 1px solid rgba(127, 199, 217, 0.22);
+  border: 1px solid rgba(127, 199, 217, 0.16);
   border-radius: 5px;
-  background: rgba(9, 24, 30, 0.8);
-  color: rgba(236, 251, 246, 0.94);
+  background: rgba(7, 18, 22, 0.72);
+  color: rgba(190, 211, 209, 0.74);
   font: inherit;
 }
 
 .node-shader-script-actions button:hover {
-  border-color: rgba(127, 199, 217, 0.48);
-  background: rgba(22, 57, 63, 0.76);
+  border-color: rgba(127, 199, 217, 0.32);
+  background: rgba(13, 34, 39, 0.76);
+  color: rgba(226, 238, 234, 0.9);
 }
 
 .node-shader-script-actions button[aria-pressed="true"] {
-  border-color: rgba(102, 224, 163, 0.34);
-  background: rgba(18, 48, 38, 0.9);
-  color: #8ffff0;
+  border-color: rgba(102, 224, 163, 0.24);
+  background: rgba(13, 37, 30, 0.84);
+  color: rgba(143, 255, 240, 0.76);
 }
 
 .node-scene-context-menu button kbd {
