@@ -10,6 +10,8 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
 const nodeGraphShaderScriptUtilityCameraPadding = 18;
 const nodeGraphShaderScriptColorWidgetModuleUrl = "./public/color-widget.js?v=shader-token-color-widget-1";
 const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
+const nodeGraphShaderScriptHighlightTokenPattern = /#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]\.(?:global|globals)\.(?:size|brightness|color)|(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*|globalsize|global\.size)\b|\b(?:laser|led|light|paint|solid|none|output\d+)\b|~|-?\d+(?:\.\d+)?\b|[=*]/g;
+const nodeGraphShaderScriptEditableTokenPattern = /#[0-9a-fA-F]{3,8}\b|-?\d+(?:\.\d+)?\b|\b(?:laser|led|light|paint|solid)\b/g;
 const nodeGraphShaderScriptDefaultSyntaxColors = Object.freeze({
   assignment: "#d6a35f",
   comment: "#9ca4a6",
@@ -587,23 +589,30 @@ function escapeNodeGraphShaderScriptHtml(text = "") {
     .replace(/>/g, "&gt;");
 }
 
+function nodeGraphShaderScriptIsModeToken(token) {
+  return nodeGraphShaderScriptBlendModes.includes(token) || token === "~" || token === "none" || /^output\d+$/.test(token);
+}
+
+function nodeGraphShaderScriptIsPropertyToken(token) {
+  return token.startsWith("dot") || token.startsWith("blend") || token.startsWith("video") || token.startsWith("global");
+}
+
 function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
   const commentIndex = line.indexOf("//");
   const code = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
   const comment = commentIndex >= 0 ? line.slice(commentIndex) : "";
-  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]\.(?:global|globals)\.(?:size|brightness|color)|(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*|globalsize|global\.size)\b|\b(?:laser|led|light|paint|solid|none|output\d+)\b|~|-?\d+(?:\.\d+)?\b|[=*])/g;
   let html = "";
   let lastIndex = 0;
-  for (const match of code.matchAll(tokenPattern)) {
+  for (const match of code.matchAll(nodeGraphShaderScriptHighlightTokenPattern)) {
     const token = match[0];
     html += escapeNodeGraphShaderScriptHtml(code.slice(lastIndex, match.index));
     const className = token.startsWith("#")
       ? "node-shader-token-color"
       : token === "=" || token === "*"
         ? "node-shader-token-assignment"
-        : nodeGraphShaderScriptBlendModes.includes(token) || token === "~" || token === "none" || /^output\d+$/.test(token)
+        : nodeGraphShaderScriptIsModeToken(token)
           ? "node-shader-token-mode"
-        : token.startsWith("dot") || token.startsWith("blend") || token.startsWith("video") || token.startsWith("global")
+        : nodeGraphShaderScriptIsPropertyToken(token)
           ? "node-shader-token-property"
           : "node-shader-token-number";
     const tokenStart = lineStart + match.index;
@@ -612,7 +621,7 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
       ? "color"
       : className === "node-shader-token-number"
         ? "number"
-        : className === "node-shader-token-mode" && (nodeGraphShaderScriptBlendModes.includes(token))
+        : className === "node-shader-token-mode" && nodeGraphShaderScriptBlendModes.includes(token)
           ? "mode"
         : "";
     const tokenAttributes = tokenType
@@ -771,8 +780,7 @@ function findNodeGraphShaderScriptEditableTokenAt(index) {
   const source = document.getElementById("nodeShaderScriptSource");
   const text = source?.value || "";
   const position = clampNodeSliderValue(Number(index) || 0, 0, text.length);
-  const tokenPattern = /#[0-9a-fA-F]{3,8}\b|-?\d+(?:\.\d+)?\b|\b(?:laser|led|light|paint|solid)\b/g;
-  for (const match of text.matchAll(tokenPattern)) {
+  for (const match of text.matchAll(nodeGraphShaderScriptEditableTokenPattern)) {
     const start = match.index;
     const end = start + match[0].length;
     if (position >= start && position <= end) {
