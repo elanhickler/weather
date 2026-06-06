@@ -152,6 +152,18 @@ function handleNodeGraphKeydown(event) {
     }
     return;
   }
+  if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key === "[") {
+    if (selectFocusedNodeGraphGraphNodeOffset(-1)) {
+      event.preventDefault();
+    }
+    return;
+  }
+  if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key === "]") {
+    if (selectFocusedNodeGraphGraphNodeOffset(1)) {
+      event.preventDefault();
+    }
+    return;
+  }
   if (nudgeFocusedNodeGraphGraphNode(event)) {
     event.preventDefault();
     return;

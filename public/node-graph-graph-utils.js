@@ -931,6 +931,26 @@ function cycleFocusedNodeGraphGraphShape() {
   return true;
 }
 
+function selectFocusedNodeGraphGraphNodeOffset(offset) {
+  const display = document.activeElement?.closest?.(".node-module-graph-display");
+  const moduleElement = display?.closest?.(".dsp-node");
+  const nodeId = moduleElement?.dataset.node || "";
+  const sourceNode = nodeGraphPatchNode(nodeId);
+  if (!display || !sourceNode || sourceNode.type !== "graph") {
+    return false;
+  }
+  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const selectedIndex = nodeGraphGraphSelectedNodeIndex(nodeId, graph, graph.nodes.length - 1);
+  const nextIndex = nodeGraphGraphNodeIndexFromValue(graph, selectedIndex + Number(offset || 0));
+  setNodeGraphGraphSelectedNodeIndex(nodeId, graph, nextIndex);
+  syncNodeGraphGraphElement(moduleElement, sourceNode);
+  if (nodeGraphModuleActionTargetNodeId() === nodeId) {
+    syncNodeGraphGraphControls(graph, nextIndex);
+  }
+  display.focus?.({ preventScroll: true });
+  return nextIndex !== selectedIndex;
+}
+
 function nudgeFocusedNodeGraphGraphNode(event) {
   const display = document.activeElement?.closest?.(".node-module-graph-display");
   const moves = {
