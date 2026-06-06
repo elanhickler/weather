@@ -6851,6 +6851,18 @@ audio {
   box-sizing: border-box;
 }
 
+.scene-context-graph-node-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.scene-context-graph-node-actions button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 6px;
+}
+
 .scene-context-graph-preset-controls {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

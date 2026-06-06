@@ -87,6 +87,7 @@ function bindNodeGraphSceneMenuEvents() {
   bindNodeGraphSceneElementEvent("nodeSceneGraphHeightDecrease", "click", () => adjustNodeGraphModuleHeightFromContext(-1));
   bindNodeGraphSceneElementEvent("nodeSceneGraphHeightIncrease", "click", () => adjustNodeGraphModuleHeightFromContext(1));
   bindNodeGraphSceneElementEvent("nodeSceneGraphAddNode", "click", addNodeGraphGraphNodeFromContext);
+  bindNodeGraphSceneElementEvent("nodeSceneGraphDuplicateNode", "click", duplicateNodeGraphGraphNodeFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneGraphRemoveNode", "click", removeNodeGraphGraphNodeFromContext);
   bindNodeGraphSceneElementEvent("nodeSceneGraphReset", "click", resetNodeGraphGraphFromContext);
   document
