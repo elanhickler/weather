@@ -9211,6 +9211,70 @@ button.saved-default,
   display: none;
 }
 
+.node-shader-script-video-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 2px;
+}
+
+.node-shader-script-video-input-bar[hidden] {
+  display: none;
+}
+
+.node-shader-script-video-input-bar > span {
+  color: rgba(156, 164, 166, 0.76);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.58rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.node-shader-script-video-input-choices {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.node-shader-script-video-input-choices button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  min-width: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(127, 199, 217, 0.16);
+  border-radius: 5px;
+  background: rgba(7, 18, 22, 0.58);
+  color: rgba(190, 211, 209, 0.72);
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.node-shader-script-video-input-index {
+  color: rgba(143, 255, 240, 0.72);
+  font-size: 0.66rem;
+}
+
+.node-shader-script-video-input-label {
+  color: rgba(226, 238, 234, 0.82);
+  font-size: 0.82rem;
+}
+
+.node-shader-script-video-input-choices button:hover {
+  border-color: rgba(127, 199, 217, 0.32);
+  color: rgba(226, 238, 234, 0.9);
+}
+
+.node-shader-script-video-input-choices button[aria-pressed="true"] {
+  border-color: rgba(102, 224, 163, 0.28);
+  background: rgba(13, 37, 30, 0.72);
+  color: rgba(143, 255, 240, 0.82);
+}
+
 .node-shader-script-highlight,
 .node-shader-script-dialog textarea {
   box-sizing: border-box;

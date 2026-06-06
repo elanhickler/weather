@@ -68,11 +68,17 @@ blend.mode      = laser;`;
 
 function normalizeNodeGraphScopeShaderVideoInput(value = "~") {
   const text = String(value || "~").trim().toLowerCase();
-  return text === "none" ? "none" : "~";
+  if (text === "none") {
+    return "none";
+  }
+  if (/^output\d+$/.test(text)) {
+    return text;
+  }
+  return "~";
 }
 
 function parseNodeGraphScopeShaderVideoInput(source = "") {
-  const match = String(source || "").match(/(?:^|\n)\s*video\.input\s*=\s*(~|none)\s*;/i);
+  const match = String(source || "").match(/(?:^|\n)\s*video\.input\s*=\s*(~|none|output\d+)\s*;/i);
   return normalizeNodeGraphScopeShaderVideoInput(match?.[1] || "~");
 }
 

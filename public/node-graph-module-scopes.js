@@ -156,6 +156,21 @@ function nodeGraphModuleScopeShaderSourceForSlot(slot) {
     : nodeGraphModuleScopeDefaultShaderSourceForNode(node);
 }
 
+function nodeGraphModuleScopeShaderVideoInputForSlot(slot) {
+  return normalizeNodeGraphScopeShader({ source: nodeGraphModuleScopeShaderSourceForSlot(slot) }).videoInput;
+}
+
+function nodeGraphModuleScopeShaderOutputPortForSlot(slot) {
+  const videoInput = nodeGraphModuleScopeShaderVideoInputForSlot(slot);
+  const match = String(videoInput || "").match(/^output(\d+)$/);
+  if (!match) {
+    return "";
+  }
+  const node = nodeGraphModuleScopeNodeForSlot(slot);
+  const outputs = node ? nodeGraphPatchNodeOutputPorts(node) : [];
+  return outputs[Number(match[1])] || "";
+}
+
 function nodeGraphModuleScopeShaderColor(source, dotName, fallback) {
   const match = String(source || "").match(new RegExp(`\\b${dotName}\\.color\\s*=\\s*(#[0-9a-fA-F]{3,8})\\s*;`));
   return match ? nodeGraphNormalizeScopeTraceColor(match[1]) : fallback;
@@ -1872,6 +1887,31 @@ function nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer) {
   return null;
 }
 
+function nodeGraphModuleScopeClockAnalogMonitorSample(phase, level) {
+  const p = clampNodeSliderValue(Number(phase) || 0, 0, 1);
+  const attack = 1 - Math.pow(1 - Math.min(1, p / 0.035), 4);
+  const release = Math.pow(Math.max(0, 1 - p), 1.85);
+  const snapEnvelope = attack * release;
+  const sweepTurns = (3.15 * (1 - Math.exp(-4.2 * p)) / (1 - Math.exp(-4.2))) + (0.18 * Math.sin(Math.PI * p));
+  const liquidBend = 0.075 * Math.sin(Math.PI * 2 * p) * Math.pow(Math.max(0, 1 - p), 1.2);
+  const body = Math.sin((sweepTurns + liquidBend) * Math.PI * 2);
+  const sheen = Math.sin((sweepTurns * 2.02 + 0.17) * Math.PI * 2) * 0.16 * Math.pow(Math.max(0, 1 - p), 2.8);
+  return (body + sheen) * snapEnvelope * level;
+}
+
+function nodeGraphModuleScopeClockMonitorTarget(slot, node, phase, duty, level) {
+  const port = nodeGraphModuleScopeShaderOutputPortForSlot(slot) || "Digital Out";
+  if (port === "Analog Out") {
+    return clampNodeSliderValue(Math.abs(nodeGraphModuleScopeClockAnalogMonitorSample(phase, level)), 0, 1);
+  }
+  if (port === "Pulse") {
+    const rate = Math.max(0, nodeGraphModuleScopeNodeParam(node, "rate", 0));
+    const frameWindow = Math.max(1 / 120, Number(nodeGraphModuleScopeState.animationDeltaSeconds) || (1 / 60));
+    return rate > 0 && phase < Math.min(1, rate * frameWindow) ? level : 0;
+  }
+  return duty > 0 && level > 0 && phase < duty ? level : 0;
+}
+
 function nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer = null) {
   if (slot?.type !== "clock") {
     return null;
@@ -1884,13 +1924,15 @@ function nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer = null
   const duty = clampNodeSliderValue(nodeGraphModuleScopeNodeParam(node, "duty", 0.5), 0, 1);
   const level = clampNodeSliderValue(nodeGraphModuleScopeNodeParam(node, "level", 1), 0, 1);
   const phase = wrapNodeSliderValue(nodeGraphModuleScopeModelFrameTime(slot) * rate, 0, 1);
-  const on = duty > 0 && level > 0 && phase < duty;
+  const selectedPort = nodeGraphModuleScopeShaderOutputPortForSlot(slot);
   const capturedTarget = nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer);
   return {
     length: 1,
     nodeGraphScopeLightDisplay: true,
     nodeGraphScopeLightShape: nodeGraphModuleScopeSetting(slot.nodeId).blinkLightShape,
-    nodeGraphScopeLightTarget: capturedTarget ?? (on ? level : 0),
+    nodeGraphScopeLightTarget: selectedPort
+      ? nodeGraphModuleScopeClockMonitorTarget(slot, node, phase, duty, level)
+      : capturedTarget ?? nodeGraphModuleScopeClockMonitorTarget(slot, node, phase, duty, level),
   };
 }
 

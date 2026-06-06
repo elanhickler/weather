@@ -592,7 +592,7 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
   const commentIndex = line.indexOf("//");
   const code = commentIndex >= 0 ? line.slice(0, commentIndex) : line;
   const comment = commentIndex >= 0 ? line.slice(commentIndex) : "";
-  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]\.(?:global|globals)\.(?:size|brightness)|(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*|globalsize|global\.size)\b|\b(?:laser|led|light|paint|solid|none)\b|~|-?\d+(?:\.\d+)?\b|[=*])/g;
+  const tokenPattern = /(#[0-9a-fA-F]{3,8}\b|\b(?:dot[12]\.(?:global|globals)\.(?:size|brightness)|(?:dot[12]|blend|video)\.[a-zA-Z_][\w]*|globalsize|global\.size)\b|\b(?:laser|led|light|paint|solid|none|output\d+)\b|~|-?\d+(?:\.\d+)?\b|[=*])/g;
   let html = "";
   let lastIndex = 0;
   for (const match of code.matchAll(tokenPattern)) {
@@ -602,7 +602,7 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
       ? "node-shader-token-color"
       : token === "=" || token === "*"
         ? "node-shader-token-assignment"
-        : nodeGraphShaderScriptBlendModes.includes(token) || token === "~" || token === "none"
+        : nodeGraphShaderScriptBlendModes.includes(token) || token === "~" || token === "none" || /^output\d+$/.test(token)
           ? "node-shader-token-mode"
         : token.startsWith("dot") || token.startsWith("blend") || token.startsWith("video") || token.startsWith("global")
           ? "node-shader-token-property"
@@ -1252,6 +1252,74 @@ function nodeGraphShaderScriptDialogScopeVideoInput() {
   return normalizeNodeGraphScopeShader({ source }).videoInput;
 }
 
+function nodeGraphShaderScriptVideoInputChoices(node = nodeGraphShaderScriptDialogScopeNode()) {
+  const ports = node ? nodeGraphPatchNodeOutputPorts(node) : [];
+  const labels = nodeGraphModuleDefinitions[node?.type]?.outputLabels || {};
+  return [
+    { label: "~", title: "module camera", value: "~" },
+    ...ports.map((port, index) => ({
+      label: labels[port] || port,
+      port,
+      title: port,
+      value: `output${index}`,
+    })),
+  ];
+}
+
+function replaceNodeGraphShaderScriptVideoInputLine(value) {
+  const source = document.getElementById("nodeShaderScriptSource");
+  if (!source) {
+    return;
+  }
+  const nextValue = normalizeNodeGraphScopeShaderVideoInput(value);
+  const text = source.value || "";
+  const linePattern = /(^|\n)\s*video\.input\s*=\s*(~|none|output\d+)\s*;/i;
+  if (linePattern.test(text)) {
+    source.value = text.replace(linePattern, (match, prefix) => `${prefix}video.input     = ${nextValue};`);
+  } else {
+    source.value = `video.input     = ${nextValue};\n\n${text}`;
+  }
+  updateNodeGraphShaderScriptHighlight();
+  syncNodeGraphShaderScriptVideoInputControls();
+  scheduleNodeGraphShaderScriptScopePreview();
+}
+
+function syncNodeGraphShaderScriptVideoInputControls() {
+  const bar = document.getElementById("nodeShaderScriptVideoInputBar");
+  const choices = document.getElementById("nodeShaderScriptVideoInputChoices");
+  const scopeMode = nodeGraphShaderScriptState.dialogMode === "scope";
+  const node = scopeMode ? nodeGraphShaderScriptDialogScopeNode() : null;
+  if (!bar || !choices) {
+    return;
+  }
+  bar.hidden = !scopeMode || !node;
+  choices.replaceChildren();
+  if (bar.hidden) {
+    return;
+  }
+  const selected = nodeGraphShaderScriptDialogScopeVideoInput();
+  for (const choice of nodeGraphShaderScriptVideoInputChoices(node)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    if (choice.port) {
+      const index = document.createElement("span");
+      index.className = "node-shader-script-video-input-index";
+      index.textContent = choice.value;
+      const label = document.createElement("span");
+      label.className = "node-shader-script-video-input-label";
+      label.textContent = choice.label;
+      button.append(index, label);
+    } else {
+      button.textContent = choice.label;
+    }
+    button.title = choice.port ? `${choice.value}: ${choice.title || choice.label}` : choice.title || choice.label;
+    button.dataset.shaderVideoInput = choice.value;
+    button.setAttribute("aria-pressed", String(choice.value === selected));
+    button.addEventListener("click", () => replaceNodeGraphShaderScriptVideoInputLine(choice.value));
+    choices.append(button);
+  }
+}
+
 function nodeGraphShaderScriptUtilityCameraId(nodeId = nodeGraphShaderScriptState.scopeTargetNodeId) {
   return `scope-shader-${String(nodeId || "target").trim() || "target"}`;
 }
@@ -1281,6 +1349,12 @@ function drawNodeGraphShaderScriptScopePreview() {
     scheduleNodeGraphShaderScriptScopePreview();
     return;
   }
+  if (videoInput.startsWith("output")) {
+    const choice = nodeGraphShaderScriptVideoInputChoices(node).find((candidate) => candidate.value === videoInput);
+    if (status) {
+      status.textContent = choice?.title ? `Monitoring ${choice.title}.` : `Monitoring ${videoInput}.`;
+    }
+  }
   const element = node?.id ? nodeGraphNodeElement(node.id) : null;
   const camera = typeof createNodeGraphUtilityCameraForElement === "function"
     ? createNodeGraphUtilityCameraForElement(nodeGraphShaderScriptUtilityCameraId(node?.id), element, {
@@ -1303,7 +1377,9 @@ function drawNodeGraphShaderScriptScopePreview() {
       viewport,
     });
     if (status) {
-      status.textContent = "";
+      status.textContent = videoInput.startsWith("output")
+        ? status.textContent
+        : "";
     }
   } catch {
     surface.replaceChildren();
@@ -1369,6 +1445,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
   if (saveDefaultButton) {
     saveDefaultButton.hidden = !scopeMode;
   }
+  syncNodeGraphShaderScriptVideoInputControls();
   for (const id of [
     "nodeShaderScriptGreenPreset",
     "nodeShaderScriptAmberPreset",
@@ -1684,6 +1761,7 @@ function bindNodeGraphShaderScriptEvents() {
   source?.addEventListener("input", () => {
     updateNodeGraphShaderScriptHighlight();
     closeNodeGraphShaderScriptTokenWidget();
+    syncNodeGraphShaderScriptVideoInputControls();
   });
   source?.addEventListener("scroll", updateNodeGraphShaderScriptHighlight);
   source?.addEventListener("pointerdown", beginNodeGraphShaderScriptNumberTokenDrag);
