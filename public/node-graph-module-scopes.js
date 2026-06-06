@@ -3137,6 +3137,10 @@ function nodeGraphModuleScopeCenteredSquareRect(rect) {
   };
 }
 
+function nodeGraphModuleScopeDrawingRect(rect) {
+  return nodeGraphModuleScopeCenteredSquareRect(rect);
+}
+
 function nodeGraphModuleScopeXyPoints(buffer, rect, canvas, pixelRatio, slot) {
   const points = [];
   if (!buffer?.nodeGraphScopeXy || !buffer.x?.length || !buffer.y?.length || rect.width <= 1 || rect.height <= 1) {
@@ -3674,7 +3678,7 @@ function nodeGraphModuleScopeDecayRegions(items) {
   return (items || [])
     .filter((item) => nodeGraphModuleScopeShouldDecaySlot(item.slot, item.buffer, item.settings))
     .map((item) => ({
-      rect: item.scopeRect,
+      rect: item.displayRect || item.scopeRect,
       scrollPixels: item.buffer?.nodeGraphScopeClassicOutputDecay ? 1 : 0,
       settings: item.settings,
     }));
@@ -3944,17 +3948,25 @@ function drawNodeGraphModuleScopes() {
         return null;
       }
       const rect = slot.scopeElement.getBoundingClientRect();
+      const fullScopeRect = {
+        height: rect.height,
+        left: rect.left - workspaceRect.left,
+        top: rect.top - workspaceRect.top,
+        width: rect.width,
+      };
+      const drawRect = nodeGraphModuleScopeDrawingRect(fullScopeRect);
       const zoomScale = nodeGraphModuleScopeZoomScale();
       return {
         buffer,
-        rect,
+        displayRect: fullScopeRect,
+        rect: drawRect,
         scopeRect: {
-          height: rect.height,
-          left: rect.left - workspaceRect.left,
-          sampleHeight: nodeGraphModuleScopeUnzoomedLength(rect.height, zoomScale),
-          sampleWidth: nodeGraphModuleScopeUnzoomedLength(rect.width, zoomScale),
-          top: rect.top - workspaceRect.top,
-          width: rect.width,
+          height: drawRect.height,
+          left: drawRect.left,
+          sampleHeight: nodeGraphModuleScopeUnzoomedLength(drawRect.height, zoomScale),
+          sampleWidth: nodeGraphModuleScopeUnzoomedLength(drawRect.width, zoomScale),
+          top: drawRect.top,
+          width: drawRect.width,
         },
         settings: nodeGraphModuleScopeSetting(slot.nodeId),
         slot,
