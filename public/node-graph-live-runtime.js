@@ -838,8 +838,9 @@ function sendNodeGraphLiveParameterUpdate() {
         sessionId: nodeGraphMvp.live.sessionId,
         type: "setParams",
       });
-      sendNodeGraphLivePlan();
-      return;
+      const plan = nodeGraphBuildLivePlan();
+      const audio = nodeGraphAudioDerivation(nodeGraphMvp.patch);
+      nodeGraphStartGpuAdditiveProducer(plan, audio);
     } else if (nodeGraphMvp.live.runtime) {
       updateNodeGraphLiveRuntimeParameters(nodeGraphMvp.live.runtime, nodes);
       setNodeGraphLiveEvidence("params-applied", {
@@ -980,6 +981,7 @@ async function stopNodeGraphLiveAudio() {
   nodeGraphMvp.live.sessionId += 1;
   nodeGraphMvp.live.syncMode = "";
   nodeGraphMvp.live.usesWorklet = false;
+  nodeGraphStopGpuAdditiveProducer();
   if (typeof clearNodeGraphModuleScopeBuffers === "function") {
     clearNodeGraphModuleScopeBuffers();
   }

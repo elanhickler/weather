@@ -364,6 +364,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.patchFingerprint = patchFingerprint;
     this.planSerial = message.planSerial || 0;
     this.sessionId = message.sessionId || 0;
+    this.gpuAdditiveQueues = new Map();
+    this.gpuAdditiveUnderruns = 0;
     this.hostSampleRate = Math.max(1, Number(message.sampleRate) || sampleRate || 44100);
     const requestedRatio = Number(message.oversamplingRatio) ||
       ((Number(message.engineSampleRate) || this.hostSampleRate) / this.hostSampleRate);
@@ -732,6 +734,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.patchFingerprint = patchFingerprint || this.patchFingerprint;
     this.planSerial = message.planSerial || 0;
     this.sessionId = message.sessionId || 0;
+    this.gpuAdditiveQueues = new Map();
+    this.gpuAdditiveUnderruns = 0;
     let parameterCount = 0;
     for (const node of Array.isArray(nodes) ? nodes : []) {
       const current = this.nodes.get(node.id);
