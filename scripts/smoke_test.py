@@ -6099,7 +6099,7 @@ def require_node_graph_mvp_contract() -> None:
         'Out: "Digital Out"',
         '"Analog Out": "\\u223F"',
         '"Digital Out": "\\u25AE"',
-        'outputs: ["Digital Out", "Analog Out"]',
+        'outputs: ["Digital Out", "Analog Out", "Pulse"]',
         "clockDivider: \"Clock Divider\"",
         "clockDivider: {",
         'inputs: ["Clock", "Reset"]',
@@ -7599,6 +7599,8 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphClockAnalogWhipSample(phase, level)",
         "function nodeGraphClockSample(state, rate, duty, level, sampleRate, runtime = null, nodeId = \"\")",
         "const analog = nodeGraphClockAnalogWhipSample(phase, safeLevel)",
+        "const pulse = safeRate > 0 && (!state.hasStarted || nextPhase < phase) ? safeLevel : 0",
+        "Pulse: pulse",
         "function createNodeGraphRandomClockState()",
         "function nodeGraphRandomClockSample(state, reset, params, sampleRate, runtime = null, nodeId = \"\")",
         "function nodeGraphDelayedTriggerSample(state, trigger, reset, params, sampleRate, runtime = null, nodeId = \"\")",
@@ -9566,7 +9568,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneLedColor",
         'node?.type === "led"',
         '"led input"',
-        "./public/node-live-audio-worklet.js?v=clock-analog-whip-1",
+        "./public/node-live-audio-worklet.js?v=clock-pulse-output-1",
     ]:
         require(snippet in node_graph_source, f"LED module contract missing {snippet}")
 
@@ -10891,8 +10893,10 @@ def require_node_graph_mvp_contract() -> None:
         "clockSample(state, rate, duty, level, rateHz = sampleRate)",
         "clockAnalogWhipSample(phase, level)",
         "const analog = this.clockAnalogWhipSample(phase, safeLevel)",
+        "const pulse = safeRate > 0 && (!state.hasStarted || nextPhase < phase) ? safeLevel : 0",
         '"Analog Out": analog',
         '"Digital Out": digital',
+        "Pulse: pulse",
         "Out: digital",
         "randomClockSample(state, reset, params, rateHz = sampleRate, nodeId = \"\")",
         "const incomingClockRate = (nodeId) =>",

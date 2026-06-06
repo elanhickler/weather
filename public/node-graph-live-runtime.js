@@ -844,7 +844,7 @@ async function createNodeGraphLiveWorkletNode(context) {
   if (!context.audioWorklet || typeof AudioWorkletNode === "undefined") {
     throw new Error("AudioWorklet unavailable");
   }
-  await context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=clock-analog-whip-1");
+  await context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=clock-pulse-output-1");
   const workletNode = new AudioWorkletNode(
     context,
     "node-live-audio-processor",

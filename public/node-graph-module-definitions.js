@@ -569,7 +569,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
       "Analog Out": "\u223F",
       "Digital Out": "\u25AE",
     },
-    outputs: ["Digital Out", "Analog Out"],
+    outputs: ["Digital Out", "Analog Out", "Pulse"],
     parameters: [
       {
         defaultValue: "2",

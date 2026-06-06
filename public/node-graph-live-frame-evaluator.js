@@ -39,6 +39,7 @@ function createNodeGraphSlewLimiterState() {
 
 function createNodeGraphClockState() {
   return {
+    hasStarted: false,
     phase: 0,
   };
 }
@@ -678,11 +679,15 @@ function nodeGraphClockSample(state, rate, duty, level, sampleRate, runtime = nu
   const phase = wrapNodeSliderValue(Number(state.phase) || 0, 0, 1);
   const digital = phase < safeDuty ? safeLevel : 0;
   const analog = nodeGraphClockAnalogWhipSample(phase, safeLevel);
-  state.phase = wrapNodeSliderValue(phase + safeRate / Math.max(1, sampleRate), 0, 1);
+  const nextPhase = wrapNodeSliderValue(phase + safeRate / Math.max(1, sampleRate), 0, 1);
+  const pulse = safeRate > 0 && (!state.hasStarted || nextPhase < phase) ? safeLevel : 0;
+  state.hasStarted = true;
+  state.phase = nextPhase;
   return {
     "Analog Out": analog,
     "Digital Out": digital,
     Out: digital,
+    Pulse: pulse,
   };
 }
 

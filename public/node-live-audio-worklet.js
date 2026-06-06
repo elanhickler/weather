@@ -1576,6 +1576,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   createClockState() {
     return {
+      hasStarted: false,
       phase: 0,
     };
   }
@@ -2499,11 +2500,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const phase = this.wrapValue(Number(state.phase) || 0, 0, 1);
     const digital = phase < safeDuty ? safeLevel : 0;
     const analog = this.clockAnalogWhipSample(phase, safeLevel);
-    state.phase = this.wrapValue(phase + safeRate / Math.max(1, rateHz), 0, 1);
+    const nextPhase = this.wrapValue(phase + safeRate / Math.max(1, rateHz), 0, 1);
+    const pulse = safeRate > 0 && (!state.hasStarted || nextPhase < phase) ? safeLevel : 0;
+    state.hasStarted = true;
+    state.phase = nextPhase;
     return {
       "Analog Out": analog,
       "Digital Out": digital,
       Out: digital,
+      Pulse: pulse,
     };
   }
 
