@@ -26,6 +26,16 @@ const nodeGraphGraphPresets = Object.freeze({
       Object.freeze({ c: 0, shape: "linear", x: 1, y: 1 }),
     ]),
   }),
+  sine: Object.freeze({
+    cursorX: 0,
+    nodes: Object.freeze([
+      Object.freeze({ c: 0, shape: "smooth", x: 0, y: 0.5 }),
+      Object.freeze({ c: 0, shape: "smooth", x: 0.25, y: 1 }),
+      Object.freeze({ c: 0, shape: "smooth", x: 0.5, y: 0.5 }),
+      Object.freeze({ c: 0, shape: "smooth", x: 0.75, y: 0 }),
+      Object.freeze({ c: 0, shape: "smooth", x: 1, y: 0.5 }),
+    ]),
+  }),
   steps: Object.freeze({
     cursorX: 0,
     nodes: Object.freeze([
