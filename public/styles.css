@@ -2331,13 +2331,6 @@ audio {
   cursor: default !important;
 }
 
-.node-graph-workspace .node-slider-readout,
-.node-graph-workspace .node-slider-readout *,
-.node-graph-workspace .node-slider-readout::before,
-.node-graph-workspace .node-slider-readout::after {
-  cursor: ew-resize !important;
-}
-
 .node-wiring-panel {
   --node-text-light-color-rgb: 243 241 236;
   --node-text-light-level: 0.18;
@@ -7498,7 +7491,6 @@ audio {
   align-items: center;
   column-gap: 7px;
   row-gap: 0;
-  cursor: ew-resize;
   touch-action: none;
   position: relative;
   overflow: hidden;

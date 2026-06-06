@@ -9899,6 +9899,16 @@ def require_node_graph_mvp_contract() -> None:
     )
 
     require(
+        ".node-slider-readout {" in style_source
+        and ".node-graph-workspace .node-slider-readout" not in style_source
+        and "cursor: ew-resize" not in style_source[
+            style_source.find(".node-slider-readout {"):
+            style_source.find(".node-slider-readout:hover,")
+        ],
+        "modular sliders should not set a custom resize cursor on hover",
+    )
+
+    require(
         ".node-graph-workspace:not(.module-scopes-enabled):not(.module-oscilloscopes-hidden) .node-module-scope-window-surface" not in style_source,
         "paused oscilloscopes should not switch to a special powered-off screen style",
     )
@@ -10327,8 +10337,6 @@ def require_node_graph_mvp_contract() -> None:
         ".node-io-label",
         ".node-graph-workspace *",
         "cursor: default !important",
-        ".node-graph-workspace .node-slider-readout",
-        "cursor: ew-resize !important",
         ".node-io-row:hover",
         ".node-io-row.patch-point-hover",
         ".node-header-actions",
