@@ -6866,6 +6866,29 @@ audio {
   color: rgba(222, 244, 238, 0.78);
 }
 
+.scene-context-graph-range-controls {
+  display: grid;
+  grid-template-columns: minmax(62px, 0.8fr) repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-items: center;
+}
+
+.scene-context-graph-range-controls span {
+  color: rgba(198, 230, 224, 0.62);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.scene-context-graph-range-controls button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 1px solid rgba(133, 223, 217, 0.18);
+  background: rgba(7, 16, 20, 0.82);
+  color: rgba(222, 244, 238, 0.78);
+}
+
 .node-image-body {
   box-sizing: border-box;
   min-width: 0;

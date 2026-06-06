@@ -94,6 +94,14 @@ function bindNodeGraphSceneMenuEvents() {
     .forEach((button) => {
       button.addEventListener("click", () => setNodeGraphGraphPresetFromContext(button.dataset.graphPreset));
     });
+  document
+    .querySelectorAll("#nodeSceneGraphRangeControls [data-graph-range-min][data-graph-range-max]")
+    .forEach((button) => {
+      button.addEventListener("click", () => setNodeGraphGraphOutputRangeFromContext(
+        button.dataset.graphRangeMin,
+        button.dataset.graphRangeMax,
+      ));
+    });
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignLeft", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("left"));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignCenter", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("center"));
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxAlignRight", "click", () => setNodeGraphTextBoxHorizontalAlignFromContext("right"));

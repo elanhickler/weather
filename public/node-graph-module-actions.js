@@ -925,6 +925,26 @@ function setNodeGraphGraphPresetFromContext(preset) {
   });
 }
 
+function setNodeGraphGraphOutputRangeFromContext(minValue, maxValue) {
+  const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
+  if (!sourceNode || sourceNode.type !== "graph") {
+    return;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
+  if (!targetNode || targetNode.type !== "graph") {
+    return;
+  }
+  targetNode.params = {
+    ...(targetNode.params || {}),
+    outputMax: normalizeNodeGraphPatchParameter("graph", "outputMax", maxValue),
+    outputMin: normalizeNodeGraphPatchParameter("graph", "outputMin", minValue),
+  };
+  commitNodeGraphPatch(patch, { status: "graph output range changed" });
+  syncNodeGraphPatchParameters();
+  configureNodeSceneContextMenu("module");
+}
+
 function nodeGraphCodeblockBuildFunctionBody(codeblock) {
   const context = [
     "const state = __state;",
