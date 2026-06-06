@@ -8,6 +8,13 @@ function nextNodeGraphNoiseSample(runtime, nodeId) {
   return (seed / 0xffffffff) * 2 - 1;
 }
 
+function currentNodeGraphNoiseSample(runtime, nodeId) {
+  if (!runtime?.noiseSeeds?.has(nodeId)) {
+    return nextNodeGraphNoiseSample(runtime, nodeId);
+  }
+  return ((runtime.noiseSeeds.get(nodeId) || 0) / 0xffffffff) * 2 - 1;
+}
+
 function nodeGraphNoiseSeedKey(nodeId, seedValue, channel = "") {
   const seed = Math.max(0, Math.min(99999, Math.floor(Number(seedValue) || 0)));
   return `${nodeId}${channel ? `:${channel}` : ""}:seed:${seed}`;
@@ -70,25 +77,56 @@ function nodeGraphPolyBlepSquare(phaseCycle, phaseIncrement) {
 }
 
 function nodeGraphOscillatorWaveformSample(runtime, nodeId, phase, phaseIncrement, waveform) {
+  const phaseDelta = Number(phaseIncrement) || 0;
+  const phaseStopped = Math.abs(phaseDelta) <= 1e-12;
+  runtime.oscillatorStoppedSamples ||= new Map();
+  runtime.oscillatorLastPhaseIncrements ||= new Map();
+  if (phaseStopped && runtime.oscillatorStoppedSamples.has(nodeId)) {
+    return runtime.oscillatorStoppedSamples.get(nodeId) || 0;
+  }
+  const renderPhaseIncrement = phaseStopped
+    ? Number(runtime.oscillatorLastPhaseIncrements.get(nodeId)) || 0
+    : phaseDelta;
   const phaseCycle = wrapNodeSliderValue(phase / (Math.PI * 2), 0, 1);
+  let sample = 0;
   switch (Math.round(Number(waveform) || 0)) {
     case 1:
-      return nodeGraphPolyBlepSquare(phaseCycle, phaseIncrement);
+      sample = nodeGraphPolyBlepSquare(phaseCycle, renderPhaseIncrement);
+      break;
     case 2:
       {
         const triangle = runtime.triangleStates?.get(nodeId) || 0;
-        const nextTriangle = (triangle + nodeGraphPolyBlepSquare(phaseCycle, phaseIncrement) * phaseIncrement * 4) * 0.995;
+        if (phaseStopped) {
+          sample = triangle;
+          break;
+        }
+        const nextTriangle = (triangle + nodeGraphPolyBlepSquare(phaseCycle, renderPhaseIncrement) * phaseDelta * 4) * 0.995;
         runtime.triangleStates?.set(nodeId, clampNodeSliderValue(nextTriangle, -1, 1));
-        return clampNodeSliderValue(nextTriangle, -1, 1);
+        sample = clampNodeSliderValue(nextTriangle, -1, 1);
+        break;
       }
     case 3:
-      return Math.sin(phase);
+      sample = Math.sin(phase);
+      break;
     case 4:
-      return nextNodeGraphNoiseSample(runtime, nodeId);
+      sample = phaseStopped ? currentNodeGraphNoiseSample(runtime, nodeId) : nextNodeGraphNoiseSample(runtime, nodeId);
+      break;
     case 0:
     default:
-      return 1 - phaseCycle * 2 + nodeGraphPolyBlep(phaseCycle, phaseIncrement);
+      sample = 1 - phaseCycle * 2 + nodeGraphPolyBlep(phaseCycle, renderPhaseIncrement);
+      break;
   }
+  if (phaseStopped) {
+    runtime.oscillatorStoppedSamples.set(nodeId, sample);
+  } else {
+    runtime.oscillatorStoppedSamples.delete(nodeId);
+    runtime.oscillatorLastPhaseIncrements.set(nodeId, phaseDelta);
+  }
+  return sample;
+}
+
+function nodeGraphForwardBackwardPolyBlepWaveformSample(runtime, nodeId, phase, phaseIncrement, waveform) {
+  return nodeGraphOscillatorWaveformSample(runtime, nodeId, phase, phaseIncrement, waveform);
 }
 
 const nodeGraphAdditiveWaveformChoices = Object.freeze([
@@ -105,25 +143,118 @@ const nodeGraphAdditiveWaveformChoices = Object.freeze([
 const nodeGraphAdditiveHardMaxHarmonics = 1024;
 
 function nodeGraphAdditiveDampingCurveValue(value = 0) {
-  return clampNodeSliderValue(Number(value) || 0, -1, 1);
+  return clampNodeSliderValue(Number(value) || 0, 0, 1);
 }
 
-function nodeGraphAdditiveHarmonicDamping(harmonic, frequency, sampleRate, curveValue = 0) {
-  const safeRate = Math.max(1, Number(sampleRate) || nodeGraphMvp?.sampleRate || 44100);
-  const safeFrequency = Math.max(0, Number(frequency) || 0);
-  const nyquist = safeRate * 0.5;
-  if (nyquist <= 0 || safeFrequency <= 0) {
+function nodeGraphAdditiveDampingAlgorithmValue(value = 0) {
+  return Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+}
+
+function nodeGraphRationalCurveValue(value = 0, skew = 0) {
+  const t = clampNodeSliderValue(Number(value) || 0, 0, 1);
+  if (t <= 0) {
+    return 0;
+  }
+  if (t >= 1) {
     return 1;
   }
-  const ratio = clampNodeSliderValue((Math.max(1, Number(harmonic) || 1) * safeFrequency) / nyquist, 0, 1);
-  const logShape = 1 - (Math.log1p(ratio * 15) / Math.log1p(15));
-  const expShape = (1 - ratio) ** 4;
-  const linShape = 1 - ratio;
-  const curve = nodeGraphAdditiveDampingCurveValue(curveValue);
-  if (curve < 0) {
-    return clampNodeSliderValue(logShape + (expShape - logShape) * (curve + 1), 0, 1);
+  const safeSkew = clampNodeSliderValue(Number(skew) || 0, -0.999999, 0.999999);
+  return clampNodeSliderValue(
+    ((1 + safeSkew) * t) / (1 - safeSkew + 2 * safeSkew * t),
+    0,
+    1,
+  );
+}
+
+function nodeGraphAdditiveFilterFrequencyValue(value = 20000, sampleRate = nodeGraphMvp?.sampleRate || 44100) {
+  const nyquist = Math.max(1, (Number(sampleRate) || nodeGraphMvp?.sampleRate || 44100) * 0.5);
+  return clampNodeSliderValue(Number(value) || 20000, 1, nyquist);
+}
+
+function nodeGraphAdditiveHarmonicDamping(harmonic, frequency, sampleRate, curveValue = 0, algorithm = 0, filterFrequency = 20000) {
+  const safeRate = Math.max(1, Number(sampleRate) || nodeGraphMvp?.sampleRate || 44100);
+  const safeFrequency = Math.max(0, Number(frequency) || 0);
+  const safeFilterFrequency = nodeGraphAdditiveFilterFrequencyValue(filterFrequency, safeRate);
+  if (safeFilterFrequency <= 0 || safeFrequency <= 0) {
+    return 1;
   }
-  return clampNodeSliderValue(expShape + (linShape - expShape) * curve, 0, 1);
+  const ratio = clampNodeSliderValue((Math.max(1, Number(harmonic) || 1) * safeFrequency) / safeFilterFrequency, 0, 1);
+  return nodeGraphAdditiveDampingAmplitude({
+    algorithm,
+    curveValue,
+    harmonic,
+    maxHarmonics: Math.max(1, Math.floor(safeFilterFrequency / Math.max(1, safeFrequency))),
+    ratio,
+  });
+}
+
+function nodeGraphAdditiveDampingAmplitude({
+  algorithm = 0,
+  curveValue = 0,
+  harmonic = 1,
+  maxHarmonics = 1,
+  ratio = 0,
+} = {}) {
+  const curve = nodeGraphAdditiveDampingCurveValue(curveValue);
+  const mode = nodeGraphAdditiveDampingAlgorithmValue(algorithm);
+  const t = clampNodeSliderValue(Number(ratio) || 0, 0, 1);
+  if (t <= 0) {
+    return 1;
+  }
+  if (t >= 1) {
+    return 0;
+  }
+  if (mode === 1) {
+    return clampNodeSliderValue((1 - t) ** (1 + curve * 7), 0, 1);
+  }
+  if (mode === 2) {
+    const amount = 0.5 + curve * 12;
+    const end = Math.exp(-amount);
+    return clampNodeSliderValue((Math.exp(-t * amount) - end) / Math.max(0.0001, 1 - end), 0, 1);
+  }
+  if (mode === 3) {
+    const cutoff = clampNodeSliderValue(0.95 - curve * 0.82, 0.08, 0.95);
+    const order = 1 + Math.round(curve * 5);
+    const raw = 1 / Math.sqrt(1 + (t / cutoff) ** (2 * order));
+    const end = 1 / Math.sqrt(1 + (1 / cutoff) ** (2 * order));
+    return clampNodeSliderValue((raw - end) / Math.max(0.0001, 1 - end), 0, 1);
+  }
+  if (mode === 4) {
+    const knee = clampNodeSliderValue(0.78 - curve * 0.68, 0.04, 0.78);
+    if (t <= knee) {
+      return 1;
+    }
+    const local = (t - knee) / Math.max(0.0001, 1 - knee);
+    return clampNodeSliderValue((1 - local) ** (1 + curve * 7), 0, 1);
+  }
+  if (mode === 5) {
+    const tilt = curve * 4;
+    if (tilt <= 0) {
+      return 1 - t;
+    }
+    const h = Math.max(1, Number(harmonic) || 1);
+    const maxH = Math.max(h, Number(maxHarmonics) || h);
+    const raw = 1 / (h ** tilt);
+    const end = 1 / (maxH ** tilt);
+    return clampNodeSliderValue((raw - end) / Math.max(0.0001, 1 - end), 0, 1);
+  }
+  return clampNodeSliderValue(1 - nodeGraphRationalCurveValue(t, curve), 0, 1);
+}
+
+function nodeGraphAdditiveHarmonicCurveAmount({
+  algorithm = 0,
+  curveValue = 0,
+  harmonic = 1,
+  maxHarmonics = 1,
+  ratio = 0,
+} = {}) {
+  return clampNodeSliderValue(1 - nodeGraphAdditiveDampingAmplitude({
+    algorithm,
+    curveValue,
+    harmonic,
+    maxHarmonics,
+    ratio,
+  }), 0, 1);
 }
 
 function nodeGraphAdditiveWaveformHarmonic(waveform, harmonic, modA = 0.5) {
@@ -170,19 +301,37 @@ function nodeGraphAdditiveOscillatorSample(runtime, nodeId, phase, params = {}, 
   );
   const waveform = Math.round(Number(params.waveform) || 0);
   const modA = clampNodeSliderValue(Number(params.modA) || 0, 0, 1);
+  const harmonicPhaseAdd = clampNodeSliderValue(Number(params.harmonicPhaseAdd) || 0, 0, 1);
+  const harmonicPhaseMultiply = clampNodeSliderValue(Number(params.harmonicPhaseMultiply) || 0, 0, 4);
+  const harmonicPhaseCurve = clampNodeSliderValue(Number(params.harmonicPhaseCurve) || 0, 0, 1);
+  const harmonicPhaseAlgorithm = nodeGraphAdditiveDampingAlgorithmValue(params.harmonicPhaseAlgorithm);
   const level = clampNodeSliderValue(Number(params.level) || 0, 0, 1);
   const dampingCurve = nodeGraphAdditiveDampingCurveValue(params.dampingCurve);
+  const dampingAlgorithm = nodeGraphAdditiveDampingAlgorithmValue(params.dampingAlgorithm);
+  const dampingFilterFrequency = nodeGraphAdditiveFilterFrequencyValue(params.dampingFilterFrequency, safeRate);
   const harmonicLimit = Math.max(1, Math.min(maxHarmonics, Math.floor(Math.min(20000, safeRate * 0.45) / Math.max(1, frequency))));
   let total = 0;
   let norm = 0;
   for (let harmonic = 1; harmonic <= harmonicLimit; harmonic += 1) {
     const partial = nodeGraphAdditiveWaveformHarmonic(waveform, harmonic, modA);
     const amplitude = (Number(partial.amplitude) || 0) *
-      nodeGraphAdditiveHarmonicDamping(harmonic, frequency, safeRate, dampingCurve);
+      nodeGraphAdditiveHarmonicDamping(harmonic, frequency, safeRate, dampingCurve, dampingAlgorithm, dampingFilterFrequency);
     if (amplitude === 0) {
       continue;
     }
-    total += Math.sin(phase * harmonic + (Number(partial.phase) || 0) * Math.PI * 2) * amplitude;
+    const harmonicRatio = harmonicLimit > 1
+      ? (harmonic - 1) / (harmonicLimit - 1)
+      : 0;
+    const phaseCurve = nodeGraphAdditiveHarmonicCurveAmount({
+      algorithm: harmonicPhaseAlgorithm,
+      curveValue: harmonicPhaseCurve,
+      harmonic,
+      maxHarmonics: harmonicLimit,
+      ratio: harmonicRatio,
+    });
+    const phaseMultiplier = 1 + phaseCurve * harmonicPhaseMultiply;
+    const phaseOffset = (Number(partial.phase) || 0) + phaseCurve * harmonicPhaseAdd;
+    total += Math.sin((phase * harmonic * phaseMultiplier) + phaseOffset * Math.PI * 2) * amplitude;
     norm += Math.abs(amplitude);
   }
   if (norm <= 0) {

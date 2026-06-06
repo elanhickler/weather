@@ -102,7 +102,7 @@
   },
   "view": {
     "gridVisible": true,
-    "moduleButtonsVisible": true,
+    "moduleButtonsVisible": false,
     "moduleOscilloscopesVisible": true,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
@@ -114,6 +114,8 @@
     "moduleScopeDotCore2Color": "#ff0000",
     "moduleScopeFramesPerSecond": 60,
     "moduleScopeLineThickness": 2,
+    "moduleScopeDiscontinuitySkipSamples": 1,
+    "moduleScopeOverdrawPoints": 1,
     "sliderLayout": "text-inside",
     "sliderAmountVisible": false,
     "sliderPositionVisible": true

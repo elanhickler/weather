@@ -416,6 +416,7 @@ function copyNodeGraphModule(sourceNode) {
       gy: gridPoint.gy,
       id,
       layout: sourceNode.layout,
+      led: sourceNode.led,
       graph: sourceNode.graph,
       codeblock: sourceNode.codeblock,
       ui: sourceNode.ui,
@@ -427,6 +428,9 @@ function copyNodeGraphModule(sourceNode) {
       : {}),
     ...(sourceNode.type === "image"
       ? { layout: normalizeNodeGraphImageLayout(sourceNode.layout) }
+      : {}),
+    ...(sourceNode.type === "led"
+      ? { led: normalizeNodeGraphLedLayout(sourceNode.led) }
       : {}),
     ...(sourceNode.type === "graph"
       ? { graph: normalizeNodeGraphGraph(sourceNode.graph) }
@@ -1195,6 +1199,31 @@ function refreshNodeGraphImageFromContext() {
   scheduleNodeGraphModuleScopeDraw();
 }
 
+function setNodeGraphLedColorFromContext({ record = true } = {}) {
+  const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
+  if (!sourceNode || sourceNode.type !== "led") {
+    return;
+  }
+  const input = document.getElementById("nodeSceneLedColor");
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
+  if (!targetNode) {
+    return;
+  }
+  targetNode.led = normalizeNodeGraphLedLayout({
+    ...targetNode.led,
+    color: input?.value,
+  });
+  commitNodeGraphPatch(patch, {
+    record,
+    status: "led color changed",
+  });
+  scheduleNodeGraphModuleScopeDraw();
+  if (document.activeElement === input) {
+    input.focus();
+  }
+}
+
 function toggleNodeGraphModuleButtonsFromContext() {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
   if (!sourceNode) {
@@ -1207,7 +1236,12 @@ function toggleNodeGraphModuleButtonsFromContext() {
     return;
   }
   const ui = normalizeNodeGraphPatchNodeUi(targetNode.ui);
-  ui.buttonsHidden = !ui.buttonsHidden;
+  if (nodeGraphMvp.moduleButtonsVisible === false) {
+    ui.buttonsHidden = false;
+    setNodeGraphModuleButtonsVisibility(true, { help: false });
+  } else {
+    ui.buttonsHidden = !ui.buttonsHidden;
+  }
   if (ui.buttonsHidden || ui.titleHidden) {
     targetNode.ui = ui;
   } else {

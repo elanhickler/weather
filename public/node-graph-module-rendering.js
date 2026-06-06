@@ -31,6 +31,7 @@ function attachNodeGraphNodeEvents(node) {
   ensureNodeGraphDragHandle(node);
   node.querySelector(".node-drag-handle")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
   node.querySelector(".node-header-title-row")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
+  node.querySelector(".node-led-face")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
   node.querySelector(".node-bypass-button")?.addEventListener("click", toggleNodeGraphModuleBypass);
   node.querySelector(".node-action-button")?.addEventListener("click", openNodeModuleActionMenu);
   node.addEventListener("pointermove", dragNodeGraphNode);
@@ -65,6 +66,56 @@ function attachNodeGraphNodeEvents(node) {
   }
 }
 
+function nodeGraphModuleButtonsHiddenForNode(node) {
+  if (!(node instanceof Element)) {
+    return false;
+  }
+  return (
+    nodeGraphMvp.moduleButtonsVisible === false ||
+    node.classList.contains("buttons-hidden") ||
+    node.closest(".node-graph-workspace")?.classList.contains("module-buttons-hidden")
+  );
+}
+
+function nodeGraphModuleTitleBypassModifierActive(event) {
+  return Boolean(event?.altKey);
+}
+
+function toggleNodeGraphModuleBypassFromNode(node, event) {
+  if (!nodeGraphScriptReadyForGraphAction("bypass")) {
+    return false;
+  }
+  const bypassButton = node?.querySelector?.(".node-bypass-button");
+  if (!bypassButton) {
+    return false;
+  }
+  const nodeId = node?.dataset?.node;
+  if (nodeId === "output") {
+    toggleNodeGraphLiveOutput();
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    return true;
+  }
+  if (!nodeId || !nodeGraphMvp.activeNodes.has(nodeId)) {
+    return false;
+  }
+
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const bypassed = new Set(patch.bypassedNodes || []);
+  if (bypassed.has(nodeId)) {
+    bypassed.delete(nodeId);
+  } else {
+    bypassed.add(nodeId);
+  }
+  patch.bypassedNodes = [...bypassed];
+  commitNodeGraphPatch(patch, {
+    status: bypassed.has(nodeId) ? "module bypassed" : "module active",
+  });
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  return true;
+}
+
 function createNodeGraphModuleElement(type, node) {
   const definition = nodeGraphModuleDefinitions[type];
   const patchNode = nodeGraphPatchNode(node) || { id: node, type };
@@ -74,15 +125,28 @@ function createNodeGraphModuleElement(type, node) {
     (port) => !parameterDefinitions.some((parameter) => parameter.key === port),
   );
   const article = document.createElement("article");
-  article.className = `dsp-node${definition.output ? " output-node" : ""}${definition.layout === "textBox" ? " text-box-layout" : ""}${definition.layout === "image" ? " image-node-layout" : ""}${definition.layout === "visualScope" ? " visual-scope-layout" : ""}${definition.layout === "graph" ? " graph-node-layout" : ""}${definition.layout === "filterCurve" ? " filter-curve-layout" : ""}${definition.layout === "sliderWidget" ? " slider-widget-layout" : ""}${definition.layout === "clapPlugin" ? " clap-plugin-layout" : ""}`;
+  article.className = `dsp-node${definition.output ? " output-node" : ""}${definition.layout === "textBox" ? " text-box-layout" : ""}${definition.layout === "image" ? " image-node-layout" : ""}${definition.layout === "visualScope" ? " visual-scope-layout" : ""}${definition.layout === "graph" ? " graph-node-layout" : ""}${definition.layout === "filterCurve" ? " filter-curve-layout" : ""}${definition.layout === "sliderWidget" ? " slider-widget-layout" : ""}${definition.layout === "clapPlugin" ? " clap-plugin-layout" : ""}${definition.layout === "led" ? " led-layout" : ""}`;
   article.dataset.node = node;
   article.dataset.nodeType = type;
   article.dataset.portSignature = `${inputPorts.join(",")}=>${outputPorts.join(",")}`;
   article.style.setProperty("--node-grid-width-units", String(nodeGraphPatchNodeGridWidthUnits(patchNode)));
   article.style.setProperty("--node-grid-height-units", String(nodeGraphPatchNodeGridHeightUnits(patchNode)));
 
-  article.append(createNodeGraphModuleHeader(type, node, definition));
-  if (definition.layout === "textBox") {
+  if (definition.layout === "led") {
+    const ledFace = createNodeGraphLedFace(node, type);
+    article.append(ledFace);
+    registerNodeGraphModuleScopeSlot(article, {
+      nodeId: node,
+      scopeElement: ledFace,
+      type,
+      viewDrag: false,
+    });
+  } else {
+    article.append(createNodeGraphModuleHeader(type, node, definition));
+  }
+  if (definition.layout === "led") {
+    // Compact LED body is the whole module face.
+  } else if (definition.layout === "textBox") {
     article.append(createNodeGraphTextBoxBody(node));
   } else if (definition.layout === "image") {
     article.append(createNodeGraphImageBody(node));
@@ -180,7 +244,7 @@ function createNodeGraphModuleElement(type, node) {
     article.append(stateBadge);
   }
 
-  if (definition.parameters?.length && definition.layout !== "sliderWidget") {
+  if (definition.parameters?.length && definition.layout !== "sliderWidget" && definition.layout !== "led") {
     const body = document.createElement("div");
     body.className = "dsp-node-body";
 
@@ -212,33 +276,7 @@ function registerExistingNodeGraphNodes() {
 }
 
 function toggleNodeGraphModuleBypass(event) {
-  if (!nodeGraphScriptReadyForGraphAction("bypass")) {
-    return;
-  }
   const button = event.currentTarget;
   const node = button.closest(".dsp-node");
-  const nodeId = node?.dataset.node;
-  if (nodeId === "output") {
-    toggleNodeGraphLiveOutput();
-    event.preventDefault();
-    event.stopPropagation();
-    return;
-  }
-  if (!nodeId || !nodeGraphMvp.activeNodes.has(nodeId)) {
-    return;
-  }
-
-  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
-  const bypassed = new Set(patch.bypassedNodes || []);
-  if (bypassed.has(nodeId)) {
-    bypassed.delete(nodeId);
-  } else {
-    bypassed.add(nodeId);
-  }
-  patch.bypassedNodes = [...bypassed];
-  commitNodeGraphPatch(patch, {
-    status: bypassed.has(nodeId) ? "module bypassed" : "module active",
-  });
-  event.preventDefault();
-  event.stopPropagation();
+  toggleNodeGraphModuleBypassFromNode(node, event);
 }

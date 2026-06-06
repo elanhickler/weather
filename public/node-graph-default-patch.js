@@ -27,6 +27,8 @@ function createNodeGraphPatchNode(type, options = {}) {
     node.layout = normalizeNodeGraphTextBoxLayout(options.layout);
   } else if (nodeGraphModuleDefinitions[type]?.layout === "image") {
     node.layout = normalizeNodeGraphImageLayout(options.layout);
+  } else if (nodeGraphModuleDefinitions[type]?.layout === "led") {
+    node.led = normalizeNodeGraphLedLayout(options.led);
   }
   if (type === "graph") {
     node.graph = normalizeNodeGraphGraph(options.graph);

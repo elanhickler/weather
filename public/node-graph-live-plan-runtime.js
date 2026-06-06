@@ -204,6 +204,8 @@ function createNodeGraphLiveRuntime(plan) {
   const moduleGroupRuntimes = new Map();
   const noiseGeneratorStates = new Map();
   const noiseSampleHoldStates = new Map();
+  const oscillatorLastPhaseIncrements = new Map();
+  const oscillatorStoppedSamples = new Map();
   const pluckEnvelopeStates = new Map();
   const randomClockStates = new Map();
   const randomWalkStates = new Map();
@@ -218,12 +220,12 @@ function createNodeGraphLiveRuntime(plan) {
   const vactrolEnvelopeStates = new Map();
   const visualControlState = createNodeGraphVisualControlState();
   for (const node of plan.nodes || []) {
-    if (node.type === "osc") {
+    if (node.type === "osc" || node.type === "fbPolyBlepOsc") {
       phases.set(node.id, 0);
       oscResetStates.set(node.id, createNodeGraphOscResetState());
       triangleStates.set(node.id, 0);
     }
-    if (node.type === "osc" || node.type === "noise") {
+    if (node.type === "osc" || node.type === "fbPolyBlepOsc" || node.type === "noise") {
       noiseSeeds.set(node.id, nodeGraphStableSeed(node.id));
     }
     if (node.type === "stereoNoise") {
@@ -346,6 +348,8 @@ function createNodeGraphLiveRuntime(plan) {
     nodeOutputs: new Map((plan.nodes || []).map((node) => [node.id, 0])),
     nodes,
     oscResetStates,
+    oscillatorLastPhaseIncrements,
+    oscillatorStoppedSamples,
     noiseSeedKeys,
     noiseSeeds,
     noiseGeneratorStates,
@@ -367,6 +371,10 @@ function createNodeGraphLiveRuntime(plan) {
     triggerDividerStates,
     triangleStates,
     vactrolEnvelopeStates,
+    visualSinks: (plan.visualSinks || []).map((sink) => ({
+      ...sink,
+      inputs: (sink.inputs || []).map((input) => ({ ...input })),
+    })),
     visualControls: visualControlState.controls,
     visualControlStates: visualControlState.states,
   };
@@ -390,6 +398,10 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   }
   runtime.order = [...(plan.order || [])];
   runtime.outputNode = plan.outputNode || "output";
+  runtime.visualSinks = (plan.visualSinks || []).map((sink) => ({
+    ...sink,
+    inputs: (sink.inputs || []).map((input) => ({ ...input })),
+  }));
   const nodeIds = new Set(runtime.nodes.keys());
   if (!runtime.nodeOutputs) {
     runtime.nodeOutputs = new Map();
@@ -402,6 +414,12 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   }
   if (!runtime.oscResetStates) {
     runtime.oscResetStates = new Map();
+  }
+  if (!runtime.oscillatorLastPhaseIncrements) {
+    runtime.oscillatorLastPhaseIncrements = new Map();
+  }
+  if (!runtime.oscillatorStoppedSamples) {
+    runtime.oscillatorStoppedSamples = new Map();
   }
   if (!runtime.spiralStates) {
     runtime.spiralStates = new Map();
@@ -489,16 +507,16 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     if (!runtime.nodeOutputs.has(node.id)) {
       runtime.nodeOutputs.set(node.id, 0);
     }
-    if (node.type === "osc" && !runtime.phases.has(node.id)) {
+    if ((node.type === "osc" || node.type === "fbPolyBlepOsc") && !runtime.phases.has(node.id)) {
       runtime.phases.set(node.id, 0);
     }
-    if (node.type === "osc" && !runtime.oscResetStates.has(node.id)) {
+    if ((node.type === "osc" || node.type === "fbPolyBlepOsc") && !runtime.oscResetStates.has(node.id)) {
       runtime.oscResetStates.set(node.id, createNodeGraphOscResetState());
     }
-    if (node.type === "osc" && !runtime.triangleStates.has(node.id)) {
+    if ((node.type === "osc" || node.type === "fbPolyBlepOsc") && !runtime.triangleStates.has(node.id)) {
       runtime.triangleStates.set(node.id, 0);
     }
-    if ((node.type === "osc" || node.type === "noise") && !runtime.noiseSeeds.has(node.id)) {
+    if ((node.type === "osc" || node.type === "fbPolyBlepOsc" || node.type === "noise") && !runtime.noiseSeeds.has(node.id)) {
       runtime.noiseSeeds.set(node.id, nodeGraphStableSeed(node.id));
     }
     if (node.type === "stereoNoise") {
@@ -617,6 +635,18 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.triangleStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.triangleStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.oscillatorLastPhaseIncrements.keys()]) {
+    const nodeId = String(id).split(":")[0];
+    if (!nodeIds.has(nodeId)) {
+      runtime.oscillatorLastPhaseIncrements.delete(id);
+    }
+  }
+  for (const id of [...runtime.oscillatorStoppedSamples.keys()]) {
+    const nodeId = String(id).split(":")[0];
+    if (!nodeIds.has(nodeId)) {
+      runtime.oscillatorStoppedSamples.delete(id);
     }
   }
   for (const id of [...runtime.noiseSeeds.keys()]) {

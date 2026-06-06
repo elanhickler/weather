@@ -3,7 +3,7 @@ function beginNodeGraphNodeDrag(event) {
     return;
   }
   const handle = event.currentTarget.closest(
-    ".node-drag-handle, .node-header-title-row",
+    ".node-drag-handle, .node-header-title-row, .node-led-face",
   );
   if (!handle) {
     return;
@@ -55,7 +55,11 @@ function beginNodeGraphNodeDrag(event) {
     dragged.element.classList.add("dragging");
   }
   handle.classList.add("dragging");
-  handle.setPointerCapture(event.pointerId);
+  try {
+    handle.setPointerCapture(event.pointerId);
+  } catch {
+    // Synthetic pointer events used by smoke/browser checks do not own capture.
+  }
   event.preventDefault();
   event.stopPropagation();
 }
@@ -101,10 +105,22 @@ function endNodeGraphNodeDrag(event) {
   }
   handle.classList.remove("dragging");
   if (handle.hasPointerCapture?.(event.pointerId)) {
-    handle.releasePointerCapture(event.pointerId);
+    try {
+      handle.releasePointerCapture(event.pointerId);
+    } catch {
+      // See setPointerCapture guard above.
+    }
   }
   nodeGraphMvp.nodeDragging = null;
   if (!moved) {
+    if (
+      handle.classList.contains("node-header-title-row") &&
+      nodeGraphModuleTitleBypassModifierActive(event) &&
+      nodeGraphModuleButtonsHiddenForNode(node) &&
+      toggleNodeGraphModuleBypassFromNode(node, event)
+    ) {
+      return;
+    }
     toggleNodeGraphNodeSelection(node.dataset.node, additiveSelection);
     return;
   }

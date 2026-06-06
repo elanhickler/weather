@@ -109,7 +109,7 @@ function createNodeGraphModuleHeader(type, node, definition) {
   header.className = "dsp-node-header";
   const titleRow = document.createElement("div");
   titleRow.className = "node-header-title-row";
-  nodeGraphApplyTooltip(titleRow, "module.move", {}, { title: false });
+  nodeGraphApplyTooltip(titleRow, "module.titleMove", {}, { title: false });
   const titleText = document.createElement("span");
   titleText.className = "node-header-title";
   titleText.textContent = nodeGraphPatchNodeTitle({ id: node, type });

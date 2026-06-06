@@ -1,4 +1,4 @@
-﻿{
+{
   "activeCameraId": "camera-1",
   "audio": {
     "targetSampleRate": 88200
@@ -21,23 +21,9 @@
   ],
   "connections": [
     {
-      "destinationNode": "gain",
-      "destinationPort": "In",
-      "sourceNode": "osc",
-      "sourcePort": "Saw",
-      "tracePoints": []
-    },
-    {
       "destinationNode": "output",
-      "destinationPort": "Left",
-      "sourceNode": "gain",
-      "sourcePort": "Out",
-      "tracePoints": []
-    },
-    {
-      "destinationNode": "output",
-      "destinationPort": "Right",
-      "sourceNode": "gain",
+      "destinationPort": "Mono",
+      "sourceNode": "clock-1",
       "sourcePort": "Out",
       "tracePoints": []
     }
@@ -60,122 +46,6 @@
   "modulations": [],
   "monitors": [],
   "nodes": [
-    {
-      "gx": 1,
-      "gy": 1,
-      "id": "osc",
-      "paramMeta": {
-        "waveform": {
-          "choices": [
-            "Saw",
-            "Square",
-            "Triangle",
-            "Sine",
-            "Noise"
-          ],
-          "def": 0,
-          "displayChoices": true,
-          "divideChoicesVisibly": true,
-          "kind": "waveform",
-          "linearSmoothing": false,
-          "max": 4,
-          "maxDigits": 3,
-          "mid": 2,
-          "min": 0,
-          "nonlinearSlider": false,
-          "showSign": false,
-          "step": 1,
-          "unit": "",
-          "wraparound": false
-        },
-        "frequency": {
-          "choices": [],
-          "def": 440,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "frequency",
-          "linearSmoothing": true,
-          "max": 20000,
-          "maxDigits": 5,
-          "mid": 440,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0,
-          "unit": "Hz",
-          "wraparound": false
-        },
-        "phase": {
-          "choices": [],
-          "def": 0,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "phase",
-          "linearSmoothing": true,
-          "max": 1,
-          "maxDigits": 3,
-          "mid": 0.5,
-          "min": 0,
-          "nonlinearSlider": false,
-          "showSign": false,
-          "step": 0.01,
-          "unit": "cycle",
-          "wraparound": true
-        },
-        "level": {
-          "choices": [],
-          "def": 1,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 1,
-          "maxDigits": 3,
-          "mid": 0.5,
-          "min": 0,
-          "nonlinearSlider": false,
-          "showSign": false,
-          "step": 0,
-          "unit": "",
-          "wraparound": false
-        }
-      },
-      "params": {
-        "waveform": 3,
-        "frequency": 220,
-        "phase": 0,
-        "level": 1
-      },
-      "type": "osc"
-    },
-    {
-      "gx": 11,
-      "gy": 2,
-      "id": "gain",
-      "paramMeta": {
-        "amount": {
-          "choices": [],
-          "def": 1,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 3,
-          "maxDigits": 3,
-          "mid": 1,
-          "min": 0,
-          "nonlinearSlider": false,
-          "showSign": false,
-          "step": 0,
-          "unit": "",
-          "wraparound": false
-        }
-      },
-      "params": {
-        "amount": 1
-      },
-      "type": "gain"
-    },
     {
       "gx": 22,
       "gy": 9,
@@ -203,7 +73,75 @@
         "volume": 0.1
       },
       "type": "output",
-      "widthGu": 7
+      "widthGu": 7,
+      "ui": {
+        "buttonsHidden": true,
+        "titleHidden": false
+      }
+    },
+    {
+      "gx": 13,
+      "gy": 8,
+      "id": "clock-1",
+      "paramMeta": {
+        "rate": {
+          "choices": [],
+          "def": 2,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "frequency",
+          "linearSmoothing": true,
+          "max": 40,
+          "maxDigits": 5,
+          "mid": 2,
+          "min": 0,
+          "nonlinearSlider": true,
+          "showSign": false,
+          "step": 0,
+          "unit": "Hz",
+          "wraparound": false
+        },
+        "duty": {
+          "choices": [],
+          "def": 0.5,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 1,
+          "maxDigits": 3,
+          "mid": 0.5,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unit": "",
+          "wraparound": false
+        },
+        "level": {
+          "choices": [],
+          "def": 1,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 1,
+          "maxDigits": 3,
+          "mid": 0.5,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unit": "",
+          "wraparound": false
+        }
+      },
+      "params": {
+        "rate": 2,
+        "duty": 0.5,
+        "level": 1
+      },
+      "type": "clock"
     }
   ],
   "timing": {

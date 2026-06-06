@@ -3,9 +3,12 @@ function fallbackCopyTextToClipboard(text) {
   fallback.value = text;
   fallback.setAttribute("readonly", "");
   fallback.style.position = "fixed";
+  fallback.style.left = "-9999px";
   fallback.style.opacity = "0";
   document.body.append(fallback);
+  fallback.focus();
   fallback.select();
+  fallback.setSelectionRange(0, fallback.value.length);
   const copied = document.execCommand("copy");
   fallback.remove();
   if (!copied) {

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=constraint-overlay-toggles-1">
+  <link rel="stylesheet" href="./public/styles.css?v=led-module-1">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="Loading interface">
@@ -99,6 +99,10 @@
             type="button"
             aria-pressed="true"><span>Modular</span><span>View</span></button>
           <button
+            id="nodeCodeScreenViewButton"
+            type="button"
+            aria-pressed="false"><span>Code</span><span>Screen</span></button>
+          <button
             id="nodeVideoViewButton"
             type="button"
             aria-label="Show Camera View"
@@ -162,7 +166,7 @@
           </div>
           <div class="node-visibility-menu-list">
             <button id="nodeGridToggleButton" type="button" role="menuitem" aria-pressed="false">Show Grid</button>
-            <button id="nodeModuleButtonsToggleButton" type="button" role="menuitem" aria-pressed="true">Hide Module Buttons</button>
+            <button id="nodeModuleButtonsToggleButton" type="button" role="menuitem" aria-pressed="false">Show Module Buttons</button>
             <button id="nodeOscilloscopeToggleButton" type="button" role="menuitem" aria-pressed="true">Hide Oscilloscopes</button>
             <button id="nodeModuleSlidersToggleButton" type="button" role="menuitem" aria-pressed="true">Hide Sliders</button>
             <button id="nodeTooltipToggleButton" type="button" role="menuitem" aria-pressed="true">Hide Tips</button>
@@ -207,6 +211,10 @@
         <canvas
           id="nodeModuleScopeCanvas"
           class="node-module-scope-canvas"
+          aria-hidden="true"></canvas>
+        <canvas
+          id="nodeModuleScopeLightCanvas"
+          class="node-module-scope-light-canvas"
           aria-hidden="true"></canvas>
         <canvas
           id="nodeModularShaderCanvas"
@@ -541,6 +549,13 @@
       </div>
 
       <div id="nodeScriptView" class="node-script-view" hidden>
+        <div class="node-script-heading">
+          <div>
+            <span>Patch Utility</span>
+            <strong>Patch Script</strong>
+          </div>
+          <small>Raw patch JSON for load, save, defaults, and recovery.</small>
+        </div>
         <div class="node-script-actions" aria-label="Patch script clipboard actions">
           <button
             id="copyNodeGraphScriptButton"
@@ -588,6 +603,63 @@
       </div>
 
       <section
+        id="nodeCodeScreenView"
+        class="node-code-screen-view"
+        aria-label="Code Screen"
+        hidden>
+        <aside class="node-code-screen-sidebar" aria-label="Code Screen sections">
+          <div class="node-code-screen-brand">
+            <span>Master Code</span>
+            <strong>Code Screen</strong>
+            <small>Move code-friendly behavior into one discoverable workspace.</small>
+          </div>
+          <div class="node-code-screen-lookup" aria-label="Code lookup shelf">
+            <span>Lookup Shelf</span>
+            <strong>Helpers & Snippets</strong>
+            <small id="nodeCodeScreenLookupSummary">Find what to type and save repeatable code.</small>
+            <div id="nodeCodeScreenLookupTarget" class="node-code-screen-lookup-target" aria-label="Lookup insert target">
+              <span>send to</span>
+              <button type="button" data-code-screen-snippet-target="script" aria-pressed="true">Script</button>
+              <button type="button" data-code-screen-snippet-target="codeblock" aria-pressed="false">Codeblock</button>
+            </div>
+            <output id="nodeCodeScreenLookupTargetSummary" class="node-code-screen-lookup-target-summary" aria-live="polite">inserts into Workspace Script</output>
+            <label>
+              <span>lookup <kbd>Ctrl+K</kbd></span>
+              <input id="nodeCodeScreenLookupSearch" type="search" spellcheck="false" placeholder="ui.set, teleport, sample...">
+            </label>
+            <div class="node-code-screen-lookup-keys" aria-label="Lookup keyboard actions">
+              <span><kbd>Enter</kbd> use top</span>
+              <span><kbd>Shift+Enter</kbd> open details</span>
+            </div>
+            <div id="nodeCodeScreenLookupNamespaces" class="node-code-screen-lookup-namespaces" aria-label="Lookup helper namespaces"></div>
+            <div class="node-code-screen-lookup-actions">
+              <button id="nodeCodeScreenNewLookupSnippet" type="button" title="Create a new reusable snippet draft in the Snippet Shelf.">New Snippet</button>
+              <button id="nodeCodeScreenSaveLookupSelection" type="button" title="Save selected editor text, or the whole visible editor when no text is selected.">Save Selection</button>
+              <button id="nodeCodeScreenSavePinLookupSelection" type="button" title="Save selected editor text and pin it to the Lookup Shelf.">Save + Pin</button>
+              <button id="nodeCodeScreenClearLookupSearch" type="button">Clear Lookup</button>
+            </div>
+            <output id="nodeCodeScreenLookupStatus" class="node-code-screen-lookup-status" aria-live="polite">ready</output>
+            <div id="nodeCodeScreenLookupResults" class="node-code-screen-lookup-results" aria-live="polite"></div>
+            <div>
+              <button id="nodeCodeScreenLookupHelpers" type="button" data-code-screen-section="helpers">Helper Lookup</button>
+              <button id="nodeCodeScreenLookupSnippets" type="button" data-code-screen-section="snippets">Snippet Shelf</button>
+            </div>
+          </div>
+          <div id="nodeCodeScreenSections" class="node-code-screen-section-list" role="tablist" aria-label="Code Screen sections"></div>
+        </aside>
+        <div class="node-code-screen-main">
+          <div class="node-code-screen-heading">
+            <div>
+              <span id="nodeCodeScreenEyebrow">Codeblocks</span>
+              <strong id="nodeCodeScreenTitle">Circuit Debug Codeblocks</strong>
+            </div>
+            <span id="nodeCodeScreenStatus" class="pill">ready</span>
+          </div>
+          <div id="nodeCodeScreenBody" class="node-code-screen-body"></div>
+        </div>
+      </section>
+
+      <section
         id="nodeMappingView"
         class="node-mapping-view"
         aria-label="MIDI mapping grid"
@@ -610,16 +682,16 @@
             <button
               id="loadNodeGraphScriptButton"
               type="button"
-              data-tooltip-key="script.load"><span>Load</span><span>Script</span></button>
+              data-tooltip-key="script.load"><span>Load</span><span>Patch Script</span></button>
             <button
               id="nodeSettingsScriptViewButton"
               type="button"
               aria-pressed="false"
-              data-tooltip-key="script.view"><span>View</span><span>Script</span></button>
+              data-tooltip-key="script.view"><span>Patch</span><span>Script</span></button>
             <button
               id="nodeSettingsSaveScriptButton"
               type="button"
-              data-tooltip-key="script.save"><span>Save</span><span>Script</span></button>
+              data-tooltip-key="script.save"><span>Save</span><span>Patch Script</span></button>
           </div>
           <button
             id="nodeUiDevButton"
@@ -1542,6 +1614,7 @@
             placeholder="text box content"></textarea>
         </label>
         <div id="nodeSceneCodeblockControls" class="scene-context-codeblock-controls" hidden>
+          <button id="nodeSceneCodeblockOpenCodeScreen" type="button">Open in Code Screen</button>
           <label>
             <span>inputs</span>
             <input
@@ -1659,6 +1732,15 @@
           type="file"
           accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
           hidden>
+        <div id="nodeSceneLedControls" class="scene-context-text-box-controls" hidden>
+          <span>led</span>
+          <div class="scene-context-scope-fields">
+            <label>
+              <span>rim color</span>
+              <input id="nodeSceneLedColor" type="color" value="#ff0000">
+            </label>
+          </div>
+        </div>
         <div id="nodeSceneTextBoxControls" class="scene-context-text-box-controls" hidden>
           <span>text box style</span>
           <div>
@@ -1719,7 +1801,7 @@
           <div class="six scene-context-scope-fields">
             <label>
               <span>screen burn</span>
-              <input id="nodeMasterScopeBurn" type="number" min="0" max="1" step="0.01" data-global-scope-input="burn" data-global-scope-number-drag="true" value="0.5">
+              <input id="nodeMasterScopeBurn" type="number" min="0" max="1" step="0.01" data-global-scope-input="burn" data-global-scope-number-drag="true" value="0">
             </label>
             <label>
               <span>fps</span>
@@ -1729,10 +1811,18 @@
         </div>
         <div class="scene-context-text-box-controls">
           <span>trace image</span>
-          <div class="one scene-context-scope-fields">
+          <div class="three scene-context-scope-fields">
             <label>
               <span>line thickness</span>
               <input id="nodeMasterScopeLineThickness" type="number" min="0.25" max="10" step="0.01" data-global-scope-input="lineThickness" data-global-scope-number-drag="true" value="2">
+            </label>
+            <label>
+              <span>overdraw points</span>
+              <input id="nodeMasterScopeOverdrawPoints" type="number" min="1" max="2048" step="1" data-global-scope-input="overdrawPoints" data-global-scope-number-drag="true" value="1">
+            </label>
+            <label>
+              <span>skip samples</span>
+              <input id="nodeMasterScopeDiscontinuitySkipSamples" type="number" min="0" max="2" step="1" data-global-scope-input="discontinuitySkipSamples" data-global-scope-number-drag="true" value="1">
             </label>
           </div>
           <div class="node-master-scope-dot-core-grid" aria-label="Trace dot image layers">
@@ -1831,6 +1921,25 @@
               data-scope-control="oscillatorTraceMode"
               aria-pressed="true"
               hidden>freq reset</button>
+            <button
+              id="nodeSceneScopeOutputTraceMode"
+              type="button"
+              data-scope-control="outputTraceMode"
+              aria-pressed="false"
+              hidden>scroll</button>
+          </div>
+        </div>
+        <div id="nodeSceneBlinkLightControls" class="scene-context-text-box-controls" hidden>
+          <span>blink light</span>
+          <div class="scene-context-scope-fields">
+            <label>
+              <span>shape</span>
+              <select id="nodeSceneBlinkLightShape" data-scope-input="blinkLightShape">
+                <option value="circle">circle</option>
+                <option value="square">square</option>
+                <option value="diamond">diamond</option>
+              </select>
+            </label>
           </div>
         </div>
         </section>
@@ -2492,9 +2601,9 @@
   <script src="./public/node-graph-file-actions.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-buttons.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-cookbook-filter.js?v=filter-curves-and-octave-cv-1780720800000"></script>
-  <script src="./public/node-graph-module-definitions.js?v=additive-spectrum-1"></script>
-  <script src="./public/node-graph-module-store.js?v=additive-osc-department-1"></script>
-  <script src="./public/node-graph-module-sizing.js?v=graph-io-runtime-1780716600000"></script>
+  <script src="./public/node-graph-module-definitions.js?v=additive-phase-curve-separate-1"></script>
+  <script src="./public/node-graph-module-store.js?v=led-module-1"></script>
+  <script src="./public/node-graph-module-sizing.js?v=led-module-1"></script>
   <script src="./public/node-graph-metadata-kinds.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-parameter-metadata.js?v=codeblock-state-context-1"></script>
   <script src="./public/node-graph-metadata-defaults.js?v=slider-unit-color-1780307400000"></script>
@@ -2506,30 +2615,32 @@
   <script src="./public/node-graph-audio-derivation.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-grid-utils.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-patch-runtime.js?v=additive-osc-source-1"></script>
+  <script src="./public/node-graph-code-screen-model.js?v=code-screen-1"></script>
   <script src="./public/node-graph-patch-serialization.js?v=timing-header-1"></script>
   <script src="./public/node-graph-settings-fields.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-settings-view.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-settings-text-fit.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-preset.js?v=camera-output-wires-1780801800000"></script>
   <script src="./public/node-graph-script-status.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-view-controls.js?v=keyboard-bind-additive-1"></script>
-  <script src="./public/node-graph-workspace-geometry.js?v=workspace-zoom-10x-1780585200000"></script>
+  <script src="./public/node-graph-view-controls.js?v=scope-overdraw-points-1"></script>
+  <script src="./public/node-graph-workspace-geometry.js?v=workspace-zoom-50x-1780700000012"></script>
   <script src="./public/node-graph-workspace-zoom.js?v=slider-zoom-geometry-1780615800000"></script>
   <script src="./public/node-graph-workspace-view.js?v=scope-pause-visual-1780658400000"></script>
   <script src="./public/node-graph-camera-view.js?v=camera-output-wires-1780801800000"></script>
   <script src="./public/node-graph-clap-host.js?v=clap-diagnostics-1"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-node-dragging.js?v=cpu-module-scopes-1780345200000"></script>
-  <script src="./public/node-graph-context-menu.js?v=graph-node-list-1780703400000"></script>
+  <script src="./public/node-graph-node-dragging.js?v=led-body-drag-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=led-color-1"></script>
   <script src="./public/node-graph-module-actions.js?v=codeblock-state-context-1"></script>
-  <script src="./public/node-graph-module-scopes.js?v=osc-scope-full-selected-waveform-1"></script>
+  <script src="./public/node-graph-code-screen.js?v=code-screen-1"></script>
+  <script src="./public/node-graph-module-scopes.js?v=output-scope-decay-mode-1"></script>
   <script src="./public/node-graph-shader-script.js?v=shader-ui-setting-1780597200000"></script>
-  <script src="./public/node-graph-module-factories.js?v=constraint-markers-1"></script>
-  <script src="./public/node-graph-module-header-rendering.js?v=timing-global-header-1780707600000"></script>
-  <script src="./public/node-graph-module-rendering.js?v=graph-io-runtime-1780716600000"></script>
+  <script src="./public/node-graph-module-factories.js?v=led-module-1"></script>
+  <script src="./public/node-graph-module-header-rendering.js?v=hidden-title-bypass-1"></script>
+  <script src="./public/node-graph-module-rendering.js?v=led-module-1"></script>
   <script src="./public/node-graph-history.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-visual-utils.js?v=text-light-registry-1780800000000"></script>
-  <script src="./public/node-graph-patch-clone.js?v=clap-state-persistence-1"></script>
+  <script src="./public/node-graph-patch-clone.js?v=led-color-1"></script>
   <script src="./public/node-graph-slider-metadata.js?v=slider-math-input-1780438200000"></script>
   <script src="./public/node-graph-slider-values.js?v=slider-zoom-geometry-1780615800000"></script>
   <script src="./public/node-graph-slider-dragging.js?v=slider-drag-ownership-1780804800000"></script>
@@ -2547,7 +2658,7 @@
   <script src="./public/node-graph-av-export.js?v=video-export-1"></script>
   <script src="./public/node-graph-rendered-output-canvases.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-execution-wires.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-execution-plan.js?v=additive-osc-source-1"></script>
+  <script src="./public/node-graph-execution-plan.js?v=led-level-1"></script>
   <script src="./public/node-graph-execution-summary.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-wire-actions.js?v=no-self-burst-1780321400000"></script>
   <script src="./public/node-graph-trace-router.js?v=no-self-burst-1780321400000"></script>
@@ -2563,7 +2674,7 @@
   <script src="./public/node-graph-ui-settings-utils.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-user-ui-settings-controls.js?v=master-scope-fps-1780618200000"></script>
   <script src="./public/node-graph-ui-settings-panels.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-ui-settings-persistence.js?v=scope-screenshot-defaults-1"></script>
+  <script src="./public/node-graph-ui-settings-persistence.js?v=scope-overdraw-points-1"></script>
   <script src="./public/node-graph-ui-settings-sync.js?v=text-light-registry-1780800000000"></script>
   <script src="./public/node-graph-keyboard-shortcuts.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-live-status-text.js?v=sample-rate-oversampling-1780468200000"></script>
@@ -2572,27 +2683,27 @@
   <script src="./public/node-graph-live-input-status.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-live-evidence.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-live-control-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-default-patch.js?v=wire-alias-ports-1"></script>
-  <script src="./public/node-graph-state.js?v=scope-screenshot-defaults-1"></script>
-  <script src="./public/node-graph-patch-core.js?v=scope-startup-schedule-1"></script>
-  <script src="./public/node-graph-live-plan-runtime.js?v=scope-output-only-1"></script>
+  <script src="./public/node-graph-default-patch.js?v=led-color-1"></script>
+  <script src="./public/node-graph-state.js?v=scope-overdraw-points-1"></script>
+  <script src="./public/node-graph-patch-core.js?v=led-color-1"></script>
+  <script src="./public/node-graph-live-plan-runtime.js?v=led-level-1"></script>
   <script src="./public/node-graph-live-parameter-runtime.js?v=clap-tail-source-silence-1"></script>
-  <script src="./public/node-graph-oscillator-runtime.js?v=additive-spectrum-1"></script>
+  <script src="./public/node-graph-oscillator-runtime.js?v=additive-phase-curve-separate-1"></script>
   <script src="./public/node-graph-jerobeam-spiral.js?v=node-graph-jerobeam-spiral-refactor-1780371000000"></script>
-  <script src="./public/node-graph-live-frame-evaluator.js?v=codeblock-state-context-1"></script>
-  <script src="./public/node-graph-live-runtime.js?v=additive-spectrum-1"></script>
+  <script src="./public/node-graph-live-frame-evaluator.js?v=additive-phase-curve-separate-1"></script>
+  <script src="./public/node-graph-live-runtime.js?v=additive-phase-curve-separate-1"></script>
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=node-graph-wire-controller-bootstrap-refactor-1780364400000"></script>
   <script src="./public/node-graph-workspace-event-bindings.js?v=constraint-overlay-toggles-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=scope-frequency-reset-match-1780622400000"></script>
-  <script src="./public/node-graph-header-event-bindings.js?v=scope-control-listeners-1"></script>
+  <script src="./public/node-graph-header-event-bindings.js?v=scope-overdraw-points-1"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=node-graph-help-event-bindings-refactor-1780369200000"></script>
-  <script src="./public/node-graph-scene-menu-event-bindings.js?v=actions-menu-safe-bind-1"></script>
+  <script src="./public/node-graph-scene-menu-event-bindings.js?v=led-color-1"></script>
   <script src="./public/node-graph-uidev-event-bindings.js?v=text-light-registry-1780800000000"></script>
   <script src="./public/node-graph-settings-event-bindings.js?v=metadata-popover-bind-1"></script>
   <script src="./public/node-graph-slider-event-bindings.js?v=node-graph-slider-event-bindings-refactor-1780369200000"></script>
   <script src="./public/node-graph-event-bindings.js?v=node-graph-event-bindings-refactor-1780365000000"></script>
   <script src="./public/node-graph-bootstrap.js?v=metadata-popover-bind-1"></script>
   <script src="./public/app-event-bindings.js?v=app-event-bindings-refactor-1780361400000"></script>
-  <script src="./public/app.js?v=interface-ready-error-marker-1780814400000"></script>
+  <script src="./public/app.js?v=interface-ready-startup-task-timeout-1"></script>
 </body>
 </html>

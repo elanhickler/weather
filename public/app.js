@@ -19,15 +19,28 @@ async function waitForNodeSandboxStableLayout(stableFrames = 4, maxFrames = 24) 
   let previous = "";
   let stable = 0;
   for (let frame = 0; frame < maxFrames && stable < stableFrames; frame += 1) {
-    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    await Promise.race([
+      new Promise((resolve) => window.requestAnimationFrame(resolve)),
+      new Promise((resolve) => window.setTimeout(resolve, 100)),
+    ]);
     const current = nodeSandboxInterfaceLayoutSignature();
     stable = current === previous ? stable + 1 : 0;
     previous = current;
   }
 }
 
+async function waitForNodeSandboxFontsReady(timeoutMs = 1500) {
+  if (!document.fonts?.ready) {
+    return;
+  }
+  await Promise.race([
+    document.fonts.ready,
+    new Promise((resolve) => window.setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 async function markNodeSandboxInterfaceReady() {
-  await document.fonts?.ready;
+  await waitForNodeSandboxFontsReady();
   await waitForNodeSandboxStableLayout();
   document.documentElement.dataset.nodeSandboxInterfaceReady = "true";
   globalThis.nodeSandboxInterfaceReady = true;
@@ -36,11 +49,34 @@ async function markNodeSandboxInterfaceReady() {
   }));
 }
 
+async function nodeSandboxStartupTask(label, task, timeoutMs = 4000) {
+  let settled = false;
+  const timeout = new Promise((resolve) => {
+    window.setTimeout(() => {
+      if (!settled) {
+        console.warn(`Sandbox startup step timed out: ${label}`);
+      }
+      resolve();
+    }, timeoutMs);
+  });
+  await Promise.race([
+    Promise.resolve()
+      .then(task)
+      .catch((error) => {
+        console.error(`Sandbox startup step failed: ${label}`, error);
+      })
+      .finally(() => {
+        settled = true;
+      }),
+    timeout,
+  ]);
+}
+
 async function initSandboxApp() {
   loadSignalPlotSettings();
   await Promise.all([
-    loadManifest(),
-    initNodeGraphMvp(),
+    nodeSandboxStartupTask("manifest", loadManifest),
+    nodeSandboxStartupTask("node graph", initNodeGraphMvp),
   ]);
   await markNodeSandboxInterfaceReady();
 }

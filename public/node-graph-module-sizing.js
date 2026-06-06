@@ -23,6 +23,9 @@ const nodeGraphTextBoxHeightLimits = Object.freeze({
 });
 
 function nodeGraphDefaultModuleGridWidthUnits(type) {
+  if (nodeGraphModuleDefinitions[type]?.layout === "led") {
+    return 1;
+  }
   if (nodeGraphModuleDefinitions[type]?.layout === "sliderWidget") {
     return 6;
   }
@@ -40,9 +43,12 @@ function nodeGraphDefaultModuleGridWidthUnits(type) {
 
 function normalizeNodeGraphModuleWidthUnits(type, widthGu) {
   const fallback = nodeGraphDefaultModuleGridWidthUnits(type);
+  const limits = nodeGraphModuleDefinitions[type]?.layout === "led"
+    ? { ...nodeGraphModuleWidthLimits, minGu: 1 }
+    : nodeGraphModuleWidthLimits;
   const value = Math.round(Number(widthGu));
   return Number.isFinite(value)
-    ? Math.max(nodeGraphModuleWidthLimits.minGu, Math.min(nodeGraphModuleWidthLimits.maxGu, value))
+    ? Math.max(limits.minGu, Math.min(limits.maxGu, value))
     : fallback;
 }
 
@@ -115,6 +121,9 @@ function nodeGraphModuleHeaderHeightUnits(ui = {}) {
 }
 
 function nodeGraphModuleRequiredHeightUnitsForUi(type, ui = {}) {
+  if (nodeGraphModuleDefinitions[type]?.layout === "led") {
+    return 1;
+  }
   if (nodeGraphModuleDefinitions[type]?.layout === "textBox") {
     return nodeGraphModuleHeaderHeightUnits(ui) + nodeGraphModuleLayout.textBoxBodyMinGu;
   }
@@ -177,6 +186,9 @@ function nodeGraphModuleGridHeightUnits(type) {
 }
 
 function nodeGraphModuleGridHeightUnitsForUi(type, ui = {}) {
+  if (nodeGraphModuleDefinitions[type]?.layout === "led") {
+    return 1;
+  }
   if (nodeGraphModuleDefinitions[type]?.layout === "textBox") {
     return Math.ceil(nodeGraphModuleRequiredHeightUnitsForUi(type, ui));
   }

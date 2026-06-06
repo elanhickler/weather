@@ -1,5 +1,14 @@
 const nodeLiveAdditiveHardMaxHarmonics = 1024;
 
+const nodeLiveRaptEllipticQuarterbandSos = Object.freeze([
+  Object.freeze([1.3515101236634053e-04, 1.8481719657676747e-04, 1.3515101236634053e-04, 1, -1.5863119326809123, 0.6428204816292211]),
+  Object.freeze([1, -0.3714014551732318, 0.9999999999999998, 1, -1.5620959364626055, 0.7161571320953768]),
+  Object.freeze([1, -1.0298229723362611, 1, 1, -1.5310702081483014, 0.8130950789236201]),
+  Object.freeze([1, -1.2676395426322578, 1.0000000000000002, 1, -1.50809401930334, 0.8931580864862605]),
+  Object.freeze([1, -1.3628788519102755, 1.0000000000000002, 1, -1.4983265140498274, 0.9475287279522546]),
+  Object.freeze([1, -1.3980241837651683, 1, 1, -1.5032624176850438, 0.9843747059042128]),
+]);
+
 class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
@@ -31,6 +40,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.engineSampleRate = sampleRate;
     this.hostSampleRate = sampleRate;
     this.oversamplingRatio = 1;
+    this.raptEllipticDecimatorLeft = this.createRaptEllipticDecimatorState();
+    this.raptEllipticDecimatorRight = this.createRaptEllipticDecimatorState();
+    this.raptEllipticDecimatorRatio = 1;
     this.bandpassStates = new Map();
     this.clockDividerStates = new Map();
     this.clockStates = new Map();
@@ -47,6 +59,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.noiseGeneratorStates = new Map();
     this.noiseSampleHoldStates = new Map();
     this.oscResetStates = new Map();
+    this.oscillatorLastPhaseIncrements = new Map();
+    this.oscillatorStoppedSamples = new Map();
     this.outputNode = "output";
     this.patchFingerprint = "";
     this.phases = new Map();
@@ -66,6 +80,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.triggerDividerStates = new Map();
     this.triangleStates = new Map();
     this.vactrolEnvelopeStates = new Map();
+    this.visualSinks = [];
     this.resetVisualControls();
     this.earProtector = this.createEarProtector(sampleRate);
     this.port.onmessage = (event) => this.handleMessage(event.data || {});
@@ -100,6 +115,30 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         };
       },
     };
+  }
+
+  createRaptEllipticDecimatorState() {
+    return nodeLiveRaptEllipticQuarterbandSos.map(() => [0, 0]);
+  }
+
+  resetRaptEllipticDecimator() {
+    this.raptEllipticDecimatorLeft = this.createRaptEllipticDecimatorState();
+    this.raptEllipticDecimatorRight = this.createRaptEllipticDecimatorState();
+    this.raptEllipticDecimatorRatio = this.oversamplingRatio;
+  }
+
+  processRaptEllipticDecimatorSample(input, states) {
+    let y = Number(input) || 0;
+    for (let section = 0; section < nodeLiveRaptEllipticQuarterbandSos.length; section += 1) {
+      const [b0, b1, b2, , a1, a2] = nodeLiveRaptEllipticQuarterbandSos[section];
+      const z1 = states[section][0];
+      const z2 = states[section][1];
+      const sectionOut = b0 * y + z1;
+      states[section][0] = b1 * y - a1 * sectionOut + z2;
+      states[section][1] = b2 * y - a2 * sectionOut;
+      y = sectionOut;
+    }
+    return y;
   }
 
   createVisualControlState() {
@@ -239,6 +278,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.triggerDividerStates = new Map();
     this.triangleStates = new Map();
     this.vactrolEnvelopeStates = new Map();
+    this.visualSinks = [];
     this.resetVisualControls();
   }
 
@@ -252,6 +292,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       ((Number(message.engineSampleRate) || this.hostSampleRate) / this.hostSampleRate);
     this.oversamplingRatio = Math.max(1, Math.min(4, Math.round(requestedRatio) || 1));
     this.engineSampleRate = this.hostSampleRate * this.oversamplingRatio;
+    if (this.raptEllipticDecimatorRatio !== this.oversamplingRatio) {
+      this.resetRaptEllipticDecimator();
+    }
     const nodes = Array.isArray(plan?.nodes) ? plan.nodes : [];
     const ids = new Set(nodes.map((node) => node.id));
     this.nodes = new Map(nodes.map((node) => [node.id, {
@@ -265,6 +308,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }]));
     this.order = Array.isArray(plan?.order) ? [...plan.order] : [...ids];
     this.outputNode = plan?.outputNode || "output";
+    this.visualSinks = (Array.isArray(plan?.visualSinks) ? plan.visualSinks : []).map((sink) => ({
+      ...sink,
+      inputs: (Array.isArray(sink?.inputs) ? sink.inputs : []).map((input) => ({ ...input })),
+    }));
     this.inputConnections = this.buildInputConnectionMap(plan?.connections, ids);
     this.modulationConnections = this.buildModulationConnectionMap(plan?.modulations, ids);
     this.resetVisualControls();
@@ -274,16 +321,16 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         this.nodeOutputs.set(id, 0);
       }
       const node = this.nodes.get(id);
-      if (node?.type === "osc" && !this.phases.has(id)) {
+      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc") && !this.phases.has(id)) {
         this.phases.set(id, 0);
       }
-      if (node?.type === "osc" && !this.oscResetStates.has(id)) {
+      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc") && !this.oscResetStates.has(id)) {
         this.oscResetStates.set(id, this.createOscResetState());
       }
-      if (node?.type === "osc" && !this.triangleStates.has(id)) {
+      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc") && !this.triangleStates.has(id)) {
         this.triangleStates.set(id, 0);
       }
-      if ((node?.type === "osc" || node?.type === "noise") && !this.noiseSeeds.has(id)) {
+      if ((node?.type === "osc" || node?.type === "fbPolyBlepOsc" || node?.type === "noise") && !this.noiseSeeds.has(id)) {
         this.noiseSeeds.set(id, this.stableSeed(id));
       }
       if (node?.type === "stereoNoise") {
@@ -396,6 +443,18 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     for (const id of [...this.triangleStates.keys()]) {
       if (!ids.has(id)) {
         this.triangleStates.delete(id);
+      }
+    }
+    for (const id of [...this.oscillatorLastPhaseIncrements.keys()]) {
+      const nodeId = String(id).split(":")[0];
+      if (!ids.has(nodeId)) {
+        this.oscillatorLastPhaseIncrements.delete(id);
+      }
+    }
+    for (const id of [...this.oscillatorStoppedSamples.keys()]) {
+      const nodeId = String(id).split(":")[0];
+      if (!ids.has(nodeId)) {
+        this.oscillatorStoppedSamples.delete(id);
       }
     }
     for (const id of [...this.noiseSeeds.keys()]) {
@@ -880,9 +939,50 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (!this.nodeOutputs.has(nodeId)) {
         continue;
       }
+      this.captureModuleScopeOutput(nodeId, this.nodeOutputs.get(nodeId));
+    }
+    for (const sink of this.visualSinks || []) {
+      const nodeId = String(sink?.nodeId || "");
+      if (!nodeId) {
+        continue;
+      }
+      const value = (sink.inputs || [])
+        .filter((input) => input?.connected)
+        .reduce((inputSum, input) => inputSum + (input.connections || []).reduce(
+          (connectionSum, connection) => connectionSum + this.readRuntimePortOutput(
+            null,
+            connection.sourceNode,
+            connection.sourcePort,
+            0,
+            1,
+          ),
+          0,
+        ), 0);
       const samples = this.scopeBuffers.get(nodeId) || [];
-      samples.push(this.scopeScalarValue(this.nodeOutputs.get(nodeId)));
+      samples.push(this.scopeScalarValue(value));
       this.scopeBuffers.set(nodeId, samples);
+    }
+  }
+
+  captureModuleScopeOutput(nodeId, output) {
+    const id = String(nodeId || "");
+    if (!id) {
+      return;
+    }
+    const samples = this.scopeBuffers.get(id) || [];
+    samples.push(this.scopeScalarValue(output));
+    this.scopeBuffers.set(id, samples);
+    if (!output || typeof output !== "object") {
+      return;
+    }
+    for (const port of ["Left", "Right"]) {
+      if (!Number.isFinite(Number(output[port]))) {
+        continue;
+      }
+      const portId = `${id}:${port}`;
+      const portSamples = this.scopeBuffers.get(portId) || [];
+      portSamples.push(this.scopeScalarValue(output[port]));
+      this.scopeBuffers.set(portId, portSamples);
     }
   }
 
@@ -1101,6 +1201,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return (seed / 0xffffffff) * 2 - 1;
   }
 
+  currentNoiseSample(nodeId) {
+    if (!this.noiseSeeds.has(nodeId)) {
+      return this.nextNoiseSample(nodeId);
+    }
+    return ((this.noiseSeeds.get(nodeId) || 0) / 0xffffffff) * 2 - 1;
+  }
+
   noiseSeedKey(nodeId, seedValue, channel = "") {
     const seed = Math.max(0, Math.min(99999, Math.floor(Number(seedValue) || 0)));
     return `${nodeId}${channel ? `:${channel}` : ""}:seed:${seed}`;
@@ -1162,25 +1269,54 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   oscillatorSample(nodeId, phase, phaseIncrement, waveform) {
+    const phaseDelta = Number(phaseIncrement) || 0;
+    const phaseStopped = Math.abs(phaseDelta) <= 1e-12;
+    if (phaseStopped && this.oscillatorStoppedSamples.has(nodeId)) {
+      return this.oscillatorStoppedSamples.get(nodeId) || 0;
+    }
+    const renderPhaseIncrement = phaseStopped
+      ? Number(this.oscillatorLastPhaseIncrements.get(nodeId)) || 0
+      : phaseDelta;
     const phaseCycle = this.wrapValue(phase / (Math.PI * 2), 0, 1);
+    let sample = 0;
     switch (Math.round(Number(waveform) || 0)) {
       case 1:
-        return this.polyBlepSquare(phaseCycle, phaseIncrement);
+        sample = this.polyBlepSquare(phaseCycle, renderPhaseIncrement);
+        break;
       case 2:
         {
           const triangle = this.triangleStates.get(nodeId) || 0;
-          const nextTriangle = (triangle + this.polyBlepSquare(phaseCycle, phaseIncrement) * phaseIncrement * 4) * 0.995;
+          if (phaseStopped) {
+            sample = triangle;
+            break;
+          }
+          const nextTriangle = (triangle + this.polyBlepSquare(phaseCycle, renderPhaseIncrement) * phaseDelta * 4) * 0.995;
           this.triangleStates.set(nodeId, this.clampValue(nextTriangle, -1, 1));
-          return this.clampValue(nextTriangle, -1, 1);
+          sample = this.clampValue(nextTriangle, -1, 1);
+          break;
         }
       case 3:
-        return Math.sin(phase);
+        sample = Math.sin(phase);
+        break;
       case 4:
-        return this.nextNoiseSample(nodeId);
+        sample = phaseStopped ? this.currentNoiseSample(nodeId) : this.nextNoiseSample(nodeId);
+        break;
       case 0:
       default:
-        return 1 - phaseCycle * 2 + this.polyBlep(phaseCycle, phaseIncrement);
+        sample = 1 - phaseCycle * 2 + this.polyBlep(phaseCycle, renderPhaseIncrement);
+        break;
     }
+    if (phaseStopped) {
+      this.oscillatorStoppedSamples.set(nodeId, sample);
+    } else {
+      this.oscillatorStoppedSamples.delete(nodeId);
+      this.oscillatorLastPhaseIncrements.set(nodeId, phaseDelta);
+    }
+    return sample;
+  }
+
+  forwardBackwardPolyBlepOscillatorSample(nodeId, phase, phaseIncrement, waveform) {
+    return this.oscillatorSample(nodeId, phase, phaseIncrement, waveform);
   }
 
   additiveWaveformHarmonic(waveform, harmonic, modA = 0.5) {
@@ -1219,25 +1355,118 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   additiveDampingCurveValue(value = 0) {
-    return this.clampValue(Number(value) || 0, -1, 1);
+    return this.clampValue(Number(value) || 0, 0, 1);
   }
 
-  additiveHarmonicDamping(harmonic, frequency, rate, curveValue = 0) {
-    const safeRate = Math.max(1, Number(rate) || this.engineSampleRate || sampleRate || 44100);
-    const safeFrequency = Math.max(0, Number(frequency) || 0);
-    const nyquist = safeRate * 0.5;
-    if (nyquist <= 0 || safeFrequency <= 0) {
+  additiveDampingAlgorithmValue(value = 0) {
+    return Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+  }
+
+  additiveFilterFrequencyValue(value = 20000, rate = this.engineSampleRate || sampleRate || 44100) {
+    const nyquist = Math.max(1, (Number(rate) || this.engineSampleRate || sampleRate || 44100) * 0.5);
+    return this.clampValue(Number(value) || 20000, 1, nyquist);
+  }
+
+  rationalCurveValue(value = 0, skew = 0) {
+    const t = this.clampValue(Number(value) || 0, 0, 1);
+    if (t <= 0) {
+      return 0;
+    }
+    if (t >= 1) {
       return 1;
     }
-    const ratio = this.clampValue((Math.max(1, Number(harmonic) || 1) * safeFrequency) / nyquist, 0, 1);
-    const logShape = 1 - (Math.log1p(ratio * 15) / Math.log1p(15));
-    const expShape = (1 - ratio) ** 4;
-    const linShape = 1 - ratio;
-    const curve = this.additiveDampingCurveValue(curveValue);
-    if (curve < 0) {
-      return this.clampValue(logShape + (expShape - logShape) * (curve + 1), 0, 1);
+    const safeSkew = this.clampValue(Number(skew) || 0, -0.999999, 0.999999);
+    return this.clampValue(
+      ((1 + safeSkew) * t) / (1 - safeSkew + 2 * safeSkew * t),
+      0,
+      1,
+    );
+  }
+
+  additiveHarmonicDamping(harmonic, frequency, rate, curveValue = 0, algorithm = 0, filterFrequency = 20000) {
+    const safeRate = Math.max(1, Number(rate) || this.engineSampleRate || sampleRate || 44100);
+    const safeFrequency = Math.max(0, Number(frequency) || 0);
+    const safeFilterFrequency = this.additiveFilterFrequencyValue(filterFrequency, safeRate);
+    if (safeFilterFrequency <= 0 || safeFrequency <= 0) {
+      return 1;
     }
-    return this.clampValue(expShape + (linShape - expShape) * curve, 0, 1);
+    const ratio = this.clampValue((Math.max(1, Number(harmonic) || 1) * safeFrequency) / safeFilterFrequency, 0, 1);
+    return this.additiveDampingAmplitude({
+      algorithm,
+      curveValue,
+      harmonic,
+      maxHarmonics: Math.max(1, Math.floor(safeFilterFrequency / Math.max(1, safeFrequency))),
+      ratio,
+    });
+  }
+
+  additiveDampingAmplitude({
+    algorithm = 0,
+    curveValue = 0,
+    harmonic = 1,
+    maxHarmonics = 1,
+    ratio = 0,
+  } = {}) {
+    const curve = this.additiveDampingCurveValue(curveValue);
+    const mode = this.additiveDampingAlgorithmValue(algorithm);
+    const t = this.clampValue(Number(ratio) || 0, 0, 1);
+    if (t <= 0) {
+      return 1;
+    }
+    if (t >= 1) {
+      return 0;
+    }
+    if (mode === 1) {
+      return this.clampValue((1 - t) ** (1 + curve * 7), 0, 1);
+    }
+    if (mode === 2) {
+      const amount = 0.5 + curve * 12;
+      const end = Math.exp(-amount);
+      return this.clampValue((Math.exp(-t * amount) - end) / Math.max(0.0001, 1 - end), 0, 1);
+    }
+    if (mode === 3) {
+      const cutoff = this.clampValue(0.95 - curve * 0.82, 0.08, 0.95);
+      const order = 1 + Math.round(curve * 5);
+      const raw = 1 / Math.sqrt(1 + (t / cutoff) ** (2 * order));
+      const end = 1 / Math.sqrt(1 + (1 / cutoff) ** (2 * order));
+      return this.clampValue((raw - end) / Math.max(0.0001, 1 - end), 0, 1);
+    }
+    if (mode === 4) {
+      const knee = this.clampValue(0.78 - curve * 0.68, 0.04, 0.78);
+      if (t <= knee) {
+        return 1;
+      }
+      const local = (t - knee) / Math.max(0.0001, 1 - knee);
+      return this.clampValue((1 - local) ** (1 + curve * 7), 0, 1);
+    }
+    if (mode === 5) {
+      const tilt = curve * 4;
+      if (tilt <= 0) {
+        return 1 - t;
+      }
+      const h = Math.max(1, Number(harmonic) || 1);
+      const maxH = Math.max(h, Number(maxHarmonics) || h);
+      const raw = 1 / (h ** tilt);
+      const end = 1 / (maxH ** tilt);
+      return this.clampValue((raw - end) / Math.max(0.0001, 1 - end), 0, 1);
+    }
+    return this.clampValue(1 - this.rationalCurveValue(t, curve), 0, 1);
+  }
+
+  additiveHarmonicCurveAmount({
+    algorithm = 0,
+    curveValue = 0,
+    harmonic = 1,
+    maxHarmonics = 1,
+    ratio = 0,
+  } = {}) {
+    return this.clampValue(1 - this.additiveDampingAmplitude({
+      algorithm,
+      curveValue,
+      harmonic,
+      maxHarmonics,
+      ratio,
+    }), 0, 1);
   }
 
   additiveOscillatorSample(phase, params = {}, rate = this.engineSampleRate || sampleRate) {
@@ -1249,19 +1478,37 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     );
     const waveform = Math.round(Number(params.waveform) || 0);
     const modA = this.clampValue(Number(params.modA) || 0, 0, 1);
+    const harmonicPhaseAdd = this.clampValue(Number(params.harmonicPhaseAdd) || 0, 0, 1);
+    const harmonicPhaseMultiply = this.clampValue(Number(params.harmonicPhaseMultiply) || 0, 0, 4);
+    const harmonicPhaseCurve = this.clampValue(Number(params.harmonicPhaseCurve) || 0, 0, 1);
+    const harmonicPhaseAlgorithm = this.additiveDampingAlgorithmValue(params.harmonicPhaseAlgorithm);
     const level = this.clampValue(Number(params.level) || 0, 0, 1);
     const dampingCurve = this.additiveDampingCurveValue(params.dampingCurve);
+    const dampingAlgorithm = this.additiveDampingAlgorithmValue(params.dampingAlgorithm);
+    const dampingFilterFrequency = this.additiveFilterFrequencyValue(params.dampingFilterFrequency, safeRate);
     const harmonicLimit = Math.max(1, Math.min(maxHarmonics, Math.floor(Math.min(20000, safeRate * 0.45) / Math.max(1, frequency))));
     let total = 0;
     let norm = 0;
     for (let harmonic = 1; harmonic <= harmonicLimit; harmonic += 1) {
       const partial = this.additiveWaveformHarmonic(waveform, harmonic, modA);
       const amplitude = (Number(partial.amplitude) || 0) *
-        this.additiveHarmonicDamping(harmonic, frequency, safeRate, dampingCurve);
+        this.additiveHarmonicDamping(harmonic, frequency, safeRate, dampingCurve, dampingAlgorithm, dampingFilterFrequency);
       if (amplitude === 0) {
         continue;
       }
-      total += Math.sin(phase * harmonic + (Number(partial.phase) || 0) * Math.PI * 2) * amplitude;
+      const harmonicRatio = harmonicLimit > 1
+        ? (harmonic - 1) / (harmonicLimit - 1)
+        : 0;
+      const phaseCurve = this.additiveHarmonicCurveAmount({
+        algorithm: harmonicPhaseAlgorithm,
+        curveValue: harmonicPhaseCurve,
+        harmonic,
+        maxHarmonics: harmonicLimit,
+        ratio: harmonicRatio,
+      });
+      const phaseMultiplier = 1 + phaseCurve * harmonicPhaseMultiply;
+      const phaseOffset = (Number(partial.phase) || 0) + phaseCurve * harmonicPhaseAdd;
+      total += Math.sin((phase * harmonic * phaseMultiplier) + phaseOffset * Math.PI * 2) * amplitude;
       norm += Math.abs(amplitude);
     }
     if (norm <= 0) {
@@ -1797,12 +2044,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     for (const id of ids) {
       const node = this.nodes.get(id);
       this.nodeOutputs.set(id, 0);
-      if (node?.type === "osc") {
+      if (node?.type === "osc" || node?.type === "fbPolyBlepOsc") {
         this.phases.set(id, 0);
         this.oscResetStates.set(id, this.createOscResetState());
         this.triangleStates.set(id, 0);
       }
-      if (node?.type === "osc" || node?.type === "noise") {
+      if (node?.type === "osc" || node?.type === "fbPolyBlepOsc" || node?.type === "noise") {
         this.noiseSeeds.set(id, this.stableSeed(id));
       }
       if (node?.type === "stereoNoise") {
@@ -3180,7 +3427,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           Out: ((left + right) * 0.5) * level,
           Right: right * level,
         };
-      } else if (node?.type === "osc") {
+      } else if (node?.type === "osc" || node?.type === "fbPolyBlepOsc") {
         const resetState = this.oscResetStates.get(nodeId) || this.createOscResetState();
         this.oscResetStates.set(nodeId, resetState);
         const resetValue = this.safeFilterNumber(mixInput(nodeId, "Reset"), resetState);
@@ -3218,13 +3465,20 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         const pitchedFrequency = Math.max(0, frequency * (2 ** (pitchInput / 0.1)));
         const phaseIncrement = (pitchedFrequency / safeRate) + incrementInput;
         const level = this.readEffectiveParameter(node, "level", 1, frame, frames, frameValues);
-        const selected = this.oscillatorSample(nodeId, phase + phaseOffset, phaseIncrement, waveform) * level;
+        const sampleOscillator = (sampleNodeId, sampleWaveform) => (
+          node?.type === "fbPolyBlepOsc"
+            ? this.forwardBackwardPolyBlepOscillatorSample(sampleNodeId, phase + phaseOffset, phaseIncrement, sampleWaveform)
+            : this.oscillatorSample(sampleNodeId, phase + phaseOffset, phaseIncrement, sampleWaveform)
+        );
+        const selected = sampleOscillator(nodeId, waveform) * level;
         value = {
           Out: selected,
-          Saw: this.oscillatorSample(`${nodeId}:saw`, phase + phaseOffset, phaseIncrement, 0) * level,
-          Square: this.oscillatorSample(`${nodeId}:square`, phase + phaseOffset, phaseIncrement, 1) * level,
-          Tri: this.oscillatorSample(`${nodeId}:tri`, phase + phaseOffset, phaseIncrement, 2) * level,
-          Sine: this.oscillatorSample(`${nodeId}:sine`, phase + phaseOffset, phaseIncrement, 3) * level,
+          Saw: sampleOscillator(`${nodeId}:saw`, 0) * level,
+          Square: sampleOscillator(`${nodeId}:square`, 1) * level,
+          Tri: sampleOscillator(`${nodeId}:tri`, 2) * level,
+          Sine: sampleOscillator(`${nodeId}:sine`, 3) * level,
+          "Wave Out": selected,
+          Noise: selected,
         };
         this.phases.set(
           nodeId,
@@ -3260,8 +3514,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           phase + phaseOffset,
           {
             frequency: pitchedFrequency,
+            dampingAlgorithm: this.readEffectiveParameter(node, "dampingAlgorithm", 0, frame, frames, frameValues),
             dampingCurve: this.readEffectiveParameter(node, "dampingCurve", 0, frame, frames, frameValues),
+            dampingFilterFrequency: this.readEffectiveParameter(node, "dampingFilterFrequency", 20000, frame, frames, frameValues),
             harmonics: this.readEffectiveParameter(node, "harmonics", 32, frame, frames, frameValues),
+            harmonicPhaseAdd: this.readEffectiveParameter(node, "harmonicPhaseAdd", 0, frame, frames, frameValues),
+            harmonicPhaseAlgorithm: this.readEffectiveParameter(node, "harmonicPhaseAlgorithm", 0, frame, frames, frameValues),
+            harmonicPhaseCurve: this.readEffectiveParameter(node, "harmonicPhaseCurve", 1, frame, frames, frameValues),
+            harmonicPhaseMultiply: this.readEffectiveParameter(node, "harmonicPhaseMultiply", 0, frame, frames, frameValues),
             level: this.readEffectiveParameter(node, "level", 0.35, frame, frames, frameValues),
             modA: this.readEffectiveParameter(node, "modA", 0.5, frame, frames, frameValues),
             waveform: this.readEffectiveParameter(node, "waveform", 1, frame, frames, frameValues),
@@ -3286,8 +3546,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           this.readEffectiveParameter(node, "level", 1, frame, frames, frameValues);
       } else if (node?.type === "stereoNoise") {
         const level = this.readEffectiveParameter(node, "level", 1, frame, frames, frameValues);
-        const left = this.nextNoiseSample(`${nodeId}:left`) * level;
-        const right = this.nextNoiseSample(`${nodeId}:right`) * level;
+        const seed = this.readEffectiveParameter(node, "seed", 1, frame, frames, frameValues);
+        const left = this.nextSeededNoiseSample(nodeId, seed, "left") * level;
+        const right = this.nextSeededNoiseSample(nodeId, seed, "right") * level;
         value = {
           Left: left,
           Out: (left + right) * 0.5,
@@ -3535,6 +3796,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         const key = this.clampValue(Number(signal.keyIndex) || 12, 0, 24);
         const frequency = 440 * (2 ** ((midi - 69) / 12));
         const outputFrequency = Math.max(0, Number(signal.frequency) || frequency);
+        const increment = Math.max(0, Number(signal.increment) || outputFrequency / safeRate);
         const gatePulse = this.midiKeyboardGatePulseSamples > 0 ? 1 : 0;
         this.midiKeyboardGatePulseSamples = Math.max(0, this.midiKeyboardGatePulseSamples - 1);
         value = {
@@ -3543,7 +3805,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           Double: this.clampValue(Number(signal.midiNormalized) || midi / 127, 0, 1),
           Frequency: outputFrequency,
           Gate: Number(signal.gate) > 0 ? 1 : 0,
-          Increment: outputFrequency / safeRate,
+          Increment: increment,
           Key: key,
           MIDI: midi,
           Pitch: this.clampValue(Number(signal.pitchValue) || midi, 0, 127),
@@ -3565,6 +3827,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       } else if (node?.type === "gain") {
         value = mixInput(nodeId) *
           this.readEffectiveParameter(node, "amount", 1, frame, frames, frameValues);
+      } else if (node?.type === "led") {
+        value = {
+          Out: this.safeFilterNumber(mixInput(nodeId, "In"), null),
+        };
       } else if (node?.type === "moduleGroup") {
         value = this.evaluateModuleGroup(node, mixInput, frame, frames, safeRate, inputFrame);
       } else if (node?.type === "codeblock") {
@@ -3967,11 +4233,25 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.inputMeterSamples += 1;
       let leftSum = 0;
       let rightSum = 0;
+      let decimatedLeft = 0;
+      let decimatedRight = 0;
+      const useRaptEllipticDecimator = oversamplingRatio === 4;
       for (let subframe = 0; subframe < oversamplingRatio; subframe += 1) {
         const engineFrame = frame * oversamplingRatio + subframe;
         const subframeOutput = this.evaluateFrame(engineFrame, engineFrames, inputs, engineSampleRate, frame);
-        leftSum += subframeOutput.left;
-        rightSum += subframeOutput.right;
+        if (useRaptEllipticDecimator) {
+          decimatedLeft = this.processRaptEllipticDecimatorSample(
+            subframeOutput.left,
+            this.raptEllipticDecimatorLeft,
+          );
+          decimatedRight = this.processRaptEllipticDecimatorSample(
+            subframeOutput.right,
+            this.raptEllipticDecimatorRight,
+          );
+        } else {
+          leftSum += subframeOutput.left;
+          rightSum += subframeOutput.right;
+        }
         this.captureModuleScopeFrame();
         this.scopeCounter += 1;
         if (this.scopeCounter >= Math.max(1, Math.floor(engineSampleRate / 30))) {
@@ -3985,8 +4265,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         }
       }
       const frameOutput = {
-        left: leftSum / oversamplingRatio,
-        right: rightSum / oversamplingRatio,
+        left: useRaptEllipticDecimator ? decimatedLeft : leftSum / oversamplingRatio,
+        right: useRaptEllipticDecimator ? decimatedRight : rightSum / oversamplingRatio,
       };
       if (this.outputSampleClipped(frameOutput.left)) {
         this.meterClipCount += 1;

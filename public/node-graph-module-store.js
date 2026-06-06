@@ -5,6 +5,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "dsfOscillator",
   "ellipsoid",
   "polyBlep",
+  "fbPolyBlepOsc",
   "sineWavetable",
   "jerobeamNyqistShannon",
   "additiveEngine",
@@ -84,6 +85,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "rgbaHsla",
   "chromaColor",
   "image",
+  "led",
   "visualOscilloscope",
   "parabol",
   "vibratoGenerator",
@@ -273,6 +275,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "Placeholder for an anti-aliased PolyBLEP oscillator for clean digital waveform edges.",
     label: "PolyBLEP",
     notes: ["placeholder", "anti-aliasing", "future oscillator"],
+  },
+  fbPolyBlepOsc: {
+    category: "Oscillator",
+    description: "Realtime forward/backward PolyBLEP oscillator test module, split out from the current PolyBLEP oscillator path for edge-repair experiments.",
+    label: "F/B PolyBLEP",
+    notes: ["anti-aliasing", "known-edge repair", "realtime oscillator"],
   },
   sineWavetable: {
     category: "Oscillator",
@@ -717,6 +725,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     category: "Visual",
     description: "Patch-local image asset node. Route it into Screen Visuals Trace Image to texture phosphor trace dots.",
     notes: ["load image", "save image", "trace texture"],
+  },
+  led: {
+    category: "Visual",
+    description: "One-grid-unit signal light. Patch any gate or control signal into In and use it as a compact in-world indicator.",
+    label: "LED",
+    notes: ["1 GU tile", "input light", "visual indicator"],
   },
   visualOscilloscope: {
     category: "Visual",

@@ -60,6 +60,12 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeLineThickness = normalizeNodeGraphModuleScopeLineThickness(
     view.moduleScopeLineThickness ?? nodeGraphMvp.moduleScopeLineThickness ?? 2,
   );
+  const moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
+    view.moduleScopeDiscontinuitySkipSamples ?? nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
+  );
+  const moduleScopeOverdrawPoints = normalizeNodeGraphModuleScopeOverdrawPoints(
+    view.moduleScopeOverdrawPoints ?? nodeGraphMvp.moduleScopeOverdrawPoints ?? 1,
+  );
   const sliderLayout = normalizeNodeGraphSliderLayout(view.sliderLayout ?? nodeGraphMvp.sliderLayout);
   const sliderAmountVisible = Boolean(view.sliderAmountVisible ?? nodeGraphMvp.sliderAmountVisible);
   const sliderPositionVisible = Boolean(
@@ -101,6 +107,8 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleScopeDotCore2Color,
       moduleScopeFramesPerSecond,
       moduleScopeLineThickness,
+      moduleScopeDiscontinuitySkipSamples,
+      moduleScopeOverdrawPoints,
       sliderLayout,
       sliderAmountVisible,
       sliderPositionVisible,
@@ -151,6 +159,10 @@ function readNodeUiDevSettingsFromControls() {
       moduleScopeDotCore2Color: normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#ff0000", "#ff0000"),
       moduleScopeFramesPerSecond: normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60),
       moduleScopeLineThickness: normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp.moduleScopeLineThickness ?? 2),
+      moduleScopeDiscontinuitySkipSamples: normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
+        nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
+      ),
+      moduleScopeOverdrawPoints: normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp.moduleScopeOverdrawPoints ?? 1),
       sliderLayout: normalizeNodeGraphSliderLayout(nodeGraphMvp.sliderLayout),
       sliderAmountVisible: Boolean(nodeGraphMvp.sliderAmountVisible),
       sliderPositionVisible: Boolean(nodeGraphMvp.sliderPositionVisible),
@@ -216,6 +228,12 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleScopeDotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(normalized.view.moduleScopeDotCore2Color, "#ff0000");
   nodeGraphMvp.moduleScopeFramesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(normalized.view.moduleScopeFramesPerSecond);
   nodeGraphMvp.moduleScopeLineThickness = normalizeNodeGraphModuleScopeLineThickness(normalized.view.moduleScopeLineThickness);
+  nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
+    normalized.view.moduleScopeDiscontinuitySkipSamples,
+  );
+  nodeGraphMvp.moduleScopeOverdrawPoints = normalizeNodeGraphModuleScopeOverdrawPoints(
+    normalized.view.moduleScopeOverdrawPoints,
+  );
   nodeGraphMvp.sliderLayout = normalizeNodeGraphSliderLayout(normalized.view.sliderLayout);
   nodeGraphMvp.sliderAmountVisible = Boolean(normalized.view.sliderAmountVisible);
   nodeGraphMvp.sliderPositionVisible = Boolean(normalized.view.sliderPositionVisible);

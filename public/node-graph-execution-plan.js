@@ -413,6 +413,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       type !== "groupInput" &&
       type !== "groupOutput" &&
       type !== "keyboardController" &&
+      type !== "led" &&
       type !== "linearEnvelope" &&
       type !== "midiNotePitch" &&
       type !== "midiOut" &&
@@ -497,6 +498,8 @@ function nodeGraphCompiledVisualSinks(graph, reachableNodes) {
       inputs: nodeGraphModuleVisualInputs(node.type).map((input) => ({
         ...input,
         connected: (graph.inputConnections.get(nodeGraphInputKey(node.id, input.port)) || []).length > 0,
+        connections: (graph.inputConnections.get(nodeGraphInputKey(node.id, input.port)) || [])
+          .map((connection) => ({ ...connection })),
       })),
       nodeId: node.id,
       type: node.type,

@@ -85,23 +85,21 @@ function createNodeGraphModuleScopeSection(node, type) {
   surface.className = "node-module-scope-window-surface";
   section.append(surface);
 
-  if (type === "clock") {
-    const ledShell = document.createElement("div");
-    ledShell.className = "node-clock-led-shell";
-    ledShell.setAttribute("aria-hidden", "true");
-
-    const led = document.createElement("div");
-    led.className = "node-clock-led";
-    led.dataset.ledState = "off";
-    ledShell.append(led);
-    section.append(ledShell);
-  }
-
   const analyzer = document.createElement("div");
   analyzer.className = "node-module-scope-analyzer";
   analyzer.hidden = true;
   section.append(analyzer);
   return section;
+}
+
+function createNodeGraphLedFace(node, type) {
+  const face = document.createElement("div");
+  face.className = "node-led-face";
+  face.dataset.node = node;
+  face.dataset.nodeType = type;
+  face.setAttribute("aria-label", `${nodeGraphNodeDisplayName(node)} LED`);
+  face.append(createNodeGraphPort(node, type, "In", "input"));
+  return face;
 }
 
 function createNodeGraphSliderWidgetBody(node, type) {

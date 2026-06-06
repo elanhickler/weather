@@ -1,5 +1,5 @@
 const nodeGraphZoomLimits = Object.freeze({
-  max: 10,
+  max: 50,
   min: 0.1,
   fineStep: 0.1,
   quarterStep: 0.25,

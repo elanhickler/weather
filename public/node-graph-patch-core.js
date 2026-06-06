@@ -139,6 +139,8 @@ function validateNodeGraphPatch(patch) {
       normalizedNode.layout = normalizeNodeGraphTextBoxLayout(node.layout);
     } else if (nodeGraphModuleDefinitions[type].layout === "image") {
       normalizedNode.layout = normalizeNodeGraphImageLayout(node.layout);
+    } else if (nodeGraphModuleDefinitions[type].layout === "led") {
+      normalizedNode.led = normalizeNodeGraphLedLayout(node.led);
     }
     if (type === "graph") {
       normalizedNode.graph = normalizeNodeGraphGraph(node.graph);
@@ -280,6 +282,7 @@ function validateNodeGraphPatch(patch) {
     audio: normalizeNodeGraphPatchAudio(patch.audio),
     bypassedNodes,
     cameras: cameraState.cameras,
+    codeScreen: normalizeNodeGraphCodeScreen(patch.codeScreen),
     connections,
     format: { ...nodeGraphPatchFormat },
     grid,
@@ -442,6 +445,9 @@ function commitNodeGraphPatch(patch, options = {}) {
   syncNodeGraphFilterCurveDisplays();
   renderNodeGraphVisualSettings();
   syncNodeGraphSettingsView();
+  if (typeof renderNodeGraphCodeScreen === "function" && !document.getElementById("nodeCodeScreenView")?.hidden) {
+    renderNodeGraphCodeScreen();
+  }
   const scriptStatus = nodeGraphPatchScriptStatus(
     options.status || "script synced",
     options.ok ?? true,

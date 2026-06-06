@@ -352,6 +352,8 @@ function configureNodeSceneContextMenu(mode) {
   const imageLoad = document.getElementById("nodeSceneImageLoad");
   const imageSave = document.getElementById("nodeSceneImageSave");
   const imageRefresh = document.getElementById("nodeSceneImageRefresh");
+  const ledControls = document.getElementById("nodeSceneLedControls");
+  const ledColor = document.getElementById("nodeSceneLedColor");
   const textBoxControls = document.getElementById("nodeSceneTextBoxControls");
   const textBoxSingleLine = document.getElementById("nodeSceneTextBoxSingleLine");
   const textBoxMultiline = document.getElementById("nodeSceneTextBoxMultiline");
@@ -387,7 +389,7 @@ function configureNodeSceneContextMenu(mode) {
   const widthGu = targetNode ? nodeGraphPatchNodeGridWidthUnits(targetNode) : 0;
   const heightGu = targetNode ? nodeGraphPatchNodeGridHeightUnits(targetNode) : 0;
   const targetNodeUi = normalizeNodeGraphPatchNodeUi(targetNode?.ui);
-  const buttonsHidden = targetNodeUi.buttonsHidden;
+  const buttonsHidden = targetNodeUi.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false;
   const titleHidden = targetNodeUi.titleHidden;
   const textBoxLayout = normalizeNodeGraphTextBoxLayout(targetNode?.layout);
   const textBoxMode = textBoxLayout.textMode;
@@ -412,6 +414,7 @@ function configureNodeSceneContextMenu(mode) {
   toggleButtonsButton.hidden = !moduleMode;
   toggleTitleButton.hidden = !moduleMode;
   imageControls.hidden = !(moduleMode && targetNode?.type === "image");
+  ledControls.hidden = !(moduleMode && targetNode?.type === "led");
   textBoxControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   textBoxHorizontalAlignControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   textBoxVerticalAlignControls.hidden = !(moduleMode && targetNode?.type === "textBox");
@@ -485,6 +488,15 @@ function configureNodeSceneContextMenu(mode) {
       imageLoad.title = "Load an image into this patch-local image node.";
       imageSave.title = imageLayout.dataUrl ? "Save this image node's current image." : "Load an image before saving.";
       imageRefresh.title = "Refresh image preview and trace texture.";
+    }
+    if (targetNode?.type === "led") {
+      const led = normalizeNodeGraphLedLayout(targetNode.led);
+      ledColor.disabled = false;
+      ledColor.value = led.color;
+      ledColor.title = "Set this LED's outer rim color. The center uses the bright white dot layer.";
+    } else {
+      ledColor.disabled = true;
+      ledColor.value = nodeGraphLedDefaultColor;
     }
     textBoxSingleLine.setAttribute("aria-pressed", textBoxMode === "singleLine" ? "true" : "false");
     textBoxMultiline.setAttribute("aria-pressed", textBoxMode === "multiline" ? "true" : "false");
@@ -605,6 +617,8 @@ function configureNodeSceneContextMenu(mode) {
     imageLoad.disabled = true;
     imageSave.disabled = true;
     imageRefresh.disabled = true;
+    ledColor.disabled = true;
+    ledColor.value = nodeGraphLedDefaultColor;
   } else {
     selectedModule.querySelector("span").textContent = "selected";
     selectedModule.querySelector("strong").textContent = "none";
@@ -658,6 +672,8 @@ function configureNodeSceneContextMenu(mode) {
     imageLoad.disabled = true;
     imageSave.disabled = true;
     imageRefresh.disabled = true;
+    ledColor.disabled = true;
+    ledColor.value = nodeGraphLedDefaultColor;
   }
 }
 

@@ -1,5 +1,6 @@
 function bindNodeGraphHeaderControlEvents() {
   bindNodeGraphShaderScriptEvents();
+  bindNodeGraphCodeScreenEvents();
   renderNodeGraphPatchTimingControls();
   const closeNodeGraphModuleBrowser = () => {
     nodeGraphMvp.sceneContextPoint = null;
@@ -86,6 +87,18 @@ function bindNodeGraphHeaderControlEvents() {
     .getElementById("nodeMasterScopeLineThickness")
     .addEventListener("change", handleNodeGraphModuleScopeLineThicknessInput);
   document
+    .getElementById("nodeMasterScopeDiscontinuitySkipSamples")
+    .addEventListener("input", handleNodeGraphModuleScopeDiscontinuitySkipSamplesInput);
+  document
+    .getElementById("nodeMasterScopeDiscontinuitySkipSamples")
+    .addEventListener("change", handleNodeGraphModuleScopeDiscontinuitySkipSamplesInput);
+  document
+    .getElementById("nodeMasterScopeOverdrawPoints")
+    .addEventListener("input", handleNodeGraphModuleScopeOverdrawPointsInput);
+  document
+    .getElementById("nodeMasterScopeOverdrawPoints")
+    .addEventListener("change", handleNodeGraphModuleScopeOverdrawPointsInput);
+  document
     .getElementById("nodeSceneScopeTime")
     .addEventListener("change", handleNodeGraphSceneScopeNumericInput);
   document
@@ -106,6 +119,9 @@ function bindNodeGraphHeaderControlEvents() {
   document
     .getElementById("nodeSceneScopeOscillatorTraceMode")
     .addEventListener("click", handleNodeGraphSceneScopeControlClick);
+  document
+    .getElementById("nodeSceneBlinkLightShape")
+    .addEventListener("change", handleNodeGraphSceneScopeOptionInput);
   document.getElementById("nodeModuleSlidersToggleButton").addEventListener("click", toggleNodeGraphModuleSlidersVisibility);
   document.getElementById("nodeTooltipToggleButton").addEventListener("click", toggleNodeGraphTooltipVisibility);
   document.getElementById("nodeUserUiSettingsButton").addEventListener("click", toggleNodeUserUiSettings);
@@ -142,6 +158,9 @@ function bindNodeGraphHeaderControlEvents() {
   document
     .getElementById("nodeModularViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("modular"));
+  document
+    .getElementById("nodeCodeScreenViewButton")
+    .addEventListener("click", () => setNodeGraphViewMode("code"));
   document
     .getElementById("nodeModuleShopButton")
     .addEventListener("click", () => {

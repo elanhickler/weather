@@ -22,6 +22,17 @@ function normalizeNodeGraphPatchNodeAlias(alias) {
   return String(alias ?? "").trim().slice(0, 64);
 }
 
+const nodeGraphLedDefaultColor = "#ff0000";
+const nodeGraphLedCenterColor = "#ffffff";
+
+function normalizeNodeGraphLedLayout(layout = {}) {
+  const source = layout && typeof layout === "object" ? layout : {};
+  return {
+    color: normalizeNodeGraphModuleScopeDotCoreColor(source.color ?? nodeGraphLedDefaultColor, nodeGraphLedDefaultColor),
+    kind: "led",
+  };
+}
+
 function normalizeNodeGraphClapAudioPorts(ports = []) {
   if (!Array.isArray(ports)) {
     return [];
@@ -104,6 +115,7 @@ function cloneNodeGraphPatch(patch) {
     audio: normalizeNodeGraphPatchAudio(patch.audio),
     bypassedNodes: Array.isArray(patch.bypassedNodes) ? [...patch.bypassedNodes] : [],
     cameras: cameraState.cameras,
+    codeScreen: normalizeNodeGraphCodeScreen(patch.codeScreen),
     connections: (patch.connections || []).map((connection) => ({
       ...connection,
       tracePoints: normalizeNodeGraphTracePoints(connection.tracePoints),
@@ -130,6 +142,9 @@ function cloneNodeGraphPatch(patch) {
           : {}),
         ...(nodeGraphModuleDefinitions[node.type]?.layout === "image"
           ? { layout: normalizeNodeGraphImageLayout(node.layout) }
+          : {}),
+        ...(nodeGraphModuleDefinitions[node.type]?.layout === "led"
+          ? { led: normalizeNodeGraphLedLayout(node.led) }
           : {}),
         ...(node.type === "graph"
           ? { graph: normalizeNodeGraphGraph(node.graph) }
