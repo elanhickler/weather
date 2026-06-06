@@ -59,13 +59,37 @@ export default function drawScope(scope) {
   const style = scope.style;
   const screen = scope.screen;
 
-  screen.clear(style.background);
+  // These come from Screen Settings unless this module later overrides them.
+  const backgroundColor = style.background;
+  const screenBurn = style.screenBurn;
+  const overdrawPoints = style.overdrawPoints;
+  const skipSamples = style.skipSamples;
+  const lineThicknessPx = style.lineThicknessPx;
+
+  const dot1Color = style.dot1.color;
+  const dot1SizePx = style.dot1.sizePx;
+  const dot1Brightness = style.dot1.brightness;
+
+  const dot2Color = style.dot2.color;
+  const dot2SizePx = style.dot2.sizePx;
+  const dot2Brightness = style.dot2.brightness;
+
+  screen.fade({ color: backgroundColor, burn: screenBurn });
   screen.trace(signal, {
-    color: style.dot1.color,
-    radiusPx: style.dot1.sizePx,
-    brightness: style.dot1.brightness,
-    overdrawPoints: style.overdrawPoints,
-    skipSamples: style.skipSamples,
+    overdrawPoints,
+    skipSamples,
+    layers: [
+      {
+        color: dot2Color,
+        radiusPx: dot2SizePx * lineThicknessPx,
+        brightness: dot2Brightness,
+      },
+      {
+        color: dot1Color,
+        radiusPx: dot1SizePx * lineThicknessPx,
+        brightness: dot1Brightness,
+      },
+    ],
   });
 }`;
 
