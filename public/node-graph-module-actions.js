@@ -873,17 +873,13 @@ function addNodeGraphGraphNodeFromContext() {
   if (!targetNode) {
     return;
   }
-  const graph = normalizeNodeGraphGraph(targetNode.graph);
-  const x = normalizeNodeGraphGraphNumber(graph.cursorX, 0.5);
-  graph.nodes.push({
-    c: 0,
-    shape: "rational",
-    x,
-    y: normalizeNodeGraphGraphNumber(nodeGraphGraphValueAt(graph, x), 0),
-  });
-  targetNode.graph = graph;
+  const addition = addNodeGraphGraphNodeData(targetNode.graph);
+  if (!addition.added) {
+    return;
+  }
+  targetNode.graph = addition.graph;
   commitNodeGraphGraphEdit(patch, targetNode, "graph node added", {
-    selectedX: x,
+    selectedIndex: addition.selectedIndex,
   });
 }
 

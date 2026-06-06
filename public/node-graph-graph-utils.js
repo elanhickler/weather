@@ -90,6 +90,37 @@ function nodeGraphGraphTransformedData(graphValue, transform) {
   return graph;
 }
 
+function addNodeGraphGraphNodeData(graphValue, pointValue = {}) {
+  const graph = normalizeNodeGraphGraph(graphValue);
+  if (graph.nodes.length >= 32) {
+    return { added: false, graph, selectedIndex: nodeGraphGraphNodeIndexFromValue(graph, graph.nodes.length - 1) };
+  }
+  const source = pointValue && typeof pointValue === "object" ? pointValue : {};
+  const x = normalizeNodeGraphGraphNumber(source.x, graph.cursorX);
+  const y = Number.isFinite(Number(source.y))
+    ? normalizeNodeGraphGraphNumber(source.y, 0)
+    : normalizeNodeGraphGraphNumber(nodeGraphGraphValueAt(graph, x), 0);
+  graph.cursorX = x;
+  graph.nodes.push({
+    c: 0,
+    shape: "rational",
+    x,
+    y,
+  });
+  const normalized = normalizeNodeGraphGraph(graph);
+  const selectedIndex = normalized.nodes.reduce((bestIndex, node, index) => (
+    Math.abs(node.x - x) < Math.abs(normalized.nodes[bestIndex].x - x)
+      ? index
+      : bestIndex
+  ), 0);
+  return {
+    added: true,
+    graph: normalized,
+    selectedIndex,
+    selectedX: x,
+  };
+}
+
 function duplicateNodeGraphGraphNodeData(graphValue, selectedIndex = 0) {
   const graph = normalizeNodeGraphGraph(graphValue);
   if (graph.nodes.length >= 32) {
@@ -664,25 +695,15 @@ function addNodeGraphGraphNodeFromDisplayEvent(event) {
   if (!targetNode || targetNode.type !== "graph") {
     return;
   }
-  const graph = normalizeNodeGraphGraph(targetNode.graph);
-  graph.cursorX = point.x;
-  graph.nodes.push({
-    c: 0,
-    shape: "rational",
-    x: point.x,
-    y: point.y,
-  });
-  targetNode.graph = graph;
+  const addition = addNodeGraphGraphNodeData(targetNode.graph, point);
+  if (!addition.added) {
+    return;
+  }
+  targetNode.graph = addition.graph;
   commitNodeGraphPatch(patch, { status: "graph node added" });
-  const normalized = normalizeNodeGraphGraph(targetNode.graph);
-  const selectedIndex = normalized.nodes.reduce((bestIndex, node, index) => (
-    Math.abs(node.x - point.x) < Math.abs(normalized.nodes[bestIndex].x - point.x)
-      ? index
-      : bestIndex
-  ), 0);
-  setNodeGraphGraphSelectedNodeIndex(nodeId, normalized, selectedIndex);
-  syncNodeGraphGraphElement(nodeGraphNodeElement(nodeId), { ...targetNode, graph: normalized });
-  syncNodeGraphGraphControls(normalized, selectedIndex);
+  setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, addition.selectedIndex);
+  syncNodeGraphGraphElement(nodeGraphNodeElement(nodeId), targetNode);
+  syncNodeGraphGraphControls(targetNode.graph, addition.selectedIndex);
   event.preventDefault();
   event.stopPropagation();
 }
@@ -823,6 +844,34 @@ function removeFocusedNodeGraphGraphNode() {
   return removeSelectedNodeGraphGraphNodeFromDisplay(
     document.activeElement?.closest?.(".node-module-graph-display"),
   );
+}
+
+function addFocusedNodeGraphGraphNode() {
+  const display = document.activeElement?.closest?.(".node-module-graph-display");
+  const moduleElement = display?.closest?.(".dsp-node");
+  const nodeId = moduleElement?.dataset.node || "";
+  const sourceNode = nodeGraphPatchNode(nodeId);
+  if (!display || !sourceNode || sourceNode.type !== "graph") {
+    return false;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === nodeId);
+  if (!targetNode || targetNode.type !== "graph") {
+    return false;
+  }
+  const addition = addNodeGraphGraphNodeData(targetNode.graph);
+  if (!addition.added) {
+    return false;
+  }
+  targetNode.graph = addition.graph;
+  commitNodeGraphPatch(patch, { status: "graph node added" });
+  setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, addition.selectedIndex);
+  syncNodeGraphGraphElement(moduleElement, targetNode);
+  if (nodeGraphModuleActionTargetNodeId() === nodeId) {
+    syncNodeGraphGraphControls(targetNode.graph, addition.selectedIndex);
+  }
+  display.focus?.({ preventScroll: true });
+  return true;
 }
 
 function duplicateFocusedNodeGraphGraphNode() {
