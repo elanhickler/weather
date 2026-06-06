@@ -117,6 +117,26 @@ function duplicateNodeGraphGraphNodeData(graphValue, selectedIndex = 0) {
   };
 }
 
+function cycleNodeGraphGraphShapeData(graphValue, selectedIndex = 1) {
+  const graph = normalizeNodeGraphGraph(graphValue);
+  const index = nodeGraphGraphNodeIndexFromValue(
+    graph,
+    selectedIndex <= 0 && graph.nodes.length > 1 ? 1 : selectedIndex,
+  );
+  const node = graph.nodes[index];
+  if (!node) {
+    return { graph, selectedIndex: index };
+  }
+  graph.nodes[index] = normalizeNodeGraphGraphNode({
+    ...node,
+    shape: nodeGraphGraphNextShape(node.shape),
+  }, index);
+  return {
+    graph: normalizeNodeGraphGraph(graph),
+    selectedIndex: index,
+  };
+}
+
 function serializeNodeGraphGraphClipboard(graphValue) {
   return JSON.stringify({
     graph: normalizeNodeGraphGraph(graphValue),
@@ -589,17 +609,12 @@ function cycleNodeGraphGraphShapeFromDisplayEvent(event, shapeBadge) {
     return false;
   }
   const graph = normalizeNodeGraphGraph(targetNode.graph);
-  const index = nodeGraphGraphNodeIndexFromValue(graph, shapeBadge.dataset.graphShapeIndex);
-  const node = graph.nodes[index];
-  graph.nodes[index] = normalizeNodeGraphGraphNode({
-    ...node,
-    shape: nodeGraphGraphNextShape(node.shape),
-  }, index);
-  targetNode.graph = graph;
+  const shape = cycleNodeGraphGraphShapeData(graph, shapeBadge.dataset.graphShapeIndex);
+  targetNode.graph = shape.graph;
   display?.focus?.({ preventScroll: true });
-  setNodeGraphGraphSelectedNodeIndex(nodeId, graph, index);
+  setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, shape.selectedIndex);
   commitNodeGraphPatch(patch, { status: "graph curve shape changed" });
-  syncNodeGraphGraphControls(targetNode.graph, index);
+  syncNodeGraphGraphControls(targetNode.graph, shape.selectedIndex);
   event?.preventDefault?.();
   event?.stopPropagation?.();
   return true;
@@ -723,6 +738,33 @@ function duplicateFocusedNodeGraphGraphNode() {
   syncNodeGraphGraphElement(moduleElement, targetNode);
   if (nodeGraphModuleActionTargetNodeId() === nodeId) {
     syncNodeGraphGraphControls(targetNode.graph, duplicate.selectedIndex);
+  }
+  display.focus?.({ preventScroll: true });
+  return true;
+}
+
+function cycleFocusedNodeGraphGraphShape() {
+  const display = document.activeElement?.closest?.(".node-module-graph-display");
+  const moduleElement = display?.closest?.(".dsp-node");
+  const nodeId = moduleElement?.dataset.node || "";
+  const sourceNode = nodeGraphPatchNode(nodeId);
+  if (!display || !sourceNode || sourceNode.type !== "graph") {
+    return false;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === nodeId);
+  if (!targetNode || targetNode.type !== "graph") {
+    return false;
+  }
+  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  const selectedIndex = nodeGraphGraphSelectedNodeIndex(nodeId, graph, graph.nodes.length - 1);
+  const shape = cycleNodeGraphGraphShapeData(graph, selectedIndex);
+  targetNode.graph = shape.graph;
+  commitNodeGraphPatch(patch, { status: "graph curve shape changed" });
+  setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, shape.selectedIndex);
+  syncNodeGraphGraphElement(moduleElement, targetNode);
+  if (nodeGraphModuleActionTargetNodeId() === nodeId) {
+    syncNodeGraphGraphControls(targetNode.graph, shape.selectedIndex);
   }
   display.focus?.({ preventScroll: true });
   return true;

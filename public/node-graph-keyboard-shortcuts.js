@@ -140,6 +140,12 @@ function handleNodeGraphKeydown(event) {
     }
     return;
   }
+  if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "s") {
+    if (cycleFocusedNodeGraphGraphShape()) {
+      event.preventDefault();
+    }
+    return;
+  }
   if (nudgeFocusedNodeGraphGraphNode(event)) {
     event.preventDefault();
     return;
