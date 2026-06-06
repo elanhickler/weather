@@ -260,6 +260,9 @@ class SandboxServer(BaseHTTPRequestHandler):
         if parsed.path == "/api/presets/useruisettings":
             self.save_default_ui_settings()
             return
+        if parsed.path == "/api/shader-script/to-desktop":
+            self.save_shader_script_to_desktop()
+            return
         self.reject_mutation_method()
 
     def do_PUT(self) -> None:
@@ -473,6 +476,45 @@ class SandboxServer(BaseHTTPRequestHandler):
                 "ok": True,
                 "path": str(DEFAULT_UI_SETTINGS),
                 "bytes": DEFAULT_UI_SETTINGS.stat().st_size,
+            },
+        )
+
+    def save_shader_script_to_desktop(self) -> None:
+        payload = self.read_json_preset_payload("shader script")
+        if payload is None:
+            return
+
+        source = payload.get("source")
+        if not isinstance(source, str):
+            self.send_json(
+                {"ok": False, "error": "shader script source must be a string"},
+                status=400,
+            )
+            return
+        title = str(payload.get("title") or "scope-shader")
+        safe_title = "".join(
+            character if character.isalnum() or character in ("-", "_", ".") else "-"
+            for character in title.strip()
+        ).strip(".-") or "scope-shader"
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"{safe_title}-{timestamp}.scope-shader.txt"
+        desktop = Path.home() / "Desktop"
+        try:
+            desktop.mkdir(parents=True, exist_ok=True)
+            path = desktop / filename
+            path.write_text(source, encoding="utf-8")
+        except OSError as exc:
+            self.send_json(
+                {"ok": False, "error": f"desktop export failed: {exc}"},
+                status=500,
+            )
+            return
+        self.send_json(
+            {
+                "ok": True,
+                "filename": filename,
+                "path": str(path),
+                "bytes": path.stat().st_size,
             },
         )
 

@@ -6,6 +6,7 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
   minPx: 8,
   stepPx: 0.75,
 });
+const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
 
 const nodeGraphShaderScriptVertexSource = `
 attribute vec2 aPosition;
@@ -258,6 +259,7 @@ const nodeGraphShaderScriptState = {
   gl: null,
   lastError: "",
   program: null,
+  previewFrame: 0,
   renderer: null,
   scopeTargetNodeId: "",
   tokenWidget: null,
@@ -462,7 +464,7 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
       ? "node-shader-token-color"
       : token === "="
         ? "node-shader-token-assignment"
-        : ["laser", "led", "light", "paint", "solid"].includes(token)
+        : nodeGraphShaderScriptBlendModes.includes(token)
           ? "node-shader-token-mode"
           : token.startsWith("dot") || token.startsWith("blend")
           ? "node-shader-token-property"
@@ -473,6 +475,8 @@ function colorizeNodeGraphShaderScriptLine(line = "", lineStart = 0) {
       ? "color"
       : className === "node-shader-token-number"
         ? "number"
+        : className === "node-shader-token-mode"
+          ? "mode"
         : "";
     const tokenAttributes = tokenType
       ? ` data-token-type="${tokenType}" data-token-start="${tokenStart}" data-token-end="${tokenEnd}"`
@@ -510,13 +514,15 @@ function closeNodeGraphShaderScriptTokenWidget() {
   if (widget) {
     widget.hidden = true;
   }
-  const colorSection = document.getElementById("nodeShaderScriptColorWidget");
-  const numberSection = document.getElementById("nodeShaderScriptNumberWidget");
-  if (colorSection) {
-    colorSection.hidden = true;
-  }
-  if (numberSection) {
-    numberSection.hidden = true;
+  for (const id of [
+    "nodeShaderScriptColorWidget",
+    "nodeShaderScriptNumberWidget",
+    "nodeShaderScriptModeWidget",
+  ]) {
+    const section = document.getElementById(id);
+    if (section) {
+      section.hidden = true;
+    }
   }
   nodeGraphShaderScriptState.tokenWidget = null;
 }
@@ -557,7 +563,7 @@ function findNodeGraphShaderScriptEditableTokenAt(index) {
   const source = document.getElementById("nodeShaderScriptSource");
   const text = source?.value || "";
   const position = clampNodeSliderValue(Number(index) || 0, 0, text.length);
-  const tokenPattern = /#[0-9a-fA-F]{3,8}\b|-?\d+(?:\.\d+)?\b/g;
+  const tokenPattern = /#[0-9a-fA-F]{3,8}\b|-?\d+(?:\.\d+)?\b|\b(?:laser|led|light|paint|solid)\b/g;
   for (const match of text.matchAll(tokenPattern)) {
     const start = match.index;
     const end = start + match[0].length;
@@ -571,7 +577,11 @@ function findNodeGraphShaderScriptEditableTokenAt(index) {
         end,
         start,
         token: match[0],
-        type: match[0].startsWith("#") ? "color" : "number",
+        type: match[0].startsWith("#")
+          ? "color"
+          : nodeGraphShaderScriptBlendModes.includes(match[0])
+            ? "mode"
+            : "number",
       };
     }
   }
@@ -611,7 +621,8 @@ function openNodeGraphShaderScriptTokenWidget(token, event) {
   const widget = document.getElementById("nodeShaderScriptTokenWidget");
   const colorSection = document.getElementById("nodeShaderScriptColorWidget");
   const numberSection = document.getElementById("nodeShaderScriptNumberWidget");
-  if (!widget || !colorSection || !numberSection || !token) {
+  const modeSection = document.getElementById("nodeShaderScriptModeWidget");
+  if (!widget || !colorSection || !numberSection || !modeSection || !token) {
     closeNodeGraphShaderScriptTokenWidget();
     return;
   }
@@ -619,6 +630,7 @@ function openNodeGraphShaderScriptTokenWidget(token, event) {
   widget.hidden = false;
   colorSection.hidden = token.type !== "color";
   numberSection.hidden = token.type !== "number";
+  modeSection.hidden = token.type !== "mode";
   if (token.type === "color") {
     const input = document.getElementById("nodeShaderScriptColorInput");
     if (input) {
@@ -658,6 +670,70 @@ function changeNodeGraphShaderScriptNumberToken(delta) {
   const input = document.getElementById("nodeShaderScriptNumberInput");
   if (input) {
     input.value = nextToken;
+  }
+}
+
+function nodeGraphShaderScriptSourceText() {
+  return document.getElementById("nodeShaderScriptSource")?.value || "";
+}
+
+function setNodeGraphShaderScriptSourceText(text) {
+  const source = document.getElementById("nodeShaderScriptSource");
+  if (!source) {
+    return;
+  }
+  source.value = String(text || "");
+  updateNodeGraphShaderScriptHighlight();
+  closeNodeGraphShaderScriptTokenWidget();
+}
+
+async function copyNodeGraphShaderScriptSource() {
+  const text = nodeGraphShaderScriptSourceText();
+  try {
+    await navigator.clipboard.writeText(text);
+    nodeGraphShaderScriptStatus("copied", false);
+  } catch {
+    nodeGraphShaderScriptStatus("copy unavailable", true);
+  }
+}
+
+async function pasteNodeGraphShaderScriptSource() {
+  try {
+    const text = await navigator.clipboard.readText();
+    setNodeGraphShaderScriptSourceText(text);
+    nodeGraphShaderScriptStatus("pasted", false);
+  } catch {
+    nodeGraphShaderScriptStatus("paste unavailable", true);
+  }
+}
+
+function downloadNodeGraphShaderScriptSource(filename, source) {
+  const link = document.createElement("a");
+  const blob = new Blob([source], { type: "text/plain;charset=utf-8" });
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 0);
+}
+
+async function exportNodeGraphShaderScriptToDesktop() {
+  const targetNode = nodeGraphShaderScriptDialogScopeNode();
+  const title = targetNode ? nodeGraphPatchNodeTitle(targetNode) : "modular-shader";
+  const source = nodeGraphShaderScriptSourceText();
+  try {
+    const response = await fetch("/api/shader-script/to-desktop", {
+      body: JSON.stringify({ source, title }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+    const result = await response.json();
+    if (!response.ok || !result?.ok) {
+      throw new Error(result?.error || "desktop export failed");
+    }
+    nodeGraphShaderScriptStatus(`desktop: ${result.filename}`, false);
+  } catch {
+    downloadNodeGraphShaderScriptSource(`${title.replace(/[^\w.-]+/g, "-") || "scope-shader"}.scope-shader.txt`, source);
+    nodeGraphShaderScriptStatus("downloaded", false);
   }
 }
 
@@ -740,6 +816,85 @@ function nodeGraphShaderScriptDialogScopeSource() {
   return normalizeNodeGraphScopeShader(node?.scopeShader).source;
 }
 
+function nodeGraphShaderScriptScopePreviewSlot() {
+  const node = nodeGraphShaderScriptDialogScopeNode();
+  return node?.id ? nodeGraphModuleScopeState?.slots?.get?.(node.id) || null : null;
+}
+
+function drawNodeGraphShaderScriptScopePreview() {
+  nodeGraphShaderScriptState.previewFrame = 0;
+  const panel = document.getElementById("nodeShaderScriptPreviewPanel");
+  const canvas = document.getElementById("nodeShaderScriptPreviewCanvas");
+  const status = document.getElementById("nodeShaderScriptPreviewStatus");
+  if (
+    nodeGraphShaderScriptState.dialogMode !== "scope" ||
+    !panel ||
+    panel.hidden ||
+    !canvas
+  ) {
+    return;
+  }
+  const slot = nodeGraphShaderScriptScopePreviewSlot();
+  const sourceCanvas = nodeGraphModuleScopeCanvas?.();
+  const lightCanvas = nodeGraphModuleScopeLightCanvas?.();
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  const scopeElement = slot?.scopeElement;
+  const context = canvas.getContext("2d");
+  if (!slot || !sourceCanvas || !workspace || !scopeElement || !context) {
+    if (status) {
+      status.textContent = "No live scope selected.";
+    }
+    scheduleNodeGraphShaderScriptScopePreview();
+    return;
+  }
+  const sourceRect = sourceCanvas.getBoundingClientRect();
+  const scopeRect = scopeElement.getBoundingClientRect();
+  const scaleX = sourceCanvas.width / Math.max(1, sourceRect.width);
+  const scaleY = sourceCanvas.height / Math.max(1, sourceRect.height);
+  const sx = Math.max(0, Math.floor((scopeRect.left - sourceRect.left) * scaleX));
+  const sy = Math.max(0, Math.floor((scopeRect.top - sourceRect.top) * scaleY));
+  const sw = Math.max(1, Math.floor(scopeRect.width * scaleX));
+  const sh = Math.max(1, Math.floor(scopeRect.height * scaleY));
+  const targetWidth = Math.max(1, Math.floor(canvas.clientWidth * (window.devicePixelRatio || 1)));
+  const targetHeight = Math.max(1, Math.floor(canvas.clientHeight * (window.devicePixelRatio || 1)));
+  if (canvas.width !== targetWidth) {
+    canvas.width = targetWidth;
+  }
+  if (canvas.height !== targetHeight) {
+    canvas.height = targetHeight;
+  }
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#000";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  try {
+    context.drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    if (lightCanvas && lightCanvas.width && lightCanvas.height) {
+      context.drawImage(lightCanvas, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    }
+    if (status) {
+      status.textContent = nodeGraphPatchNodeTitle(slot.nodeId || nodeGraphShaderScriptDialogScopeNode());
+    }
+  } catch {
+    if (status) {
+      status.textContent = "Live preview unavailable.";
+    }
+  }
+  scheduleNodeGraphShaderScriptScopePreview();
+}
+
+function scheduleNodeGraphShaderScriptScopePreview() {
+  if (nodeGraphShaderScriptState.previewFrame) {
+    return;
+  }
+  if (
+    nodeGraphShaderScriptState.dialogMode !== "scope" ||
+    document.getElementById("nodeShaderScriptDialog")?.hidden
+  ) {
+    return;
+  }
+  nodeGraphShaderScriptState.previewFrame = window.requestAnimationFrame(drawNodeGraphShaderScriptScopePreview);
+}
+
 function syncNodeGraphShaderScriptControls(options = {}) {
   const source = document.getElementById("nodeShaderScriptSource");
   const scopeMode = nodeGraphShaderScriptState.dialogMode === "scope";
@@ -768,7 +923,11 @@ function syncNodeGraphShaderScriptControls(options = {}) {
   }
   const applyButton = document.getElementById("nodeShaderScriptApply");
   if (applyButton) {
-    applyButton.textContent = scopeMode ? "Save Scope Shader" : "Apply";
+    applyButton.textContent = scopeMode ? "Save" : "Apply";
+  }
+  const previewPanel = document.getElementById("nodeShaderScriptPreviewPanel");
+  if (previewPanel) {
+    previewPanel.hidden = !scopeMode;
   }
   const defaultButton = document.getElementById("nodeShaderScriptDefault");
   if (defaultButton) {
@@ -796,6 +955,7 @@ function syncNodeGraphShaderScriptControls(options = {}) {
   }
   nodeGraphShaderScriptWorkspace()?.classList.toggle("shader-enabled", Boolean(nodeGraphShaderScriptState.enabled));
   applyNodeGraphShaderScriptEditorFontSize();
+  scheduleNodeGraphShaderScriptScopePreview();
 }
 
 function clearNodeGraphShaderScriptCanvas() {
@@ -924,6 +1084,9 @@ function setNodeGraphShaderScriptDialogVisible(visible) {
   if (visible) {
     syncNodeGraphShaderScriptControls({ forceSource: true });
     document.getElementById("nodeShaderScriptSource")?.focus();
+  } else if (nodeGraphShaderScriptState.previewFrame) {
+    window.cancelAnimationFrame(nodeGraphShaderScriptState.previewFrame);
+    nodeGraphShaderScriptState.previewFrame = 0;
   }
 }
 
@@ -1035,6 +1198,9 @@ function bindNodeGraphShaderScriptEvents() {
   document.getElementById("nodeShaderScriptClose")?.addEventListener("click", () =>
     setNodeGraphShaderScriptDialogVisible(false));
   document.getElementById("nodeShaderScriptApply")?.addEventListener("click", applyNodeGraphShaderScriptFromDialog);
+  document.getElementById("nodeShaderScriptCopy")?.addEventListener("click", copyNodeGraphShaderScriptSource);
+  document.getElementById("nodeShaderScriptPaste")?.addEventListener("click", pasteNodeGraphShaderScriptSource);
+  document.getElementById("nodeShaderScriptToDesktop")?.addEventListener("click", exportNodeGraphShaderScriptToDesktop);
   document.getElementById("nodeShaderScriptTextSizeDecrease")?.addEventListener("click", () =>
     changeNodeGraphShaderScriptEditorFontSize(-nodeGraphShaderScriptEditorFontSizeLimits.stepPx));
   document.getElementById("nodeShaderScriptTextSizeIncrease")?.addEventListener("click", () =>
@@ -1070,6 +1236,14 @@ function bindNodeGraphShaderScriptEvents() {
     changeNodeGraphShaderScriptNumberToken(-1));
   document.getElementById("nodeShaderScriptNumberIncrease")?.addEventListener("click", () =>
     changeNodeGraphShaderScriptNumberToken(1));
+  document.querySelectorAll("[data-shader-blend-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.shaderBlendMode;
+      if (nodeGraphShaderScriptBlendModes.includes(mode)) {
+        replaceNodeGraphShaderScriptToken(mode);
+      }
+    });
+  });
   const panel = document.querySelector("#nodeShaderScriptDialog .node-shader-script-panel");
   panel?.addEventListener("pointerdown", beginNodeGraphShaderScriptDialogDrag);
   panel?.addEventListener("pointermove", dragNodeGraphShaderScriptDialog);

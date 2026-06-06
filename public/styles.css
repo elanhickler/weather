@@ -9048,7 +9048,7 @@ button.saved-default,
   position: fixed;
   z-index: 75;
   inset: auto 18px 18px auto;
-  width: min(720px, calc(100vw - 36px));
+  width: min(960px, calc(100vw - 36px));
   max-height: min(720px, calc(100vh - 36px));
   color: var(--text);
 }
@@ -9151,6 +9151,13 @@ button.saved-default,
   justify-self: end;
 }
 
+.node-shader-script-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  gap: 10px;
+  min-height: 240px;
+}
+
 .node-shader-script-editor {
   position: relative;
   box-sizing: border-box;
@@ -9162,6 +9169,45 @@ button.saved-default,
   background:
     linear-gradient(180deg, rgba(1, 8, 10, 0.88), rgba(0, 0, 0, 0.92));
   overflow: hidden;
+}
+
+.node-shader-script-preview-panel {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(127, 199, 217, 0.2);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(4, 11, 14, 0.88), rgba(0, 0, 0, 0.9));
+}
+
+.node-shader-script-preview-panel[hidden] {
+  display: none;
+}
+
+.node-shader-script-preview-panel span {
+  color: rgba(127, 199, 217, 0.72);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.62rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.node-shader-script-preview-panel canvas {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid rgba(127, 199, 217, 0.18);
+  border-radius: 5px;
+  background: #000;
+}
+
+.node-shader-script-preview-panel p {
+  margin: 0;
+  color: rgba(156, 164, 166, 0.74);
+  font-size: 0.68rem;
+  line-height: 1.3;
 }
 
 .node-shader-script-highlight,
@@ -9266,6 +9312,10 @@ button.saved-default,
   gap: 6px;
 }
 
+.node-shader-script-token-widget-section.mode-options {
+  grid-template-columns: auto repeat(5, minmax(0, auto));
+}
+
 .node-shader-script-token-widget-section span {
   color: rgba(156, 164, 166, 0.78);
   font-family: Consolas, "Courier New", monospace;
@@ -9295,13 +9345,20 @@ button.saved-default,
 }
 
 .node-shader-script-token-widget-section button {
-  width: 28px;
+  min-width: 28px;
   height: 28px;
+  padding: 0 7px;
   border: 1px solid rgba(127, 199, 217, 0.24);
   border-radius: 4px;
   background: rgba(9, 24, 30, 0.9);
   color: rgba(236, 251, 246, 0.94);
   font: inherit;
+}
+
+@media (max-width: 760px) {
+  .node-shader-script-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .node-shader-script-actions {

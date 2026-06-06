@@ -444,31 +444,49 @@
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <div class="node-shader-script-editor">
-            <pre
-              id="nodeShaderScriptHighlight"
-              class="node-shader-script-highlight"
-              aria-hidden="true"></pre>
-            <textarea
-              id="nodeShaderScriptSource"
-              spellcheck="false"
-              autocomplete="off"
-              aria-label="Modular view fragment shader source"></textarea>
-            <div id="nodeShaderScriptTokenWidget" class="node-shader-script-token-widget" hidden>
-              <div id="nodeShaderScriptColorWidget" class="node-shader-script-token-widget-section" hidden>
-                <span>color</span>
-                <input id="nodeShaderScriptColorInput" type="color" value="#ffffff" aria-label="Shader token color">
-              </div>
-              <div id="nodeShaderScriptNumberWidget" class="node-shader-script-token-widget-section" hidden>
-                <span>number</span>
-                <button id="nodeShaderScriptNumberDecrease" type="button" aria-label="Decrease shader token number">-</button>
-                <input id="nodeShaderScriptNumberInput" type="number" step="0.01" aria-label="Shader token number">
-                <button id="nodeShaderScriptNumberIncrease" type="button" aria-label="Increase shader token number">+</button>
+          <div class="node-shader-script-body">
+            <div class="node-shader-script-editor">
+              <pre
+                id="nodeShaderScriptHighlight"
+                class="node-shader-script-highlight"
+                aria-hidden="true"></pre>
+              <textarea
+                id="nodeShaderScriptSource"
+                spellcheck="false"
+                autocomplete="off"
+                aria-label="Modular view fragment shader source"></textarea>
+              <div id="nodeShaderScriptTokenWidget" class="node-shader-script-token-widget" hidden>
+                <div id="nodeShaderScriptColorWidget" class="node-shader-script-token-widget-section" hidden>
+                  <span>color</span>
+                  <input id="nodeShaderScriptColorInput" type="color" value="#ffffff" aria-label="Shader token color">
+                </div>
+                <div id="nodeShaderScriptNumberWidget" class="node-shader-script-token-widget-section" hidden>
+                  <span>number</span>
+                  <button id="nodeShaderScriptNumberDecrease" type="button" aria-label="Decrease shader token number">-</button>
+                  <input id="nodeShaderScriptNumberInput" type="number" step="0.01" aria-label="Shader token number">
+                  <button id="nodeShaderScriptNumberIncrease" type="button" aria-label="Increase shader token number">+</button>
+                </div>
+                <div id="nodeShaderScriptModeWidget" class="node-shader-script-token-widget-section mode-options" hidden>
+                  <span>blend</span>
+                  <button type="button" data-shader-blend-mode="laser">laser</button>
+                  <button type="button" data-shader-blend-mode="led">led</button>
+                  <button type="button" data-shader-blend-mode="light">light</button>
+                  <button type="button" data-shader-blend-mode="paint">paint</button>
+                  <button type="button" data-shader-blend-mode="solid">solid</button>
+                </div>
               </div>
             </div>
+            <aside id="nodeShaderScriptPreviewPanel" class="node-shader-script-preview-panel" hidden>
+              <span>live scope</span>
+              <canvas id="nodeShaderScriptPreviewCanvas" width="320" height="180" aria-label="Current scope preview"></canvas>
+              <p id="nodeShaderScriptPreviewStatus">No live scope selected.</p>
+            </aside>
           </div>
           <div class="node-shader-script-actions">
             <button id="nodeShaderScriptApply" type="button">Apply</button>
+            <button id="nodeShaderScriptCopy" type="button">Copy</button>
+            <button id="nodeShaderScriptPaste" type="button">Paste</button>
+            <button id="nodeShaderScriptToDesktop" type="button">To Desktop</button>
             <button id="nodeShaderScriptDefault" type="button">Ghost Phosphor</button>
             <button id="nodeShaderScriptGreenPreset" type="button">Green Tube</button>
             <button id="nodeShaderScriptAmberPreset" type="button">Amber Tube</button>
