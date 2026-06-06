@@ -655,6 +655,18 @@ function nodeGraphSlewLimiterSample(state, input, upTime, downTime, sampleRate, 
   return state.out;
 }
 
+function nodeGraphClockAnalogWhipSample(phase, level) {
+  const p = clampNodeSliderValue(Number(phase) || 0, 0, 1);
+  const attack = 1 - Math.pow(1 - Math.min(1, p / 0.035), 4);
+  const release = Math.pow(Math.max(0, 1 - p), 1.85);
+  const snapEnvelope = attack * release;
+  const sweepTurns = (3.15 * (1 - Math.exp(-4.2 * p)) / (1 - Math.exp(-4.2))) + (0.18 * Math.sin(Math.PI * p));
+  const liquidBend = 0.075 * Math.sin(Math.PI * 2 * p) * Math.pow(Math.max(0, 1 - p), 1.2);
+  const body = Math.sin((sweepTurns + liquidBend) * Math.PI * 2);
+  const sheen = Math.sin((sweepTurns * 2.02 + 0.17) * Math.PI * 2) * 0.16 * Math.pow(Math.max(0, 1 - p), 2.8);
+  return (body + sheen) * snapEnvelope * level;
+}
+
 function nodeGraphClockSample(state, rate, duty, level, sampleRate, runtime = null, nodeId = "") {
   const safeRate = Math.max(0, nodeGraphSafeFilterNumber(rate, runtime, nodeId, null, "clock rate"));
   const safeDuty = clampNodeSliderValue(
@@ -665,7 +677,7 @@ function nodeGraphClockSample(state, rate, duty, level, sampleRate, runtime = nu
   const safeLevel = nodeGraphSafeFilterNumber(level, runtime, nodeId, null, "clock level");
   const phase = wrapNodeSliderValue(Number(state.phase) || 0, 0, 1);
   const digital = phase < safeDuty ? safeLevel : 0;
-  const analog = Math.sin(phase * Math.PI * 2) * safeLevel;
+  const analog = nodeGraphClockAnalogWhipSample(phase, safeLevel);
   state.phase = wrapNodeSliderValue(phase + safeRate / Math.max(1, sampleRate), 0, 1);
   return {
     "Analog Out": analog,

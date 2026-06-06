@@ -7595,7 +7595,9 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphLadderFilterComputeFeedbackFactor",
         "y[0] = coeff.g * safeInput - coeff.k * y[4]",
         "function nodeGraphSlewLimiterSample(state, input, upTime, downTime, sampleRate, runtime = null, nodeId = \"\")",
+        "function nodeGraphClockAnalogWhipSample(phase, level)",
         "function nodeGraphClockSample(state, rate, duty, level, sampleRate, runtime = null, nodeId = \"\")",
+        "const analog = nodeGraphClockAnalogWhipSample(phase, safeLevel)",
         "function createNodeGraphRandomClockState()",
         "function nodeGraphRandomClockSample(state, reset, params, sampleRate, runtime = null, nodeId = \"\")",
         "function nodeGraphDelayedTriggerSample(state, trigger, reset, params, sampleRate, runtime = null, nodeId = \"\")",
@@ -9549,7 +9551,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSceneLedColor",
         'node?.type === "led"',
         '"led input"',
-        "./public/node-live-audio-worklet.js?v=clock-digital-analog-outs-1",
+        "./public/node-live-audio-worklet.js?v=clock-analog-whip-1",
     ]:
         require(snippet in node_graph_source, f"LED module contract missing {snippet}")
 
@@ -10867,6 +10869,8 @@ def require_node_graph_mvp_contract() -> None:
         "slewLimiterSample(state, input, upTime, downTime, rate = sampleRate)",
         "Math.max(-maxFall, Math.min(maxRise, delta))",
         "clockSample(state, rate, duty, level, rateHz = sampleRate)",
+        "clockAnalogWhipSample(phase, level)",
+        "const analog = this.clockAnalogWhipSample(phase, safeLevel)",
         '"Analog Out": analog',
         '"Digital Out": digital',
         "Out: digital",

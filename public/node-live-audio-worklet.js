@@ -2480,13 +2480,25 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return state.out;
   }
 
+  clockAnalogWhipSample(phase, level) {
+    const p = this.clampValue(Number(phase) || 0, 0, 1);
+    const attack = 1 - Math.pow(1 - Math.min(1, p / 0.035), 4);
+    const release = Math.pow(Math.max(0, 1 - p), 1.85);
+    const snapEnvelope = attack * release;
+    const sweepTurns = (3.15 * (1 - Math.exp(-4.2 * p)) / (1 - Math.exp(-4.2))) + (0.18 * Math.sin(Math.PI * p));
+    const liquidBend = 0.075 * Math.sin(Math.PI * 2 * p) * Math.pow(Math.max(0, 1 - p), 1.2);
+    const body = Math.sin((sweepTurns + liquidBend) * Math.PI * 2);
+    const sheen = Math.sin((sweepTurns * 2.02 + 0.17) * Math.PI * 2) * 0.16 * Math.pow(Math.max(0, 1 - p), 2.8);
+    return (body + sheen) * snapEnvelope * level;
+  }
+
   clockSample(state, rate, duty, level, rateHz = sampleRate) {
     const safeRate = Math.max(0, this.safeFilterNumber(rate, null));
     const safeDuty = this.clampValue(this.safeFilterNumber(duty, null), 0, 1);
     const safeLevel = this.safeFilterNumber(level, null);
     const phase = this.wrapValue(Number(state.phase) || 0, 0, 1);
     const digital = phase < safeDuty ? safeLevel : 0;
-    const analog = Math.sin(phase * Math.PI * 2) * safeLevel;
+    const analog = this.clockAnalogWhipSample(phase, safeLevel);
     state.phase = this.wrapValue(phase + safeRate / Math.max(1, rateHz), 0, 1);
     return {
       "Analog Out": analog,
