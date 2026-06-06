@@ -1,4 +1,5 @@
 const nodeGraphShaderScriptStorageKey = "soemdsp-sandbox.modularShader.v1";
+const nodeGraphScopeShaderModuleDefaultsStorageKey = "soemdsp-sandbox.scopeShaderModuleDefaults.v1";
 const nodeGraphShaderScriptMaxScopes = 32;
 const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
   defaultPx: 11.5,
@@ -24,6 +25,46 @@ const nodeGraphShaderScriptLegacySyntaxColors = Object.freeze({
   number: "#b4ffb2",
   property: "#84e6ff",
 });
+
+function nodeGraphScopeShaderDefaultModuleKey(node) {
+  return String(node?.type || "").trim().slice(0, 80);
+}
+
+function normalizeNodeGraphScopeShaderModuleDefaults(defaults = {}) {
+  const source = defaults && typeof defaults === "object" && !Array.isArray(defaults) ? defaults : {};
+  return Object.fromEntries(
+    Object.entries(source)
+      .filter(([key, value]) => key && typeof value === "string" && value.trim())
+      .map(([key, value]) => [String(key).slice(0, 80), String(value).slice(0, 20000)]),
+  );
+}
+
+function loadNodeGraphScopeShaderModuleDefaults() {
+  try {
+    return normalizeNodeGraphScopeShaderModuleDefaults(
+      JSON.parse(window.localStorage.getItem(nodeGraphScopeShaderModuleDefaultsStorageKey) || "{}"),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveNodeGraphScopeShaderModuleDefaults(defaults) {
+  try {
+    window.localStorage.setItem(
+      nodeGraphScopeShaderModuleDefaultsStorageKey,
+      JSON.stringify(normalizeNodeGraphScopeShaderModuleDefaults(defaults)),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function nodeGraphScopeShaderModuleDefaultSource(node) {
+  const key = nodeGraphScopeShaderDefaultModuleKey(node);
+  return key ? loadNodeGraphScopeShaderModuleDefaults()[key] || "" : "";
+}
 
 const nodeGraphShaderScriptVertexSource = `
 attribute vec2 aPosition;
@@ -977,6 +1018,12 @@ function nodeGraphShaderScriptDialogScopeNode() {
 
 function nodeGraphShaderScriptDialogScopeSource() {
   const node = nodeGraphShaderScriptDialogScopeNode();
+  if (node && !Object.hasOwn(node, "scopeShader")) {
+    const moduleDefault = nodeGraphScopeShaderModuleDefaultSource(node);
+    if (moduleDefault) {
+      return moduleDefault;
+    }
+  }
   return normalizeNodeGraphScopeShader(node?.scopeShader).source;
 }
 
@@ -1105,6 +1152,10 @@ function syncNodeGraphShaderScriptControls(options = {}) {
   const defaultButton = document.getElementById("nodeShaderScriptDefault");
   if (defaultButton) {
     defaultButton.textContent = scopeMode ? "Scope Starter" : "Ghost Phosphor";
+  }
+  const saveDefaultButton = document.getElementById("nodeShaderScriptSaveDefault");
+  if (saveDefaultButton) {
+    saveDefaultButton.hidden = !scopeMode;
   }
   for (const id of [
     "nodeShaderScriptGreenPreset",
@@ -1321,6 +1372,30 @@ function saveNodeGraphScopeShaderScriptFromDialog() {
   return true;
 }
 
+function saveNodeGraphScopeShaderScriptDefaultFromDialog() {
+  const targetNode = nodeGraphShaderScriptDialogScopeNode();
+  if (!targetNode) {
+    nodeGraphShaderScriptStatus("scope module missing", true);
+    return false;
+  }
+  const key = nodeGraphScopeShaderDefaultModuleKey(targetNode);
+  if (!key) {
+    nodeGraphShaderScriptStatus("module type missing", true);
+    return false;
+  }
+  const source = document.getElementById("nodeShaderScriptSource")?.value || "";
+  const defaults = {
+    ...loadNodeGraphScopeShaderModuleDefaults(),
+    [key]: normalizeNodeGraphScopeShader({ source }).source,
+  };
+  if (!saveNodeGraphScopeShaderModuleDefaults(defaults)) {
+    nodeGraphShaderScriptStatus("default save unavailable", true);
+    return false;
+  }
+  nodeGraphShaderScriptStatus(`${nodeGraphPatchNodeTitle(targetNode)} default saved`, false);
+  return true;
+}
+
 function applyNodeGraphShaderScriptFromDialog() {
   if (nodeGraphShaderScriptState.dialogMode === "scope") {
     saveNodeGraphScopeShaderScriptFromDialog();
@@ -1334,9 +1409,11 @@ function applyNodeGraphShaderScriptFromDialog() {
 
 function applyNodeGraphShaderScriptPreset(fragmentSource) {
   if (nodeGraphShaderScriptState.dialogMode === "scope") {
-    document.getElementById("nodeShaderScriptSource").value = nodeGraphScopeShaderDefaultSource;
+    const targetNode = nodeGraphShaderScriptDialogScopeNode();
+    const moduleDefault = nodeGraphScopeShaderModuleDefaultSource(targetNode);
+    document.getElementById("nodeShaderScriptSource").value = moduleDefault || nodeGraphScopeShaderDefaultSource;
     updateNodeGraphShaderScriptHighlight();
-    nodeGraphShaderScriptStatus("scope starter loaded", false);
+    nodeGraphShaderScriptStatus(moduleDefault ? "module default loaded" : "scope starter loaded", false);
     return;
   }
   nodeGraphShaderScriptState.fragmentSource = fragmentSource.trim();
@@ -1381,6 +1458,7 @@ function bindNodeGraphShaderScriptEvents() {
   document.getElementById("nodeShaderScriptCopy")?.addEventListener("click", copyNodeGraphShaderScriptSource);
   document.getElementById("nodeShaderScriptPaste")?.addEventListener("click", pasteNodeGraphShaderScriptSource);
   document.getElementById("nodeShaderScriptToDesktop")?.addEventListener("click", exportNodeGraphShaderScriptToDesktop);
+  document.getElementById("nodeShaderScriptSaveDefault")?.addEventListener("click", saveNodeGraphScopeShaderScriptDefaultFromDialog);
   document.getElementById("nodeShaderScriptTextSizeDecrease")?.addEventListener("click", () =>
     changeNodeGraphShaderScriptEditorFontSize(-nodeGraphShaderScriptEditorFontSizeLimits.stepPx));
   document.getElementById("nodeShaderScriptTextSizeIncrease")?.addEventListener("click", () =>
