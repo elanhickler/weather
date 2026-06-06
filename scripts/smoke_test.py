@@ -8910,6 +8910,7 @@ def require_node_graph_mvp_contract() -> None:
         "const on = duty > 0 && level > 0 && phase < duty",
         "const capturedTarget = nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer)",
         "nodeGraphScopeLightDisplay: true",
+        "nodeGraphScopeLightCenterRadiusInsetPx: 1",
         "nodeGraphScopeLightShape: nodeGraphModuleScopeSetting(slot.nodeId).blinkLightShape",
         "nodeGraphScopeLightTarget: capturedTarget ?? (on ? level : 0)",
         "nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer)",
@@ -9434,6 +9435,12 @@ def require_node_graph_mvp_contract() -> None:
         and "const dot2Scale = clampNodeSliderValue((core2Size * lineThickness) / 8, 0.1, 2)" in light_display_source
         and "drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, radius);" in light_display_source,
         "clock light display should assume dot 2 color and dot 2 size for the outer light",
+    )
+    require(
+        "const centerRadiusInsetPx = Number(buffer.nodeGraphScopeLightCenterRadiusInsetPx)" in light_display_source
+        and "Math.max(0, radius - Math.max(0, centerRadiusInsetPx) * pixelRatio)" in light_display_source
+        and "drawNodeGraphModuleScopeLightShape(context, shape, centerX, centerY, centerRadius);" in light_display_source,
+        "clock light display should be able to draw dot 1 as dot 2 radius minus a pixel inset",
     )
     require(
         "buffer.nodeGraphScopeLightCenterColor ?? outerColor" in light_display_source
