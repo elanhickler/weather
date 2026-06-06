@@ -36,6 +36,9 @@ function createNodeGraphPatchNode(type, options = {}) {
   if (type === "codeblock") {
     node.codeblock = normalizeNodeGraphCodeblock(options.codeblock);
   }
+  if (Object.hasOwn(options, "scopeShader")) {
+    node.scopeShader = normalizeNodeGraphScopeShader(options.scopeShader);
+  }
   if (type === "moduleGroup") {
     node.moduleGroup = normalizeNodeGraphModuleGroup(options.moduleGroup);
   }

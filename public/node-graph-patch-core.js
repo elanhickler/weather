@@ -148,6 +148,9 @@ function validateNodeGraphPatch(patch) {
     if (type === "codeblock") {
       normalizedNode.codeblock = normalizeNodeGraphCodeblock(node.codeblock);
     }
+    if (Object.hasOwn(node, "scopeShader")) {
+      normalizedNode.scopeShader = normalizeNodeGraphScopeShader(node.scopeShader);
+    }
     if (type === "moduleGroup") {
       normalizedNode.moduleGroup = normalizeNodeGraphModuleGroup(node.moduleGroup);
     }

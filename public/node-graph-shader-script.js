@@ -244,12 +244,14 @@ void main() {
 
 const nodeGraphShaderScriptState = {
   animationFrame: 0,
+  dialogMode: "global",
   enabled: false,
   fragmentSource: nodeGraphShaderScriptDefaultFragmentSource.trim(),
   gl: null,
   lastError: "",
   program: null,
   renderer: null,
+  scopeTargetNodeId: "",
 };
 
 function nodeGraphShaderScriptCanvas() {
@@ -391,15 +393,60 @@ function nodeGraphShaderScriptStatus(message, isError = false) {
   status.classList.toggle("good", !isError);
 }
 
-function syncNodeGraphShaderScriptControls() {
+function nodeGraphShaderScriptDialogScopeNode() {
+  const nodeId = String(nodeGraphShaderScriptState.scopeTargetNodeId || "").trim();
+  return nodeId ? nodeGraphPatchNode(nodeId) : null;
+}
+
+function nodeGraphShaderScriptDialogScopeSource() {
+  const node = nodeGraphShaderScriptDialogScopeNode();
+  return normalizeNodeGraphScopeShader(node?.scopeShader).source;
+}
+
+function syncNodeGraphShaderScriptControls(options = {}) {
   const source = document.getElementById("nodeShaderScriptSource");
-  if (source && document.activeElement !== source) {
-    source.value = nodeGraphShaderScriptState.fragmentSource;
+  const scopeMode = nodeGraphShaderScriptState.dialogMode === "scope";
+  if (source && (options.forceSource || document.activeElement !== source)) {
+    source.value = scopeMode
+      ? nodeGraphShaderScriptDialogScopeSource()
+      : nodeGraphShaderScriptState.fragmentSource;
+  }
+  const title = document.getElementById("nodeShaderScriptTitle");
+  const targetNode = scopeMode ? nodeGraphShaderScriptDialogScopeNode() : null;
+  if (title) {
+    title.textContent = scopeMode && targetNode
+      ? `Scope Shader: ${nodeGraphPatchNodeTitle(targetNode)}`
+      : "Shader Script";
+  }
+  const modeLabel = title?.closest?.(".node-shader-script-heading")?.querySelector?.("span");
+  if (modeLabel) {
+    modeLabel.textContent = scopeMode ? "module scope" : "modular view";
   }
   const enable = document.getElementById("nodeShaderScriptEnable");
   if (enable) {
+    enable.hidden = scopeMode;
     enable.textContent = nodeGraphShaderScriptState.enabled ? "Enabled" : "Disabled";
     enable.setAttribute("aria-pressed", String(Boolean(nodeGraphShaderScriptState.enabled)));
+  }
+  const applyButton = document.getElementById("nodeShaderScriptApply");
+  if (applyButton) {
+    applyButton.textContent = scopeMode ? "Save Scope Shader" : "Apply";
+  }
+  const defaultButton = document.getElementById("nodeShaderScriptDefault");
+  if (defaultButton) {
+    defaultButton.textContent = scopeMode ? "Scope Starter" : "Ghost Phosphor";
+  }
+  for (const id of [
+    "nodeShaderScriptGreenPreset",
+    "nodeShaderScriptAmberPreset",
+    "nodeShaderScriptCoolWhitePreset",
+    "nodeShaderScriptRgbPixelPreset",
+    "nodeShaderScriptRedPreset",
+  ]) {
+    const button = document.getElementById(id);
+    if (button) {
+      button.hidden = scopeMode;
+    }
   }
   const toolbar = document.getElementById("nodeShaderScriptButton");
   if (toolbar) {
@@ -536,16 +583,67 @@ function setNodeGraphShaderScriptDialogVisible(visible) {
   }
   dialog.hidden = !visible;
   if (visible) {
-    syncNodeGraphShaderScriptControls();
+    syncNodeGraphShaderScriptControls({ forceSource: true });
     document.getElementById("nodeShaderScriptSource")?.focus();
   }
+}
+
+function setNodeGraphShaderScriptDialogMode(mode, nodeId = "") {
+  nodeGraphShaderScriptState.dialogMode = mode === "scope" ? "scope" : "global";
+  nodeGraphShaderScriptState.scopeTargetNodeId = nodeGraphShaderScriptState.dialogMode === "scope"
+    ? String(nodeId || "").trim()
+    : "";
+}
+
+function openNodeGraphGlobalShaderScript() {
+  setNodeGraphShaderScriptDialogMode("global");
+  setNodeGraphShaderScriptDialogVisible(true);
+}
+
+function openNodeGraphScopeShaderScript(nodeId) {
+  const node = nodeGraphPatchNode(nodeId);
+  if (!node) {
+    return false;
+  }
+  setNodeGraphShaderScriptDialogMode("scope", node.id);
+  setNodeGraphShaderScriptDialogVisible(true);
+  nodeGraphShaderScriptStatus("scope shader ready", false);
+  return true;
 }
 
 function toggleNodeGraphShaderScriptEnabled() {
   setNodeGraphShaderScriptEnabled(!nodeGraphShaderScriptState.enabled);
 }
 
+function saveNodeGraphScopeShaderScriptFromDialog() {
+  const targetNode = nodeGraphShaderScriptDialogScopeNode();
+  if (!targetNode) {
+    nodeGraphShaderScriptStatus("scope module missing", true);
+    return false;
+  }
+  const source = document.getElementById("nodeShaderScriptSource")?.value || "";
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const node = patch.nodes.find((candidate) => candidate.id === targetNode.id);
+  if (!node) {
+    nodeGraphShaderScriptStatus("scope module missing", true);
+    return false;
+  }
+  node.scopeShader = normalizeNodeGraphScopeShader({
+    ...node.scopeShader,
+    source,
+  });
+  commitNodeGraphPatch(patch, {
+    status: `scope shader saved for ${nodeGraphPatchNodeTitle(node)}`,
+  });
+  nodeGraphShaderScriptStatus("scope shader saved", false);
+  return true;
+}
+
 function applyNodeGraphShaderScriptFromDialog() {
+  if (nodeGraphShaderScriptState.dialogMode === "scope") {
+    saveNodeGraphScopeShaderScriptFromDialog();
+    return;
+  }
   const source = document.getElementById("nodeShaderScriptSource")?.value || "";
   if (updateNodeGraphShaderProgram(source)) {
     setNodeGraphShaderScriptEnabled(true);
@@ -553,6 +651,11 @@ function applyNodeGraphShaderScriptFromDialog() {
 }
 
 function applyNodeGraphShaderScriptPreset(fragmentSource) {
+  if (nodeGraphShaderScriptState.dialogMode === "scope") {
+    document.getElementById("nodeShaderScriptSource").value = nodeGraphScopeShaderDefaultSource;
+    nodeGraphShaderScriptStatus("scope starter loaded", false);
+    return;
+  }
   nodeGraphShaderScriptState.fragmentSource = fragmentSource.trim();
   document.getElementById("nodeShaderScriptSource").value = nodeGraphShaderScriptState.fragmentSource;
   updateNodeGraphShaderProgram(nodeGraphShaderScriptState.fragmentSource);
@@ -587,7 +690,7 @@ function bindNodeGraphShaderScriptEvents() {
   loadNodeGraphShaderScriptState();
   syncNodeGraphShaderScriptControls();
   document.getElementById("nodeShaderScriptButton")?.addEventListener("click", () =>
-    setNodeGraphShaderScriptDialogVisible(true));
+    openNodeGraphGlobalShaderScript());
   document.getElementById("nodeShaderScriptClose")?.addEventListener("click", () =>
     setNodeGraphShaderScriptDialogVisible(false));
   document.getElementById("nodeShaderScriptApply")?.addEventListener("click", applyNodeGraphShaderScriptFromDialog);

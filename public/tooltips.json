@@ -86,7 +86,7 @@
     "executionInactive": "Compiled order: inactive\nThis module is not reachable from Output or a visual sink.",
     "executionTitleInactive": "Not in compiled execution order",
     "executionListItem": "Compiled order {order}: {nodeName}\nSelection only happens from move handles or marquee.",
-    "scopeWindow": "Oscilloscope: drag up/down to zoom in or out by changing cycles. Drag left/right to pan the waveform. Right-click for oscilloscope controls."
+    "scopeWindow": "Oscilloscope: drag up/down to zoom in or out by changing cycles. Drag left/right to pan the waveform. Right-click to edit this module's scope shader."
   },
   "wire": {
     "selected": "Mouse: click to select this wire. Delete removes selected wire.",

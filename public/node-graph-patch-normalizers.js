@@ -49,6 +49,42 @@ function normalizeNodeGraphPatchGrid(grid = {}) {
   };
 }
 
+const nodeGraphScopeShaderDefaultSource = `// Prettyscope-style module scope shader
+// V1 authoring contract. This script is saved on one module.
+// The current renderer does not execute it yet; use it to design the
+// module-local scope renderer that will replace shared phosphor drawing.
+
+export default function drawScope(scope) {
+  const signal = scope.signal;
+  const style = scope.style;
+  const screen = scope.screen;
+
+  screen.clear(style.background);
+  screen.trace(signal, {
+    color: style.dot1.color,
+    radiusPx: style.dot1.sizePx,
+    brightness: style.dot1.brightness,
+    overdrawPoints: style.overdrawPoints,
+    skipSamples: style.skipSamples,
+  });
+}`;
+
+function normalizeNodeGraphScopeShader(scopeShader = {}) {
+  const source = typeof scopeShader === "string"
+    ? scopeShader
+    : scopeShader && typeof scopeShader === "object"
+      ? scopeShader.source
+      : "";
+  const language = String(scopeShader?.language || "scope-js").trim().slice(0, 32) || "scope-js";
+  const normalizedSource = String(source || "").trim().slice(0, 100000);
+  return {
+    enabled: scopeShader?.enabled !== false,
+    kind: "scopeShader",
+    language,
+    source: normalizedSource || nodeGraphScopeShaderDefaultSource,
+  };
+}
+
 const nodeGraphDefaultCameraColors = Object.freeze([
   "#ff3333",
   "#3399ff",

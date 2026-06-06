@@ -152,6 +152,9 @@ function cloneNodeGraphPatch(patch) {
         ...(node.type === "codeblock"
           ? { codeblock: normalizeNodeGraphCodeblock(node.codeblock) }
           : {}),
+        ...(Object.hasOwn(node, "scopeShader")
+          ? { scopeShader: normalizeNodeGraphScopeShader(node.scopeShader) }
+          : {}),
         ...(node.type === "moduleGroup"
           ? { moduleGroup: normalizeNodeGraphModuleGroup(node.moduleGroup) }
           : {}),
