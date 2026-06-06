@@ -9336,6 +9336,22 @@ button.saved-default,
   gap: 6px;
 }
 
+.node-shader-script-token-widget-section:has(.node-shader-script-color-widget-host) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.node-shader-script-color-widget-host {
+  width: 220px;
+  height: 104px;
+  --color-widget-accent: rgba(127, 199, 217, 0.86);
+  --color-widget-bg: rgba(0, 5, 7, 0.42);
+  --color-widget-border: rgba(127, 199, 217, 0.2);
+  --color-widget-control-border: rgba(127, 199, 217, 0.22);
+  --color-widget-hex-bg: rgba(0, 5, 7, 0.68);
+  --color-widget-hex-ink: rgba(236, 251, 246, 0.9);
+  --color-widget-label-ink: rgba(156, 164, 166, 0.78);
+}
+
 .node-shader-script-token-widget-section.mode-options {
   grid-template-columns: auto repeat(5, minmax(0, auto));
 }
@@ -9355,11 +9371,6 @@ button.saved-default,
   background: rgba(0, 5, 7, 0.92);
   color: rgba(236, 251, 246, 0.94);
   font: inherit;
-}
-
-.node-shader-script-token-widget-section input[type="color"] {
-  width: 82px;
-  padding: 2px;
 }
 
 .node-shader-script-token-widget-section input[type="number"] {

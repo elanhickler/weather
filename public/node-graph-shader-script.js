@@ -7,6 +7,7 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
   stepPx: 0.75,
 });
 const nodeGraphShaderScriptClockPreviewToggleMs = 2000;
+const nodeGraphShaderScriptColorWidgetModuleUrl = "./public/color-widget.js?v=shader-token-color-widget-1";
 const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
 const nodeGraphShaderScriptDefaultSyntaxColors = Object.freeze({
   assignment: "#d6a35f",
@@ -276,6 +277,8 @@ const nodeGraphShaderScriptState = {
   program: null,
   previewFrame: 0,
   renderer: null,
+  colorWidget: null,
+  colorWidgetLoad: null,
   scopeTargetNodeId: "",
   syntaxColors: { ...nodeGraphShaderScriptDefaultSyntaxColors },
   tokenWidget: null,
@@ -605,6 +608,7 @@ function updateNodeGraphShaderScriptHighlight() {
 }
 
 function closeNodeGraphShaderScriptTokenWidget() {
+  destroyNodeGraphShaderScriptColorWidget();
   const widget = document.getElementById("nodeShaderScriptTokenWidget");
   if (widget) {
     widget.hidden = true;
@@ -622,6 +626,11 @@ function closeNodeGraphShaderScriptTokenWidget() {
   nodeGraphShaderScriptState.tokenWidget = null;
 }
 
+function destroyNodeGraphShaderScriptColorWidget() {
+  nodeGraphShaderScriptState.colorWidget?.destroy?.();
+  nodeGraphShaderScriptState.colorWidget = null;
+}
+
 function normalizeNodeGraphShaderScriptColorToken(value = "") {
   const token = String(value || "").trim();
   if (/^#[0-9a-fA-F]{6}$/.test(token)) {
@@ -634,6 +643,68 @@ function normalizeNodeGraphShaderScriptColorToken(value = "") {
     return token.slice(0, 7).toLowerCase();
   }
   return "#ffffff";
+}
+
+function nodeGraphShaderScriptHexToHsl(hexToken = "#ffffff") {
+  const hex = normalizeNodeGraphShaderScriptColorToken(hexToken);
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lightness = (max + min) / 2;
+  let hue = 0;
+  let saturation = 0;
+  if (max !== min) {
+    const delta = max - min;
+    saturation = lightness > 0.5
+      ? delta / (2 - max - min)
+      : delta / (max + min);
+    if (max === r) {
+      hue = (g - b) / delta + (g < b ? 6 : 0);
+    } else if (max === g) {
+      hue = (b - r) / delta + 2;
+    } else {
+      hue = (r - g) / delta + 4;
+    }
+    hue /= 6;
+  }
+  return {
+    a: 1,
+    h: Math.round(hue * 359),
+    l: Math.round(lightness * 100),
+    s: Math.round(saturation * 100),
+  };
+}
+
+function loadNodeGraphShaderScriptColorWidgetModule() {
+  nodeGraphShaderScriptState.colorWidgetLoad ||= import(nodeGraphShaderScriptColorWidgetModuleUrl);
+  return nodeGraphShaderScriptState.colorWidgetLoad;
+}
+
+async function mountNodeGraphShaderScriptColorWidget(token) {
+  const host = document.getElementById("nodeShaderScriptColorWidgetHost");
+  if (!host || !token || token.type !== "color") {
+    return;
+  }
+  destroyNodeGraphShaderScriptColorWidget();
+  host.replaceChildren();
+  const tokenStart = token.start;
+  const module = await loadNodeGraphShaderScriptColorWidgetModule();
+  const activeToken = nodeGraphShaderScriptState.tokenWidget;
+  if (!activeToken || activeToken.type !== "color" || activeToken.start !== tokenStart) {
+    return;
+  }
+  nodeGraphShaderScriptState.colorWidget = module.mountColorWidget(host, {
+    label: "color",
+    ...nodeGraphShaderScriptHexToHsl(activeToken.token),
+    onChange: (color) => {
+      if (nodeGraphShaderScriptState.tokenWidget?.type !== "color") {
+        return;
+      }
+      replaceNodeGraphShaderScriptToken(normalizeNodeGraphShaderScriptColorToken(color.hex));
+    },
+  });
 }
 
 function nodeGraphShaderScriptNumberPrecision(token = "") {
@@ -727,10 +798,7 @@ function openNodeGraphShaderScriptTokenWidget(token, event) {
   numberSection.hidden = token.type !== "number";
   modeSection.hidden = token.type !== "mode";
   if (token.type === "color") {
-    const input = document.getElementById("nodeShaderScriptColorInput");
-    if (input) {
-      input.value = normalizeNodeGraphShaderScriptColorToken(token.token);
-    }
+    mountNodeGraphShaderScriptColorWidget(token);
   } else if (token.type === "number") {
     const input = document.getElementById("nodeShaderScriptNumberInput");
     if (input) {
@@ -1337,9 +1405,6 @@ function bindNodeGraphShaderScriptEvents() {
         closeNodeGraphShaderScriptTokenWidget();
       }
     }
-  });
-  document.getElementById("nodeShaderScriptColorInput")?.addEventListener("input", (event) => {
-    replaceNodeGraphShaderScriptToken(normalizeNodeGraphShaderScriptColorToken(event.target.value));
   });
   document.getElementById("nodeShaderScriptNumberInput")?.addEventListener("input", (event) => {
     const token = nodeGraphShaderScriptState.tokenWidget;
