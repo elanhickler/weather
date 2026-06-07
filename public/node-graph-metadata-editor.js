@@ -123,8 +123,18 @@ const nodeMetadataScriptSupportedKeys = new Set([
 function nodeMetadataScriptReferenceHtml() {
   const keys = Array.from(nodeMetadataScriptSupportedKeys).sort();
   const aliases = Object.entries(nodeMetadataScriptAliases);
+  const kindTemplates = typeof nodeMetadataKindTemplates !== "undefined"
+    ? nodeMetadataKindTemplates
+    : typeof fallbackNodeMetadataKindTemplates !== "undefined"
+      ? fallbackNodeMetadataKindTemplates
+      : {};
+  const kinds = Object.entries(kindTemplates)
+    .sort(([left], [right]) => left.localeCompare(right));
   const keyHtml = keys
     .map((key) => `<code data-key="${escapeNodeMetadataScriptHtml(key)}" title="Insert param.name.${escapeNodeMetadataScriptHtml(key)}">${escapeNodeMetadataScriptHtml(key)}</code>`)
+    .join("");
+  const kindHtml = kinds
+    .map(([kind, template]) => `<code data-kind="${escapeNodeMetadataScriptHtml(kind)}" title="Insert kind ${escapeNodeMetadataScriptHtml(kind)}">${escapeNodeMetadataScriptHtml(template.label || kind)}</code>`)
     .join("");
   const aliasHtml = aliases.length
     ? aliases
@@ -134,6 +144,7 @@ function nodeMetadataScriptReferenceHtml() {
   return `
     <span>keys</span>
     ${keyHtml}
+    ${kindHtml ? `<span>kinds</span>${kindHtml}` : ""}
     ${aliasHtml ? `<span>aliases</span>${aliasHtml}` : ""}`;
 }
 
@@ -162,12 +173,26 @@ function insertNodeMetadataScriptKey(key) {
   insertNodeMetadataScriptText(`param.${paramKey}.${key} = ${value};`);
 }
 
-function handleNodeMetadataScriptReferenceClick(event) {
-  const key = event.target?.closest?.("[data-key]")?.dataset?.key;
-  if (!key) {
+function insertNodeMetadataScriptKind(kind) {
+  const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
+  if (!slider) {
+    metadataScriptStatus("no parameter", true);
     return;
   }
-  insertNodeMetadataScriptKey(key);
+  const paramKey = nodeMetadataScriptParamKey(slider);
+  insertNodeMetadataScriptText(`param.${paramKey}.kind = ${normalizeNodeMetadataKind(kind)};`);
+}
+
+function handleNodeMetadataScriptReferenceClick(event) {
+  const target = event.target?.closest?.("[data-key], [data-kind]");
+  if (!target) {
+    return;
+  }
+  if (target.dataset.key) {
+    insertNodeMetadataScriptKey(target.dataset.key);
+  } else if (target.dataset.kind) {
+    insertNodeMetadataScriptKind(target.dataset.kind);
+  }
 }
 
 function escapeNodeMetadataScriptHtml(value = "") {
