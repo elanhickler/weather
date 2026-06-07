@@ -1054,7 +1054,15 @@ function applyNodeMetadataScriptEditor() {
   const ignoredText = parsed.ignored.length
     ? `; ignored lines ${parsed.ignored.join(", ")}`
     : "";
-  setNodeMetadataScriptDirty(Boolean(parsed.ignored.length), `script applied${ignoredText}`, Boolean(parsed.ignored.length));
+  const ignoredDetail = parsed.ignored.length
+    ? "Supported metadata was applied; ignored script lines remain unresolved."
+    : "";
+  setNodeMetadataScriptDirty(
+    Boolean(parsed.ignored.length),
+    `script applied${ignoredText}`,
+    Boolean(parsed.ignored.length),
+    ignoredDetail,
+  );
   return true;
 }
 
