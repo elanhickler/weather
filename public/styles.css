@@ -8795,7 +8795,7 @@ audio {
 
 .metadata-script-preview li {
   display: grid;
-  grid-template-columns: 58px minmax(54px, 0.72fr) minmax(0, 1.28fr);
+  grid-template-columns: 58px 34px minmax(54px, 0.72fr) minmax(0, 1.28fr);
   gap: 6px;
   align-items: center;
   min-width: 0;
@@ -8807,6 +8807,11 @@ audio {
 .metadata-script-preview span {
   color: rgba(127, 199, 217, 0.72);
   text-transform: uppercase;
+}
+
+.metadata-script-preview em {
+  color: rgba(156, 164, 166, 0.66);
+  font-style: normal;
 }
 
 .metadata-script-preview strong {

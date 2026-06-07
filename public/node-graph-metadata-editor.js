@@ -421,6 +421,7 @@ function nodeMetadataScriptPreviewItemHtml(assignment, state = "supported") {
   return `
     <li class="${state === "unsupported" ? "ignored" : state}">
       <span>${escapeNodeMetadataScriptHtml(stateText)}</span>
+      <em>L${escapeNodeMetadataScriptHtml(assignment.line)}</em>
       <strong>${escapeNodeMetadataScriptHtml(assignment.key)}</strong>
       <code>${escapeNodeMetadataScriptHtml(assignment.rawValue)}</code>
     </li>`;
@@ -452,8 +453,9 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
     items.push(`
       <li class="ignored">
         <span>ignored</span>
+        <em>L${escapeNodeMetadataScriptHtml(diagnostics.syntaxIgnored.join(","))}</em>
         <strong>syntax</strong>
-        <code>lines ${escapeNodeMetadataScriptHtml(diagnostics.syntaxIgnored.join(", "))}</code>
+        <code>not an assignment</code>
       </li>`);
   }
   preview.hidden = items.length === 0;
@@ -467,6 +469,7 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
     visibleItems.push(`
       <li class="more">
         <span>preview</span>
+        <em>...</em>
         <strong>more</strong>
         <code>${hiddenCount} more</code>
       </li>`);
