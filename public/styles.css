@@ -8895,6 +8895,13 @@ audio {
   opacity: 0.72;
 }
 
+.metadata-script-preview li.more:focus-visible {
+  outline: none;
+  background: rgba(127, 199, 217, 0.1);
+  box-shadow: inset 2px 0 rgba(214, 163, 95, 0.44);
+  opacity: 0.94;
+}
+
 .metadata-script-effective {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

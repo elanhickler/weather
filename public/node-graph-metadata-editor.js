@@ -637,6 +637,7 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
   updateNodeMetadataScriptEffective(source);
   const diagnostics = analyzeNodeMetadataScriptSource(source);
   const maxVisibleItems = 8;
+  const expanded = preview.dataset.metadataScriptPreviewExpanded === "true";
   const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
   const currentMetadata = slider ? nodeSliderMetadata(slider) : null;
   const draftMetadata = slider ? {
@@ -670,15 +671,15 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
     preview.innerHTML = "";
     return;
   }
-  const hiddenCount = Math.max(0, items.length - maxVisibleItems);
-  const visibleItems = items.slice(0, maxVisibleItems);
-  if (hiddenCount) {
+  const hiddenCount = expanded ? 0 : Math.max(0, items.length - maxVisibleItems);
+  const visibleItems = expanded ? [...items] : items.slice(0, maxVisibleItems);
+  if (hiddenCount || (expanded && items.length > maxVisibleItems)) {
     visibleItems.push(`
-      <li class="more">
-        <span>preview</span>
+      <li class="more" data-preview-toggle="true" role="button" tabindex="0" title="${expanded ? "Collapse metadata script preview" : "Show all metadata script preview rows"}">
+        <span>${expanded ? "less" : "preview"}</span>
         <em>...</em>
-        <strong>more</strong>
-        <code>${hiddenCount} more</code>
+        <strong>${expanded ? "collapse" : "more"}</strong>
+        <code>${expanded ? "show compact" : `${hiddenCount} more`}</code>
       </li>`);
   }
   preview.innerHTML = visibleItems.join("");
@@ -702,10 +703,37 @@ function focusNodeMetadataScriptLine(lineNumber) {
 
 function handleNodeMetadataScriptPreviewClick(event) {
   const row = event.target?.closest?.("[data-line]");
+  const toggle = event.target?.closest?.("[data-preview-toggle]");
+  if (toggle) {
+    toggleNodeMetadataScriptPreviewExpanded();
+    return;
+  }
   if (!row) {
     return;
   }
   focusNodeMetadataScriptLine(row.dataset.line);
+}
+
+function handleNodeMetadataScriptPreviewKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+  const toggle = event.target?.closest?.("[data-preview-toggle]");
+  if (!toggle) {
+    return;
+  }
+  event.preventDefault();
+  toggleNodeMetadataScriptPreviewExpanded();
+}
+
+function toggleNodeMetadataScriptPreviewExpanded() {
+  const preview = document.getElementById("metadataScriptPreview");
+  if (!preview) {
+    return;
+  }
+  preview.dataset.metadataScriptPreviewExpanded =
+    preview.dataset.metadataScriptPreviewExpanded === "true" ? "false" : "true";
+  updateNodeMetadataScriptPreview();
 }
 
 function nodeMetadataScriptDiagnosticMessage(source = metadataScriptSourceText()) {
@@ -945,6 +973,7 @@ function bindNodeGraphMetadataPopoverEvents() {
   if (scriptPreview && scriptPreview.dataset.metadataScriptPreviewBound !== "true") {
     scriptPreview.dataset.metadataScriptPreviewBound = "true";
     scriptPreview.addEventListener("click", handleNodeMetadataScriptPreviewClick);
+    scriptPreview.addEventListener("keydown", handleNodeMetadataScriptPreviewKeydown);
   }
   const closeButton = document.getElementById("metadataPopoverClose");
   if (closeButton && closeButton.dataset.metadataCloseBound !== "true") {
