@@ -408,6 +408,8 @@ function syncNodeMetadataScriptDiagnostics() {
 }
 
 function runNodeMetadataScriptParserSelfTest() {
+  const fakeSlider = document.createElement("div");
+  fakeSlider.dataset.param = "waveform";
   const parsed = parseNodeMetadataScriptAssignments(`
 // parser fixture
 param.frequency.default = 440;
@@ -425,6 +427,8 @@ this line is intentionally invalid
     parsed.ignored[0] === 6,
     analyzeNodeMetadataScriptSource("param.frequency.default = 440;").supportedCount === 1,
     nodeMetadataScriptDiagnosticMessage("param.frequency.unknown = 1;").error === true,
+    nodeMetadataScriptTemplateForKind(fakeSlider, "waveform").includes("param.waveform.choices = [Saw, Square, Triangle, Sine, Noise];"),
+    nodeMetadataScriptTemplateForKind(fakeSlider, "waveform").includes("param.waveform.displayChoices = true;"),
   ];
   return {
     assignments: parsed.assignments,
@@ -439,6 +443,14 @@ function syncNodeMetadataScriptParserSelfTestStatus() {
   if (!result.ok) {
     console.warn("metadata script parser self-test failed", result);
   }
+}
+
+function scheduleNodeMetadataScriptParserSelfTestStatus() {
+  if (document.readyState === "complete") {
+    syncNodeMetadataScriptParserSelfTestStatus();
+    return;
+  }
+  window.addEventListener("load", syncNodeMetadataScriptParserSelfTestStatus, { once: true });
 }
 
 function parseNodeMetadataScriptValue(rawValue, key, current) {
@@ -858,4 +870,4 @@ function handleNodeMetadataEditorInput(event) {
 
 bindNodeGraphMetadataPopoverEvents();
 bindNodeMetadataScriptBeforeUnload();
-syncNodeMetadataScriptParserSelfTestStatus();
+scheduleNodeMetadataScriptParserSelfTestStatus();
