@@ -257,10 +257,14 @@ function formatNodeMetadataScript(slider, metadata = nodeSliderMetadata(slider))
   return rows.join("\n");
 }
 
-function syncNodeMetadataScriptFromFields() {
+function syncNodeMetadataScriptFromFields(options = {}) {
   const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
   if (!slider) {
     metadataScriptStatus("no parameter", true);
+    return;
+  }
+  if (!options.force && nodeGraphMvp.metadataScriptDirty && !confirmNodeMetadataScriptDiscard()) {
+    metadataScriptStatus("sync canceled", false);
     return;
   }
   const metadata = readNodeMetadataEditorValues(slider);
@@ -572,7 +576,7 @@ function bindNodeGraphMetadataPopoverEvents() {
   const scriptRefresh = document.getElementById("metadataScriptRefresh");
   if (scriptRefresh && scriptRefresh.dataset.metadataScriptRefreshBound !== "true") {
     scriptRefresh.dataset.metadataScriptRefreshBound = "true";
-    scriptRefresh.addEventListener("click", syncNodeMetadataScriptFromFields);
+    scriptRefresh.addEventListener("click", () => syncNodeMetadataScriptFromFields());
   }
   const scriptCopy = document.getElementById("metadataScriptCopy");
   if (scriptCopy && scriptCopy.dataset.metadataScriptCopyBound !== "true") {
@@ -780,7 +784,7 @@ function setNodeMetadataDefaultsFromKind() {
   document.getElementById("metadataWraparoundValue").checked = Boolean(template.wraparound);
   syncNodeMetadataMidVisibility();
   applyNodeMetadataEditor();
-  syncNodeMetadataScriptFromFields();
+  syncNodeMetadataScriptFromFields({ force: true });
   document.getElementById("metadataSetDefaultButton").classList.remove("armed");
 }
 
@@ -800,7 +804,7 @@ function handleNodeMetadataEditorInput(event) {
   }
   syncNodeMetadataMidVisibility();
   applyNodeMetadataEditor();
-  syncNodeMetadataScriptFromFields();
+  syncNodeMetadataScriptFromFields({ force: true });
 }
 
 bindNodeGraphMetadataPopoverEvents();
