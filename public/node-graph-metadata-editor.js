@@ -454,8 +454,9 @@ function nodeMetadataScriptPreviewItemHtml(assignment, details = "supported") {
   const valueText = state === "changed" && detail.before
     ? `${detail.before} => ${detail.after}`
     : detail.after || assignment.rawValue;
+  const titleText = `line ${assignment.line}: ${assignment.path || assignment.key} = ${valueText}`;
   return `
-    <li class="${state === "unsupported" ? "ignored" : state}" data-line="${escapeNodeMetadataScriptHtml(assignment.line)}">
+    <li class="${state === "unsupported" ? "ignored" : state}" data-line="${escapeNodeMetadataScriptHtml(assignment.line)}" title="${escapeNodeMetadataScriptHtml(titleText)}">
       <span>${escapeNodeMetadataScriptHtml(stateText)}</span>
       <em>L${escapeNodeMetadataScriptHtml(assignment.line)}</em>
       <strong>${escapeNodeMetadataScriptHtml(assignment.key)}</strong>
@@ -504,7 +505,7 @@ function updateNodeMetadataScriptEffective(source = metadataScriptSourceText()) 
     .map(([key, value]) => `
       <div>
         <dt>${escapeNodeMetadataScriptHtml(key)}</dt>
-        <dd>${escapeNodeMetadataScriptHtml(value)}</dd>
+        <dd title="${escapeNodeMetadataScriptHtml(`${key}: ${value}`)}">${escapeNodeMetadataScriptHtml(value)}</dd>
       </div>`)
     .join("");
 }
