@@ -736,6 +736,13 @@ function toggleNodeMetadataScriptPreviewExpanded() {
   updateNodeMetadataScriptPreview();
 }
 
+function resetNodeMetadataScriptPreviewExpanded() {
+  const preview = document.getElementById("metadataScriptPreview");
+  if (preview) {
+    preview.dataset.metadataScriptPreviewExpanded = "false";
+  }
+}
+
 function nodeMetadataScriptDiagnosticMessage(source = metadataScriptSourceText()) {
   const diagnostics = nodeMetadataScriptPreviewSummary(source);
   const settingsText = diagnostics.supportedCount === 1
@@ -908,6 +915,7 @@ function fillNodeMetadataPopover(slider) {
   const metadata = nodeSliderMetadata(slider);
   document.getElementById("metadataPopoverTitle").textContent = nodeSliderDebugPath(slider);
   document.getElementById("metadataScriptTarget").textContent = nodeSliderLabelText(slider);
+  resetNodeMetadataScriptPreviewExpanded();
   writeNodeMetadataEditorValues(metadata);
   setMetadataScriptSourceText(formatNodeMetadataScript(slider, metadata));
   setNodeMetadataScriptDirty(false, "script ready", false);
