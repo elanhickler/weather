@@ -760,6 +760,9 @@ this line is intentionally invalid
       .some(([key, value]) => key === "step" && value === "any"),
     nodeMetadataScriptTemplateForKind(fakeSlider, "waveform").includes("param.waveform.choices = [Saw, Square, Triangle, Sine, Noise];"),
     nodeMetadataScriptTemplateForKind(fakeSlider, "waveform").includes("param.waveform.displayChoices = true;"),
+    nodeMetadataScriptAssignmentInsertion("param.a.min = 0;", "param.a.max = 1;", 16) === "\nparam.a.max = 1;",
+    nodeMetadataScriptAssignmentInsertion("param.a.min = 0;\n", "param.a.max = 1;", 17) === "param.a.max = 1;",
+    nodeMetadataScriptAssignmentInsertion("param.a.min = 0;param.a.def = 0.5;", "param.a.max = 1;", 16) === "\nparam.a.max = 1;\n",
   ];
   return {
     assignments: parsed.assignments,
@@ -999,6 +1002,15 @@ function insertNodeMetadataScriptText(text) {
   syncNodeMetadataScriptDiagnostics();
 }
 
+function nodeMetadataScriptAssignmentInsertion(value, text, start, end = start) {
+  const source = String(value || "");
+  const insertStart = Math.max(0, Math.min(source.length, Number(start) || 0));
+  const insertEnd = Math.max(insertStart, Math.min(source.length, Number(end) || insertStart));
+  const prefix = insertStart > 0 && source[insertStart - 1] !== "\n" ? "\n" : "";
+  const suffix = insertEnd < source.length && source[insertEnd] !== "\n" ? "\n" : "";
+  return `${prefix}${text}${suffix}`;
+}
+
 function insertNodeMetadataScriptAssignment(text) {
   const source = document.getElementById("metadataScriptSource");
   if (!source) {
@@ -1006,9 +1018,7 @@ function insertNodeMetadataScriptAssignment(text) {
   }
   const start = source.selectionStart ?? source.value.length;
   const end = source.selectionEnd ?? start;
-  const prefix = start > 0 && source.value[start - 1] !== "\n" ? "\n" : "";
-  const suffix = end < source.value.length && source.value[end] !== "\n" ? "\n" : "";
-  insertNodeMetadataScriptText(`${prefix}${text}${suffix}`);
+  insertNodeMetadataScriptText(nodeMetadataScriptAssignmentInsertion(source.value, text, start, end));
 }
 
 function handleNodeMetadataScriptKeydown(event) {
