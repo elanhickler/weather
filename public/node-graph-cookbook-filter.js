@@ -336,9 +336,9 @@ function nodeGraphFilterCurveCutoffFrequencies(node) {
   if (node.type === "bandpass") {
     return [node.params?.lowFrequency, node.params?.highFrequency]
       .map((value) => Number(value) || 0)
-      .filter((value) => value > 0);
+      .filter((value) => Number.isFinite(value) && value >= 0);
   }
-  return [Number(node.params?.frequency) || 0].filter((value) => value > 0);
+  return [Number(node.params?.frequency) || 0].filter((value) => Number.isFinite(value) && value >= 0);
 }
 
 function nodeGraphFilterCurveLabel(node) {
@@ -364,13 +364,7 @@ function createNodeGraphFilterCurveDisplay(nodeId, type) {
   section.dataset.nodeType = type;
   const canvas = document.createElement("canvas");
   canvas.className = "node-filter-curve-canvas";
-  const inputLabel = document.createElement("span");
-  inputLabel.className = "node-filter-curve-endpoint node-filter-curve-endpoint-input";
-  inputLabel.textContent = "In";
-  const outputLabel = document.createElement("span");
-  outputLabel.className = "node-filter-curve-endpoint node-filter-curve-endpoint-output";
-  outputLabel.textContent = "Out";
-  section.append(canvas, inputLabel, outputLabel);
+  section.append(canvas);
   requestAnimationFrame(() => drawNodeGraphFilterCurveDisplay(section));
   return section;
 }
@@ -383,18 +377,22 @@ function drawNodeGraphFilterCurveDisplay(section) {
   }
   const rect = section.getBoundingClientRect();
   const pixelRatio = window.devicePixelRatio || 1;
-  const width = Math.max(1, Math.round(rect.width * pixelRatio));
-  const height = Math.max(1, Math.round(rect.height * pixelRatio));
-  if (canvas.width !== width) {
-    canvas.width = width;
+  const zoom = Math.max(0.01, Number(nodeGraphMvp?.zoom) || 1);
+  const width = Math.max(1, Number(section.clientWidth || section.offsetWidth || 0) || rect.width / zoom);
+  const height = Math.max(1, Number(section.clientHeight || section.offsetHeight || 0) || rect.height / zoom);
+  const canvasWidth = Math.max(1, Math.round(width * pixelRatio));
+  const canvasHeight = Math.max(1, Math.round(height * pixelRatio));
+  if (canvas.width !== canvasWidth) {
+    canvas.width = canvasWidth;
   }
-  if (canvas.height !== height) {
-    canvas.height = height;
+  if (canvas.height !== canvasHeight) {
+    canvas.height = canvasHeight;
   }
   const context = canvas.getContext("2d");
   if (!context) {
     return;
   }
+  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   const sampleRate = Math.max(1, Number(nodeGraphMvp?.sampleRate) || 44100);
   const minFreq = 20;
   const maxFreq = Math.max(minFreq * 2, Math.min(20000, sampleRate * 0.5));
@@ -404,7 +402,7 @@ function drawNodeGraphFilterCurveDisplay(section) {
   context.fillStyle = "rgba(2, 6, 9, 0.88)";
   context.fillRect(0, 0, width, height);
   context.strokeStyle = "rgba(127, 199, 217, 0.18)";
-  context.lineWidth = Math.max(1, pixelRatio);
+  context.lineWidth = 1;
   for (let line = 0; line <= 4; line += 1) {
     const y = (line / 4) * height;
     context.beginPath();
@@ -415,15 +413,20 @@ function drawNodeGraphFilterCurveDisplay(section) {
   const logMin = Math.log10(minFreq);
   const logRange = Math.log10(maxFreq) - logMin;
   context.strokeStyle = "rgba(226, 168, 109, 0.5)";
+  const cutoffLineWidth = 1;
+  const cutoffInset = cutoffLineWidth * 0.5;
+  const cutoffDrawableWidth = Math.max(1, width - cutoffLineWidth);
+  context.lineWidth = cutoffLineWidth;
   for (const frequency of nodeGraphFilterCurveCutoffFrequencies(node)) {
-    const cutoffX = ((Math.log10(clampNodeSliderValue(frequency, minFreq, maxFreq)) - logMin) / logRange) * width;
+    const cutoffRatio = (Math.log10(clampNodeSliderValue(frequency, minFreq, maxFreq)) - logMin) / logRange;
+    const cutoffX = cutoffInset + cutoffRatio * cutoffDrawableWidth;
     context.beginPath();
     context.moveTo(cutoffX, 0);
     context.lineTo(cutoffX, height);
     context.stroke();
   }
   context.strokeStyle = "rgba(61, 224, 255, 0.95)";
-  context.lineWidth = Math.max(1.5, 1.5 * pixelRatio);
+  context.lineWidth = 1.5;
   context.beginPath();
   for (let x = 0; x < width; x += 1) {
     const progress = width <= 1 ? 0 : x / (width - 1);
@@ -439,8 +442,8 @@ function drawNodeGraphFilterCurveDisplay(section) {
   }
   context.stroke();
   context.fillStyle = "rgba(229, 238, 242, 0.74)";
-  context.font = `${Math.max(9, Math.round(10 * pixelRatio))}px system-ui, sans-serif`;
-  context.fillText(nodeGraphFilterCurveLabel(node), 8 * pixelRatio, 14 * pixelRatio);
+  context.font = "600 10px system-ui, sans-serif";
+  context.fillText(nodeGraphFilterCurveLabel(node), 8, 14);
 }
 
 function drawNodeGraphFilterCurveDisplays() {

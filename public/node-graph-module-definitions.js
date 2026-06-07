@@ -2,6 +2,7 @@ const nodeGraphNodeLabels = Object.freeze({
   audioInput: "Input",
   codeblock: "Codeblock",
   graph: "Graph",
+  graph2: "Graph 2",
   groupInput: "Group Input",
   groupOutput: "Group Output",
   moduleGroup: "Module Group",
@@ -9,6 +10,7 @@ const nodeGraphNodeLabels = Object.freeze({
   fbPolyBlepOsc: "F/B PolyBLEP Osc",
   additiveOsc: "Additive Osc",
   gpuAdditiveOsc: "GPU Additive",
+  ellipsoid: "Ellipsoid",
   clock: "Clock",
   clockDivider: "Clock Divider",
   delayedTrigger: "Delayed Trigger",
@@ -49,7 +51,7 @@ const nodeGraphNodeLabels = Object.freeze({
   chromaColor: "Chroma Color",
   image: "Image",
   led: "LED",
-  visualOscilloscope: "Visual Oscilloscope",
+  visualOscilloscope: "Oscilloscope",
   badvalMonitor: "BADVAL Monitor",
   textBox: "Text Box",
   output: "Output",
@@ -94,6 +96,21 @@ const nodeGraphModuleDefinitions = Object.freeze({
     outputs: ["Out"],
     parameters: [
       { choices: ["Input", "LFO"], defaultValue: "0", displayChoices: true, divideChoicesVisibly: true, key: "mode", label: "Mode", linearSmoothing: false, max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "1" },
+      { choices: ["Off", "On"], defaultValue: "0", displayChoices: true, divideChoicesVisibly: true, key: "lockEndpointY", label: "Lock Ends", linearSmoothing: false, max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "1" },
+      { defaultValue: "1", key: "rate", kind: "frequency", label: "Rate", max: "40", maxDigits: 5, mid: "1", min: "0", step: "any", unit: "Hz" },
+      { defaultValue: "0", key: "phase", kind: "phase", label: "Phase", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "0.01", unit: "cycle", wraparound: true },
+      { defaultValue: "0", key: "outputMin", label: "Out Min", max: "1", mid: "0", min: "-1", nonlinearSlider: false, step: "any" },
+      { defaultValue: "1", key: "outputMax", label: "Out Max", max: "1", mid: "0", min: "-1", nonlinearSlider: false, step: "any" },
+    ],
+  },
+  graph2: {
+    inputs: ["In"],
+    layout: "graph",
+    outputs: ["Out"],
+    parameters: [
+      { choices: ["Input", "LFO"], defaultValue: "0", displayChoices: true, divideChoicesVisibly: true, key: "mode", label: "Mode", linearSmoothing: false, max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "1" },
+      { choices: ["Linear", "Smooth", "Meander", "Quadratic Through", "Cubic Through"], defaultValue: "1", displayChoices: true, divideChoicesVisibly: true, key: "smoothingMode", label: "Smoothing", linearSmoothing: false, max: "4", mid: "2", min: "0", nonlinearSlider: false, step: "1" },
+      { choices: ["Off", "On"], defaultValue: "0", displayChoices: true, divideChoicesVisibly: true, key: "lockEndpointY", label: "Lock Ends", linearSmoothing: false, max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "1" },
       { defaultValue: "1", key: "rate", kind: "frequency", label: "Rate", max: "40", maxDigits: 5, mid: "1", min: "0", step: "any", unit: "Hz" },
       { defaultValue: "0", key: "phase", kind: "phase", label: "Phase", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "0.01", unit: "cycle", wraparound: true },
       { defaultValue: "0", key: "outputMin", label: "Out Min", max: "1", mid: "0", min: "-1", nonlinearSlider: false, step: "any" },
@@ -326,6 +343,24 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { defaultValue: "0.35", key: "level", label: "Level", max: "1", mid: "0.35", min: "0", nonlinearSlider: false, step: "any" },
     ],
   },
+  ellipsoid: {
+    inputs: ["Reset", "0.1V/Oct", "Increment"],
+    outputAliases: {
+      Out: "Wave Out",
+    },
+    outputs: ["X", "Y", "Wave Out"],
+    parameters: [
+      { defaultValue: "220", key: "frequency", kind: "frequency", label: "Frequency", max: "20000", mid: "220", min: "0", step: "any", unit: "Hz" },
+      { defaultValue: "0", key: "phase", kind: "phase", label: "Phase", max: "1", mid: "0.5", min: "0", step: "0.01", unit: "cycle", wraparound: true },
+      { defaultValue: "0", key: "offsetX", label: "Offset X", max: "1", mid: "0", min: "-1", step: "0.01" },
+      { defaultValue: "0", key: "offsetY", label: "Offset Y", max: "1", mid: "0", min: "-1", step: "0.01" },
+      { defaultValue: "0", key: "shapeX", label: "Shape X", max: "1", mid: "0", min: "-1", step: "0.01" },
+      { defaultValue: "0", key: "shapeY", label: "Shape Y", max: "1", mid: "0", min: "-1", step: "0.01" },
+      { defaultValue: "1", key: "scaleX", label: "Scale X", max: "10", mid: "1", min: "0", step: "0.01" },
+      { defaultValue: "1", key: "scaleY", label: "Scale Y", max: "10", mid: "1", min: "0", step: "0.01" },
+      { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "0.01" },
+    ],
+  },
   spiral: {
     outputs: ["X", "Y", "Z"],
     parameters: [
@@ -385,7 +420,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   stereoNoise: {
-    outputs: ["Left", "Right", "Out"],
+    outputs: ["X", "Y", "Out"],
     parameters: [
       {
         defaultValue: "1",
@@ -1352,12 +1387,14 @@ const nodeGraphModuleDefinitions = Object.freeze({
     visualSink: true,
   },
   visualOscilloscope: {
-    inputs: ["In"],
+    inputs: ["In", "X", "Y"],
     layout: "visualScope",
     outputs: [],
     parameters: [],
     visualInputs: [
       { key: "visualOscilloscope", label: "In", port: "In" },
+      { key: "visualOscilloscopeX", label: "X", port: "X" },
+      { key: "visualOscilloscopeY", label: "Y", port: "Y" },
     ],
     visualSink: true,
   },
@@ -1433,6 +1470,10 @@ function nodeGraphModuleGraphInputs(type) {
   return Array.isArray(inputs)
     ? inputs.map((input) => String(input || "").trim()).filter(Boolean)
     : [];
+}
+
+function nodeGraphModuleIsGraphType(type) {
+  return nodeGraphModuleDefinitions[type]?.layout === "graph";
 }
 
 function nodeGraphCanonicalInputPort(type, port) {

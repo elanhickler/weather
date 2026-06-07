@@ -13,7 +13,7 @@ const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", 
 const nodeGraphShaderScriptBlendModePatternSource = nodeGraphShaderScriptBlendModes
   .map((mode) => mode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");
-const nodeGraphShaderScriptScopeModes = Object.freeze(["1d_full", "1d_scan"]);
+const nodeGraphShaderScriptScopeModes = Object.freeze(["1d_full", "1d_scan", "x_y", "one_value"]);
 const nodeGraphShaderScriptScopeModePatternSource = nodeGraphShaderScriptScopeModes
   .map((mode) => mode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");
@@ -1213,6 +1213,9 @@ function nodeGraphShaderScriptDialogScopeSource() {
     if (moduleDefault) {
       return compactNodeGraphShaderScriptSource(moduleDefault);
     }
+    if (typeof nodeGraphScopeShaderDefaultSourceForType === "function") {
+      return compactNodeGraphShaderScriptSource(nodeGraphScopeShaderDefaultSourceForType(node.type));
+    }
   }
   return compactNodeGraphShaderScriptSource(normalizeNodeGraphScopeShader(node?.scopeShader).source);
 }
@@ -1659,6 +1662,58 @@ function setNodeGraphShaderScriptDialogVisible(visible) {
   }
 }
 
+function nodeGraphShaderScriptSavedSourceForDialog() {
+  return nodeGraphShaderScriptState.dialogMode === "scope"
+    ? nodeGraphShaderScriptDialogScopeSource()
+    : nodeGraphShaderScriptState.fragmentSource;
+}
+
+function normalizeNodeGraphShaderScriptDirtySource(source) {
+  return compactNodeGraphShaderScriptSource(String(source || ""));
+}
+
+function nodeGraphShaderScriptDialogIsDirty() {
+  const dialog = nodeGraphShaderScriptDialog();
+  if (!dialog || dialog.hidden) {
+    return false;
+  }
+  return normalizeNodeGraphShaderScriptDirtySource(nodeGraphShaderScriptSourceText()) !==
+    normalizeNodeGraphShaderScriptDirtySource(nodeGraphShaderScriptSavedSourceForDialog());
+}
+
+function saveNodeGraphShaderScriptDialogChanges() {
+  if (nodeGraphShaderScriptState.dialogMode === "scope") {
+    return saveNodeGraphScopeShaderScriptFromDialog();
+  }
+  const source = nodeGraphShaderScriptSourceText();
+  if (!updateNodeGraphShaderProgram(source)) {
+    return false;
+  }
+  setNodeGraphShaderScriptEnabled(true);
+  return true;
+}
+
+function closeNodeGraphShaderScriptDialogWithDirtyCheck() {
+  if (!nodeGraphShaderScriptDialogIsDirty()) {
+    setNodeGraphShaderScriptDialogVisible(false);
+    return true;
+  }
+  if (window.confirm("Save shader changes before closing?")) {
+    if (!saveNodeGraphShaderScriptDialogChanges()) {
+      nodeGraphShaderScriptStatus("save failed; editor left open", true);
+      return false;
+    }
+    setNodeGraphShaderScriptDialogVisible(false);
+    return true;
+  }
+  if (window.confirm("Discard unsaved shader changes?")) {
+    setNodeGraphShaderScriptDialogVisible(false);
+    return true;
+  }
+  nodeGraphShaderScriptStatus("close canceled", false);
+  return false;
+}
+
 function setNodeGraphShaderScriptDialogMode(mode, nodeId = "") {
   nodeGraphShaderScriptState.dialogMode = mode === "scope" ? "scope" : "global";
   nodeGraphShaderScriptState.scopeTargetNodeId = nodeGraphShaderScriptState.dialogMode === "scope"
@@ -1791,7 +1846,7 @@ function bindNodeGraphShaderScriptEvents() {
   document.getElementById("nodeShaderScriptButton")?.addEventListener("click", () =>
     openNodeGraphGlobalShaderScript());
   document.getElementById("nodeShaderScriptClose")?.addEventListener("click", () =>
-    setNodeGraphShaderScriptDialogVisible(false));
+    closeNodeGraphShaderScriptDialogWithDirtyCheck());
   document.getElementById("nodeShaderScriptApply")?.addEventListener("click", applyNodeGraphShaderScriptFromDialog);
   document.getElementById("nodeShaderScriptCopy")?.addEventListener("click", copyNodeGraphShaderScriptSource);
   document.getElementById("nodeShaderScriptPaste")?.addEventListener("click", pasteNodeGraphShaderScriptSource);

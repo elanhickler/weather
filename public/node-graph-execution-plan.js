@@ -104,7 +104,7 @@ function nodeGraphBuildDependencyMap(patch = nodeGraphMvp.patch) {
       continue;
     }
     const sourcePort = nodeGraphCanonicalOutputPort(source.type, graphConnection.sourcePort);
-    if (source.type !== "graph" || sourcePort !== "Out") {
+    if (!nodeGraphModuleIsGraphType(source.type) || sourcePort !== "Out") {
       issues.push(`graph connection source invalid: ${graphConnection.sourceNode}.${graphConnection.sourcePort}`);
       continue;
     }

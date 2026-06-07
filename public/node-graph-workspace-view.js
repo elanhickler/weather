@@ -290,8 +290,9 @@ function snapNodeGraphWorkspaceEdgesToGrid(zoom = nodeGraphZoom()) {
   drawNodeGraphWires();
 }
 
-function snapNodeGraphPanValueToGrid(value, gridSize, zoom = nodeGraphZoom()) {
-  const step = gridSize * zoom;
+function snapNodeGraphPanValueToGrid(value, gridSize, zoom = nodeGraphZoom(), options = {}) {
+  const units = options.halfGrid ? 2 : 1;
+  const step = (gridSize * zoom) / units;
   return Number.isFinite(step) && step > 0
     ? Math.round((Number(value) || 0) / step) * step
     : Number(value) || 0;
@@ -520,10 +521,10 @@ function dragNodeGraphWorkspacePan(event) {
   const nextY = drag.startPanY + event.clientY - drag.startClientY;
   setNodeGraphPan(
     nodeGraphMvp.snapGridWhilePanning
-      ? snapNodeGraphPanValueToGrid(nextX, nodeGraphGridWidth())
+      ? snapNodeGraphPanValueToGrid(nextX, nodeGraphGridWidth(), nodeGraphZoom(), { halfGrid: true })
       : nextX,
     nodeGraphMvp.snapGridWhilePanning
-      ? snapNodeGraphPanValueToGrid(nextY, nodeGraphGridHeight())
+      ? snapNodeGraphPanValueToGrid(nextY, nodeGraphGridHeight(), nodeGraphZoom(), { halfGrid: true })
       : nextY,
   );
   event.preventDefault();

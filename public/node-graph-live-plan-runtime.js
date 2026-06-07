@@ -281,7 +281,7 @@ function createNodeGraphLiveRuntime(plan) {
     if (node.type === "clock") {
       clockStates.set(node.id, createNodeGraphClockState());
     }
-    if (node.type === "graph") {
+    if (nodeGraphModuleIsGraphType(node.type)) {
       graphLfoStates.set(node.id, createNodeGraphGraphLfoState());
     }
     if (node.type === "clockDivider") {
@@ -573,7 +573,7 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     if (node.type === "clock" && !runtime.clockStates.has(node.id)) {
       runtime.clockStates.set(node.id, createNodeGraphClockState());
     }
-    if (node.type === "graph" && !runtime.graphLfoStates.has(node.id)) {
+    if (nodeGraphModuleIsGraphType(node.type) && !runtime.graphLfoStates.has(node.id)) {
       runtime.graphLfoStates.set(node.id, createNodeGraphGraphLfoState());
     }
     if (node.type === "clockDivider" && !runtime.clockDividerStates.has(node.id)) {

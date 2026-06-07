@@ -37,6 +37,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "clapPlugin",
   "codeblock",
   "graph",
+  "graph2",
   "gain",
   "bias",
   "output",
@@ -271,9 +272,9 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   ellipsoid: {
     category: "Oscillator",
-    description: "Placeholder for an ellipsoid motion oscillator for rounded spatial signal paths.",
+    description: "SOEMDSP ellipsoid motion oscillator. Emits paired X/Y curved waveform outputs from two phase-offset ellipsoid DSP paths.",
     label: "Ellipsoid",
-    notes: ["placeholder", "geometric motion", "future oscillator"],
+    notes: ["geometric motion", "x/y output", "soemdsp oscillator"],
   },
   polyBlep: {
     category: "Oscillator",
@@ -418,8 +419,8 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   stereoNoise: {
     category: "Random",
-    description: "Two independent broadband noise streams with Left, Right, and summed mono outputs for wide textures.",
-    notes: ["stereo source", "independent channels", "amplitude"],
+    description: "Two independent broadband noise streams as X/Y vector outputs plus a summed mono output for clouds and textures.",
+    notes: ["x/y source", "independent channels", "amplitude"],
   },
   noiseGenerator: {
     category: "Random",
@@ -451,6 +452,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     category: "Visual",
     description: "Patch-local soemdsp-style graph object with curve nodes and a vertical cursor position.",
     notes: ["curve display", "cursor line", "graph nodes"],
+  },
+  graph2: {
+    category: "Visual",
+    description: "Single-algorithm graph testbed for comparing linear, smooth, and meandering point interpolation.",
+    label: "Graph 2",
+    notes: ["global smoothing", "curve laboratory", "graph nodes"],
   },
   gain: {
     category: "Dynamics",
@@ -844,6 +851,50 @@ function setNodeGraphModuleStoreDepartment(department = "") {
   renderNodeGraphModuleStoreCatalog();
 }
 
+function nodeGraphNormalizeModuleDepartmentSearch(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function nodeGraphModuleDepartmentMatchesSearch(department, entries, query) {
+  const needle = nodeGraphNormalizeModuleDepartmentSearch(query);
+  if (!needle) {
+    return true;
+  }
+  const ad = nodeGraphModuleStoreDepartmentAds[department] || {};
+  const haystack = [
+    department,
+    ad.title,
+    ad.pitch,
+    ...entries.flatMap((entry) => [
+      entry.label,
+      entry.type,
+      entry.category,
+      entry.description,
+      ...(entry.notes || []),
+    ]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(needle);
+}
+
+function handleNodeGraphModuleDepartmentSearchInput(event) {
+  nodeGraphMvp.moduleStoreDepartmentSearch = String(event?.currentTarget?.value || "");
+  renderNodeGraphModuleStoreCatalog();
+}
+
+function handleNodeGraphModuleDepartmentSearchKeydown(event) {
+  if (event?.key !== "Escape") {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  nodeGraphMvp.moduleStoreDepartmentSearch = "";
+  event.currentTarget.value = "";
+  renderNodeGraphModuleStoreCatalog();
+}
+
 function createNodeGraphModuleStorePreview(entry) {
   const preview = document.createElement("span");
   preview.className = "scene-context-store-preview";
@@ -926,7 +977,7 @@ function nodeGraphModuleStoreDemoPatch(type) {
     });
   }
   return validateNodeGraphPatch({
-    audio: { targetSampleRate: 88200 },
+    audio: { targetSampleRate: 44100 },
     bypassedNodes: [],
     connections,
     format: { ...nodeGraphPatchFormat },
@@ -1214,9 +1265,16 @@ function closeNodeGraphModuleCollectionsMenu() {
   if (menu) {
     menu.hidden = true;
   }
+  if (nodeGraphMvp.moduleCollectionsDragging?.handle) {
+    nodeGraphMvp.moduleCollectionsDragging.handle.classList.remove("dragging");
+  }
+  nodeGraphMvp.moduleCollectionsDragging = null;
 }
 
 function openNodeGraphModuleCollectionsMenu(event) {
+  if (event.target?.matches?.("#nodeModuleDepartmentSearch")) {
+    return false;
+  }
   const target = event.target.closest?.("#nodeModuleDepartmentSearchShell");
   if (!target || document.getElementById("nodeModuleShopView")?.hidden) {
     return false;
@@ -1247,6 +1305,61 @@ function handleNodeGraphModuleCollectionsPointerDown(event) {
   closeNodeGraphModuleCollectionsMenu();
 }
 
+function beginNodeGraphModuleCollectionsMenuDrag(event) {
+  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
+    return;
+  }
+  const menu = document.getElementById("nodeModuleCollectionsMenu");
+  if (!menu || menu.hidden) {
+    return;
+  }
+  const rect = menu.getBoundingClientRect();
+  nodeGraphMvp.moduleCollectionsDragging = {
+    handle: event.currentTarget,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top,
+    pointerId: event.pointerId ?? null,
+  };
+  event.currentTarget.classList.add("dragging");
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphModuleCollectionsMenu(event) {
+  const drag = nodeGraphMvp.moduleCollectionsDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  positionNodeSceneContextMenu(
+    document.getElementById("nodeModuleCollectionsMenu"),
+    event.clientX - drag.offsetX,
+    event.clientY - drag.offsetY,
+    false,
+  );
+  event.preventDefault();
+}
+
+function endNodeGraphModuleCollectionsMenuDrag(event) {
+  const drag = nodeGraphMvp.moduleCollectionsDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  drag.handle.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.moduleCollectionsDragging = null;
+}
+
 function renderNodeGraphModuleStoreCatalog() {
   const available = document.getElementById("nodeModuleShopAvailable");
   const shopView = document.getElementById("nodeModuleShopView");
@@ -1263,6 +1376,11 @@ function renderNodeGraphModuleStoreCatalog() {
   departmentList.innerHTML = "";
 
   const entries = nodeGraphModuleStoreEntries();
+  const departmentSearch = nodeGraphMvp.moduleStoreDepartmentSearch || "";
+  const departmentSearchField = document.getElementById("nodeModuleDepartmentSearch");
+  if (departmentSearchField && departmentSearchField.value !== departmentSearch) {
+    departmentSearchField.value = departmentSearch;
+  }
   const activeDepartment = nodeGraphModuleStoreDepartments.includes(nodeGraphMvp.moduleStoreDepartment)
     ? nodeGraphMvp.moduleStoreDepartment
     : "";
@@ -1275,9 +1393,15 @@ function renderNodeGraphModuleStoreCatalog() {
 
   for (const department of nodeGraphModuleStoreDepartments) {
     const departmentEntries = entries.filter((item) => item.category === department);
-    if (departmentEntries.length) {
+    if (departmentEntries.length && nodeGraphModuleDepartmentMatchesSearch(department, departmentEntries, departmentSearch)) {
       departmentList.append(createNodeGraphModuleDepartmentButton(department, departmentEntries));
     }
+  }
+  if (!departmentList.children.length) {
+    const empty = document.createElement("div");
+    empty.className = "scene-context-store-empty";
+    empty.textContent = "No module departments match this search.";
+    departmentList.append(empty);
   }
 
   shopView.hidden = Boolean(activeDepartment);

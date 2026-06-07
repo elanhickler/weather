@@ -1554,7 +1554,7 @@ audio {
   flex-basis: 108px;
 }
 
-#nodeDonateFiveButton {
+#nodeBuyLicenseButton {
   flex-basis: 92px;
   border-color: rgba(226, 168, 109, 0.28);
   background:
@@ -7539,13 +7539,25 @@ audio {
   border-inline-start: 1px solid rgba(127, 199, 217, 0.08);
   background: rgba(17, 20, 24, 0.52);
   color: rgba(127, 199, 217, 0.92);
-  font: 800 calc(var(--node-header-height) * 0.32)/1 "Segoe UI Symbol", "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  font-family: "Segoe UI Symbol", "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: clamp(1.75rem, 2.4vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1;
   letter-spacing: 0;
 }
 
 .node-header-tap-tempo-symbol {
-  display: block;
+  display: grid;
+  place-items: center;
+  inline-size: 1.15em;
+  block-size: 1.15em;
+  line-height: 1;
   transform: translateY(-0.02em);
+}
+
+.node-history-controls .node-header-tap-tempo-button {
+  font-size: clamp(1.75rem, 2.4vw, 2.2rem);
+  line-height: 1;
 }
 
 .node-header-timing-field span {

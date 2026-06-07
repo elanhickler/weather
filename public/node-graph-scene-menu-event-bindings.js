@@ -119,4 +119,7 @@ function bindNodeGraphSceneMenuEvents() {
   bindNodeGraphSceneElementEvent("nodeSceneTextBoxVerticalAlign", "change", () => setNodeGraphTextBoxVerticalAlignFromContext({ record: true }));
   bindNodeGraphSceneElementEvent("nodeSceneCloseMenu", "click", closeNodeSceneContextMenu);
   bindNodeGraphSceneElementEvent("nodeSceneDragHandle", "pointerdown", beginNodeSceneContextMenuDrag);
+  document
+    .querySelector("#nodeSceneContextMenu .scene-context-heading")
+    ?.addEventListener("pointerdown", beginNodeSceneContextMenuDrag);
 }

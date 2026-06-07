@@ -375,8 +375,8 @@ function addNodeGraphModuleGroupFromBrowser(name) {
         ui: sourceNode.ui,
         ...sizingOptions,
       }),
-      ...(sourceNode.type === "graph"
-        ? { graph: normalizeNodeGraphGraph(sourceNode.graph) }
+      ...(nodeGraphModuleIsGraphType(sourceNode.type)
+        ? { graph: nodeGraphGraphForNode(sourceNode) }
         : {}),
       ...(sourceNode.type === "codeblock"
         ? { codeblock: normalizeNodeGraphCodeblock(sourceNode.codeblock) }
@@ -432,8 +432,8 @@ function copyNodeGraphModule(sourceNode) {
     ...(sourceNode.type === "led"
       ? { led: normalizeNodeGraphLedLayout(sourceNode.led) }
       : {}),
-    ...(sourceNode.type === "graph"
-      ? { graph: normalizeNodeGraphGraph(sourceNode.graph) }
+    ...(nodeGraphModuleIsGraphType(sourceNode.type)
+      ? { graph: nodeGraphGraphForNode(sourceNode) }
       : {}),
     ...(sourceNode.type === "codeblock"
       ? { codeblock: normalizeNodeGraphCodeblock(sourceNode.codeblock) }
@@ -567,7 +567,7 @@ function adjustNodeGraphModuleHeightFromContext(delta) {
   } else {
     targetNode.heightGu = nextHeightGu;
   }
-  commitNodeGraphPatch(patch, { status: targetNode.type === "graph" ? "graph height changed" : "module height changed" });
+  commitNodeGraphPatch(patch, { status: nodeGraphModuleIsGraphType(targetNode.type) ? "graph height changed" : "module height changed" });
   configureNodeSceneContextMenu("module");
 }
 
@@ -627,14 +627,14 @@ function setNodeGraphModuleAliasFromContext({ record = true } = {}) {
 
 function nodeGraphGraphTargetFromContext(patch = cloneNodeGraphPatch(nodeGraphMvp.patch)) {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return { patch, targetNode: null };
   }
   const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return { patch, targetNode: null };
   }
-  targetNode.graph = normalizeNodeGraphGraph(targetNode.graph);
+  targetNode.graph = nodeGraphGraphForNode(targetNode);
   return { patch, targetNode };
 }
 
@@ -679,10 +679,13 @@ function createNodeGraphGraphRowNumberInput(index, field, value, options = {}) {
   input.dataset.graphNodeRow = String(index);
   input.dataset.graphNodeField = field;
   input.setAttribute("aria-label", `Graph node ${index + 1} ${field}`);
+  if (options.disabled) {
+    input.disabled = true;
+  }
   return input;
 }
 
-function createNodeGraphGraphRowShapeSelect(index, value) {
+function createNodeGraphGraphRowShapeSelect(index, value, options = {}) {
   const select = document.createElement("select");
   select.dataset.graphNodeRow = String(index);
   select.dataset.graphNodeField = "shape";
@@ -694,20 +697,24 @@ function createNodeGraphGraphRowShapeSelect(index, value) {
     select.append(option);
   }
   select.value = normalizeNodeGraphGraphShape(value);
+  if (options.disabled) {
+    select.disabled = true;
+  }
   return select;
 }
 
-function renderNodeGraphGraphNodeList(graph, selectedIndex = selectedNodeGraphGraphIndex(graph)) {
+function renderNodeGraphGraphNodeList(graph, selectedIndex = selectedNodeGraphGraphIndex(graph), options = {}) {
   const list = document.getElementById("nodeSceneGraphNodeList");
   if (!list) {
     return;
   }
   const graphData = normalizeNodeGraphGraph(graph);
+  const usesGlobalSmoothing = Boolean(options.usesGlobalSmoothing);
   const activeIndex = selectedNodeGraphGraphIndex(graphData, selectedIndex);
   list.replaceChildren();
   const header = document.createElement("div");
   header.className = "scene-context-graph-node-row scene-context-graph-node-row-header";
-  for (const label of ["node", "x", "y", "curve", "shape"]) {
+  for (const label of ["node", "x", "y", usesGlobalSmoothing ? "global" : "curve", usesGlobalSmoothing ? "mode" : "shape"]) {
     const span = document.createElement("span");
     span.textContent = label;
     header.append(span);
@@ -727,8 +734,12 @@ function renderNodeGraphGraphNodeList(graph, selectedIndex = selectedNodeGraphGr
     row.append(label);
     row.append(createNodeGraphGraphRowNumberInput(index, "x", node.x));
     row.append(createNodeGraphGraphRowNumberInput(index, "y", node.y));
-    row.append(createNodeGraphGraphRowNumberInput(index, "c", node.c, { min: -0.999, max: 0.999 }));
-    row.append(createNodeGraphGraphRowShapeSelect(index, node.shape));
+    row.append(createNodeGraphGraphRowNumberInput(index, "c", node.c, {
+      disabled: usesGlobalSmoothing,
+      min: -0.999,
+      max: 0.999,
+    }));
+    row.append(createNodeGraphGraphRowShapeSelect(index, node.shape, { disabled: usesGlobalSmoothing }));
     list.append(row);
   });
 }
@@ -737,13 +748,19 @@ function syncNodeGraphGraphControls(graph, selectedIndex = selectedNodeGraphGrap
   const graphData = normalizeNodeGraphGraph(graph);
   const index = selectedNodeGraphGraphIndex(graphData, selectedIndex);
   const nodeId = nodeGraphModuleActionTargetNodeId();
-  if (nodeGraphPatchNode(nodeId)?.type === "graph") {
+  const graphNodeType = nodeGraphPatchNode(nodeId)?.type || "";
+  const usesGlobalSmoothing = graphNodeType === "graph2";
+  if (nodeGraphModuleIsGraphType(nodeGraphPatchNode(nodeId)?.type)) {
     setNodeGraphGraphSelectedNodeIndex(nodeId, graphData, index);
-    syncNodeGraphGraphElement(nodeGraphNodeElement(nodeId), { id: nodeId, graph: graphData });
+    syncNodeGraphGraphElement(nodeGraphNodeElement(nodeId), {
+      ...nodeGraphPatchNode(nodeId),
+      graph: graphData,
+      id: nodeId,
+    });
   }
   const node = graphData.nodes[index] || graphData.nodes.at(-1);
   populateNodeGraphGraphNodeIndexSelect(graphData, index);
-  renderNodeGraphGraphNodeList(graphData, index);
+  renderNodeGraphGraphNodeList(graphData, index, { usesGlobalSmoothing });
   const cursorInput = document.getElementById("nodeSceneGraphCursorX");
   const xInput = document.getElementById("nodeSceneGraphNodeX");
   const yInput = document.getElementById("nodeSceneGraphNodeY");
@@ -766,6 +783,10 @@ function syncNodeGraphGraphControls(graph, selectedIndex = selectedNodeGraphGrap
   }
   if (shapeInput) {
     shapeInput.value = normalizeNodeGraphGraphShape(node.shape);
+    shapeInput.disabled = usesGlobalSmoothing;
+  }
+  if (contourInput) {
+    contourInput.disabled = usesGlobalSmoothing;
   }
   if (previousButton) {
     previousButton.disabled = index <= 0;
@@ -780,16 +801,18 @@ function syncNodeGraphGraphControls(graph, selectedIndex = selectedNodeGraphGrap
 
 function setNodeGraphGraphSelectedIndex(index) {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return;
   }
-  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const graph = nodeGraphGraphForNode(sourceNode);
   syncNodeGraphGraphControls(graph, nodeGraphGraphNodeIndexFromValue(graph, index));
 }
 
 function commitNodeGraphGraphEdit(patch, targetNode, status, options = {}) {
   let selectedIndex = selectedNodeGraphGraphIndex(targetNode.graph, options.selectedIndex);
-  targetNode.graph = normalizeNodeGraphGraph(targetNode.graph);
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(targetNode.graph, selectedIndex)
+    : normalizeNodeGraphGraph(targetNode.graph);
   if (Number.isFinite(options.selectedX)) {
     selectedIndex = targetNode.graph.nodes.reduce((bestIndex, node, index) => {
       const best = targetNode.graph.nodes[bestIndex];
@@ -823,9 +846,10 @@ function setNodeGraphGraphNodeFromContext({ record = true } = {}) {
   const graph = normalizeNodeGraphGraph(targetNode.graph);
   const selectedIndex = selectedNodeGraphGraphIndex(graph);
   const node = graph.nodes[selectedIndex];
+  const usesGlobalSmoothing = targetNode.type === "graph2";
   graph.nodes[selectedIndex] = normalizeNodeGraphGraphNode({
-    c: document.getElementById("nodeSceneGraphNodeContour")?.value ?? node.c,
-    shape: document.getElementById("nodeSceneGraphNodeShape")?.value ?? node.shape,
+    c: usesGlobalSmoothing ? node.c : document.getElementById("nodeSceneGraphNodeContour")?.value ?? node.c,
+    shape: usesGlobalSmoothing ? node.shape : document.getElementById("nodeSceneGraphNodeShape")?.value ?? node.shape,
     x: document.getElementById("nodeSceneGraphNodeX")?.value ?? node.x,
     y: document.getElementById("nodeSceneGraphNodeY")?.value ?? node.y,
   }, selectedIndex);
@@ -835,18 +859,18 @@ function setNodeGraphGraphNodeFromContext({ record = true } = {}) {
 
 function selectNodeGraphGraphNodeFromContext() {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return;
   }
-  syncNodeGraphGraphControls(sourceNode.graph);
+  syncNodeGraphGraphControls(nodeGraphGraphForNode(sourceNode));
 }
 
 function selectNodeGraphGraphNodeOffsetFromContext(offset) {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return;
   }
-  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const graph = nodeGraphGraphForNode(sourceNode);
   const selectedIndex = selectedNodeGraphGraphIndex(graph);
   const nextIndex = nodeGraphGraphNodeIndexFromValue(graph, selectedIndex + Number(offset || 0));
   syncNodeGraphGraphControls(graph, nextIndex);
@@ -860,6 +884,10 @@ function setNodeGraphGraphNodeListValueFromContext(event, { record = true } = {}
   }
   const { patch, targetNode } = nodeGraphGraphTargetFromContext();
   if (!targetNode) {
+    return;
+  }
+  if (targetNode.type === "graph2" && (field === "c" || field === "shape")) {
+    syncNodeGraphGraphControls(nodeGraphGraphForNode(targetNode));
     return;
   }
   const graph = normalizeNodeGraphGraph(targetNode.graph);
@@ -961,18 +989,18 @@ function setNodeGraphGraphPresetFromContext(preset) {
 
 function setNodeGraphGraphOutputRangeFromContext(minValue, maxValue) {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return;
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return;
   }
   targetNode.params = {
     ...(targetNode.params || {}),
-    outputMax: normalizeNodeGraphPatchParameter("graph", "outputMax", maxValue),
-    outputMin: normalizeNodeGraphPatchParameter("graph", "outputMin", minValue),
+    outputMax: normalizeNodeGraphPatchParameter(targetNode.type, "outputMax", maxValue),
+    outputMin: normalizeNodeGraphPatchParameter(targetNode.type, "outputMin", minValue),
   };
   commitNodeGraphPatch(patch, { status: "graph output range changed" });
   syncNodeGraphPatchParameters();
@@ -992,10 +1020,10 @@ function transformNodeGraphGraphFromContext(transform) {
 
 async function copyNodeGraphGraphFromContext() {
   const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return;
   }
-  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const graph = nodeGraphGraphForNode(sourceNode);
   const text = serializeNodeGraphGraphClipboard(graph);
   nodeGraphMvp.graphClipboard = text;
   try {
@@ -1359,7 +1387,7 @@ function toggleNodeGraphModuleButtonsFromContext() {
   const ui = normalizeNodeGraphPatchNodeUi(targetNode.ui);
   if (nodeGraphMvp.moduleButtonsVisible === false) {
     ui.buttonsHidden = false;
-    setNodeGraphModuleButtonsVisibility(true, { help: false });
+    setNodeGraphModuleButtonsVisibility(true, { clearNodeOverrides: false, help: false });
   } else {
     ui.buttonsHidden = !ui.buttonsHidden;
   }

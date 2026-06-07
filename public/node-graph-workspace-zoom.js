@@ -28,6 +28,9 @@ function applyNodeGraphZoom() {
     zoomInButton.disabled = nodeGraphZoom() >= nodeGraphZoomLimits.max - 0.001;
   }
   drawNodeGraphWires();
+  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
+    scheduleNodeGraphModuleScopeDraw();
+  }
 }
 
 function setNodeGraphZoom(nextZoom, anchor = null) {
@@ -76,6 +79,15 @@ function nodeGraphZoomByRatio(ratio) {
     : nodeGraphZoom();
 }
 
+function nodeGraphWheelZoomTarget(direction) {
+  const step = nodeGraphZoomLimits.fineStep || 0.1;
+  const zoom = nodeGraphZoom();
+  const scaled = zoom / step;
+  return direction > 0
+    ? (Math.floor(scaled + 0.001) + 1) * step
+    : (Math.ceil(scaled - 0.001) - 1) * step;
+}
+
 function nodeGraphZoomButtonStep(event) {
   if (event?.ctrlKey || event?.metaKey) {
     return nodeGraphZoomLimits.fineStep;
@@ -107,10 +119,11 @@ function zoomNodeGraphBy(delta) {
 }
 
 function zoomNodeGraphAt(delta, clientX, clientY) {
-  const ratio = delta > 0
-    ? nodeGraphZoomLimits.wheelRatio
-    : 1 / nodeGraphZoomLimits.wheelRatio;
-  setNodeGraphZoom(nodeGraphZoomByRatio(ratio), { x: clientX, y: clientY });
+  const direction = Math.sign(delta);
+  if (!direction) {
+    return;
+  }
+  setNodeGraphZoom(nodeGraphWheelZoomTarget(direction), { x: clientX, y: clientY });
 }
 
 function resetNodeGraphZoomToOne() {

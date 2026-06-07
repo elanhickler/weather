@@ -3,6 +3,230 @@ function nodeGraphViewportImageFileName() {
   return `soemdsp-modular-view-${stamp}.png`;
 }
 
+function nodeGraphViewportExportFileName(extension) {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `soemdsp-modular-view-${stamp}.${extension}`;
+}
+
+function nodeGraphViewportCanvasBlob(canvas, type = "image/png", quality) {
+  return new Promise((resolve) => {
+    try {
+      canvas.toBlob((blob) => resolve(blob), type, quality);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+function downloadNodeGraphViewportBlob(blob, fileName) {
+  if (!blob) {
+    return false;
+  }
+  const controls = document.getElementById("nodeViewportExportControls");
+  const oldLink = document.getElementById("nodeViewportExportDownloadLink");
+  if (oldLink?.dataset.objectUrl) {
+    URL.revokeObjectURL(oldLink.dataset.objectUrl);
+  }
+  oldLink?.remove();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.id = "nodeViewportExportDownloadLink";
+  link.className = "node-viewport-export-download-link";
+  link.href = url;
+  link.download = fileName;
+  link.dataset.objectUrl = url;
+  link.textContent = `${fileName.split(".").pop().toUpperCase()} Ready`;
+  (controls || document.body).append(link);
+  try {
+    link.click();
+    return true;
+  } catch (_error) {
+    console.warn("Viewport export download was blocked; keeping save link", _error);
+    return false;
+  }
+}
+
+function nodeGraphViewportExportTargetWidth(fallbackWidth = 1280) {
+  const input = document.getElementById("nodeViewportExportWidthInput");
+  const value = Number.parseInt(input?.value, 10);
+  if (Number.isFinite(value)) {
+    return Math.max(64, Math.min(8192, Math.round(value)));
+  }
+  return Math.max(64, Math.min(8192, Math.round(fallbackWidth)));
+}
+
+function nodeGraphViewportExportSeconds() {
+  const input = document.getElementById("nodeViewportExportSecondsInput");
+  const value = Number.parseFloat(input?.value);
+  const seconds = Number.isFinite(value) && value > 0 ? value : 2;
+  return Math.max(0.25, Math.min(60, seconds));
+}
+
+function nodeGraphViewportRoundedRectPath(context, x, y, width, height, radius) {
+  const safeRadius = Math.max(0, Math.min(radius, width * 0.5, height * 0.5));
+  context.beginPath();
+  context.moveTo(x + safeRadius, y);
+  context.lineTo(x + width - safeRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  context.lineTo(x + width, y + height - safeRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  context.lineTo(x + safeRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  context.lineTo(x, y + safeRadius);
+  context.quadraticCurveTo(x, y, x + safeRadius, y);
+}
+
+function drawNodeGraphViewportFallbackGrid(context, width, height, gridWidth, gridHeight, pan, zoom) {
+  context.fillStyle = "#0d0d0d";
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = "rgba(255, 255, 255, 0.075)";
+  context.lineWidth = 1;
+  const stepX = Math.max(4, gridWidth * zoom);
+  const stepY = Math.max(4, gridHeight * zoom);
+  const startX = ((Number(pan.x) || 0) % stepX + stepX) % stepX;
+  const startY = ((Number(pan.y) || 0) % stepY + stepY) % stepY;
+  context.beginPath();
+  for (let x = startX; x <= width; x += stepX) {
+    context.moveTo(Math.round(x) + 0.5, 0);
+    context.lineTo(Math.round(x) + 0.5, height);
+  }
+  for (let y = startY; y <= height; y += stepY) {
+    context.moveTo(0, Math.round(y) + 0.5);
+    context.lineTo(width, Math.round(y) + 0.5);
+  }
+  context.stroke();
+}
+
+function drawNodeGraphViewportFallbackWires(context, workspace, zoom, pan) {
+  const svg = document.getElementById("nodeWireSvg");
+  if (!svg || typeof Path2D !== "function") {
+    return;
+  }
+  context.save();
+  context.translate(Number(pan.x) || 0, Number(pan.y) || 0);
+  context.scale(zoom, zoom);
+  for (const path of svg.querySelectorAll("path")) {
+    const d = path.getAttribute("d");
+    if (!d) {
+      continue;
+    }
+    const style = getComputedStyle(path);
+    context.strokeStyle = style.stroke && style.stroke !== "none" ? style.stroke : "rgba(127, 199, 217, 0.82)";
+    context.globalAlpha = Number.parseFloat(style.opacity) || 1;
+    context.lineWidth = Math.max(1, Number.parseFloat(style.strokeWidth) || 4);
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    try {
+      context.stroke(new Path2D(d));
+    } catch {
+      // Ignore paths the browser cannot parse into Canvas Path2D.
+    }
+  }
+  context.restore();
+  context.globalAlpha = 1;
+}
+
+function drawNodeGraphViewportFallbackModules(context, workspace) {
+  const workspaceRect = workspace.getBoundingClientRect();
+  context.textBaseline = "top";
+  for (const node of workspace.querySelectorAll(".dsp-node:not(.removed):not([hidden])")) {
+    const rect = node.getBoundingClientRect();
+    const x = rect.left - workspaceRect.left;
+    const y = rect.top - workspaceRect.top;
+    const width = rect.width;
+    const height = rect.height;
+    if (width <= 0 || height <= 0) {
+      continue;
+    }
+    nodeGraphViewportRoundedRectPath(context, x, y, width, height, 5);
+    context.fillStyle = "rgba(10, 12, 15, 0.96)";
+    context.fill();
+    context.strokeStyle = node.classList.contains("selected")
+      ? "rgba(226, 168, 109, 0.9)"
+      : "rgba(243, 241, 236, 0.2)";
+    context.lineWidth = 1;
+    context.stroke();
+
+    const header = node.querySelector(".dsp-node-header");
+    if (header) {
+      const headerRect = header.getBoundingClientRect();
+      context.fillStyle = "rgba(8, 9, 11, 0.96)";
+      context.fillRect(x, y, width, Math.max(18, headerRect.height));
+    }
+
+    const title = node.querySelector(".dsp-node-header strong, .dsp-node-title, strong");
+    if (title?.textContent) {
+      context.fillStyle = "rgba(243, 241, 236, 0.9)";
+      context.font = "700 14px Consolas, monospace";
+      context.textAlign = "center";
+      context.fillText(title.textContent.trim().slice(0, 32), x + width * 0.5, y + 6);
+    }
+
+    context.textAlign = "left";
+    context.font = "12px Consolas, monospace";
+    context.fillStyle = "rgba(214, 230, 238, 0.88)";
+    const rows = [...node.querySelectorAll(".node-slider-readout, .node-port-label, .node-io-label, label, output")]
+      .map((element) => element.textContent.trim().replace(/\s+/g, " "))
+      .filter(Boolean)
+      .slice(0, 10);
+    let textY = y + Math.min(42, height - 14);
+    for (const row of rows) {
+      if (textY > y + height - 14) {
+        break;
+      }
+      context.fillText(row.slice(0, 28), x + 12, textY);
+      textY += 15;
+    }
+
+    for (const port of node.querySelectorAll("[data-port], .node-port, .node-param-port")) {
+      const portRect = port.getBoundingClientRect();
+      if (portRect.width <= 0 || portRect.height <= 0) {
+        continue;
+      }
+      const cx = portRect.left - workspaceRect.left + portRect.width * 0.5;
+      const cy = portRect.top - workspaceRect.top + portRect.height * 0.5;
+      const portStyle = getComputedStyle(port);
+      context.beginPath();
+      context.arc(cx, cy, Math.max(3, Math.min(8, portRect.width * 0.35)), 0, Math.PI * 2);
+      context.fillStyle = portStyle.backgroundColor || "rgba(127, 199, 217, 0.85)";
+      context.fill();
+      context.strokeStyle = portStyle.borderColor || "rgba(243, 241, 236, 0.55)";
+      context.stroke();
+    }
+  }
+}
+
+function createNodeGraphViewportFallbackCanvas(options = {}) {
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  if (!workspace) {
+    return null;
+  }
+  if (typeof drawNodeGraphWires === "function") {
+    drawNodeGraphWires();
+  }
+  const rect = workspace.getBoundingClientRect();
+  const width = Math.max(1, Math.round(workspace.clientWidth || rect.width));
+  const height = Math.max(1, Math.round(workspace.clientHeight || rect.height));
+  const targetWidth = options.targetWidth === null
+    ? width
+    : nodeGraphViewportExportTargetWidth(options.targetWidth || width);
+  const targetHeight = Math.max(1, Math.round(targetWidth * (height / width)));
+  const exportScale = targetWidth / width;
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  const context = canvas.getContext("2d");
+  context.scale(exportScale, exportScale);
+  const pan = nodeGraphMvp.pan || { x: 0, y: 0 };
+  const zoom = typeof nodeGraphZoom === "function" ? nodeGraphZoom() : 1;
+  drawNodeGraphViewportFallbackGrid(context, width, height, nodeGraphGridWidth(), nodeGraphGridHeight(), pan, zoom);
+  drawNodeGraphViewportFallbackWires(context, workspace, zoom, pan);
+  drawNodeGraphViewportFallbackModules(context, workspace);
+  return canvas;
+}
+
 function nodeGraphViewportReadableStyles() {
   const parts = [];
   for (const sheet of document.styleSheets) {
@@ -55,6 +279,13 @@ function cloneNodeGraphViewportForImage(workspace) {
   const clone = workspace.cloneNode(true);
   clone.querySelector("#nodeGraphResizeHandle")?.remove();
   clone.querySelector("#nodeCopyViewportImageOverlayButton")?.remove();
+  clone.querySelector("#nodeExportViewportGifButton")?.remove();
+  clone.querySelector("#nodeExportViewportMp4Button")?.remove();
+  clone.querySelector("#nodeExportViewportWavButton")?.remove();
+  clone.querySelector("#nodeExportViewportOggButton")?.remove();
+  clone.querySelector("#nodeExportViewportFlacButton")?.remove();
+  clone.querySelector("#nodeViewportExportSecondsInput")?.remove();
+  clone.querySelector("#nodeViewportExportWidthInput")?.remove();
   clone.querySelector("#nodeModularOnlyBackButton")?.remove();
   clone.querySelector("#nodeSelectionMarquee")?.remove();
   clone.querySelector("#nodeCameraOverlayLayer")?.remove();
@@ -97,22 +328,7 @@ function nodeGraphImageFromBlob(blob) {
   });
 }
 
-function nodeGraphCanvasToPngBlob(canvas) {
-  return new Promise((resolve) => {
-    try {
-      canvas.toBlob((blob) => resolve(blob), "image/png");
-    } catch {
-      resolve(null);
-    }
-  });
-}
-
-async function createNodeGraphViewportImageBlob() {
-  const image = await createNodeGraphViewportImage();
-  return image?.pngBlob || null;
-}
-
-async function createNodeGraphViewportImage() {
+async function createNodeGraphViewportSvgCanvas(options = {}) {
   const workspace = document.getElementById("nodeGraphWorkspace");
   if (!workspace) {
     return null;
@@ -122,29 +338,86 @@ async function createNodeGraphViewportImage() {
   }
   const width = Math.max(1, Math.round(workspace.clientWidth || workspace.getBoundingClientRect().width));
   const height = Math.max(1, Math.round(workspace.clientHeight || workspace.getBoundingClientRect().height));
+  const targetWidth = options.targetWidth === null
+    ? width
+    : nodeGraphViewportExportTargetWidth(options.targetWidth || width);
+  const targetHeight = Math.max(1, Math.round(targetWidth * (height / width)));
   const clone = cloneNodeGraphViewportForImage(workspace);
   const svgBlob = new Blob([nodeGraphViewportSvgMarkup(clone, width, height)], {
     type: "image/svg+xml;charset=utf-8",
   });
   const image = await nodeGraphImageFromBlob(svgBlob);
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
   const context = canvas.getContext("2d");
-  context.drawImage(image, 0, 0, width, height);
+  context.drawImage(image, 0, 0, targetWidth, targetHeight);
   return {
-    height,
-    pngBlob: await nodeGraphCanvasToPngBlob(canvas),
+    canvas,
+    height: targetHeight,
     svgBlob,
-    width,
+    width: targetWidth,
   };
 }
 
-function setNodeGraphViewportImageButtonStatus(text) {
-  const buttons = [
-    document.getElementById("nodeCopyViewportImageButton"),
-    document.getElementById("nodeCopyViewportImageOverlayButton"),
-  ].filter(Boolean);
+function nodeGraphCanvasToPngBlob(canvas) {
+  return nodeGraphViewportCanvasBlob(canvas, "image/png");
+}
+
+async function createNodeGraphViewportImageBlob() {
+  const image = await createNodeGraphViewportImage();
+  return image?.pngBlob || null;
+}
+
+async function createNodeGraphViewportImage() {
+  try {
+    const svgCapture = await createNodeGraphViewportSvgCanvas();
+    const pngBlob = svgCapture?.canvas
+      ? await nodeGraphViewportCanvasBlob(svgCapture.canvas, "image/png")
+      : null;
+    if (svgCapture?.canvas && pngBlob) {
+      return {
+        canvas: svgCapture.canvas,
+        height: svgCapture.height,
+        pngBlob,
+        svgBlob: svgCapture.svgBlob,
+        width: svgCapture.width,
+      };
+    }
+  } catch (_error) {
+    console.warn("Viewport DOM capture failed; using fallback renderer", _error);
+  }
+
+  const fallbackCanvas = createNodeGraphViewportFallbackCanvas();
+  const fallbackPngBlob = fallbackCanvas
+    ? await nodeGraphViewportCanvasBlob(fallbackCanvas, "image/png")
+    : null;
+  if (fallbackCanvas && fallbackPngBlob) {
+    return {
+      canvas: fallbackCanvas,
+      height: fallbackCanvas.height,
+      pngBlob: fallbackPngBlob,
+      svgBlob: null,
+      width: fallbackCanvas.width,
+    };
+  }
+  return null;
+}
+
+async function createNodeGraphViewportVideoFrameCanvas(options = {}) {
+  // MediaRecorder canvas.captureStream requires an origin-clean canvas. The DOM/SVG
+  // foreignObject capture path can taint the canvas in Chromium, so video uses the
+  // manual renderer even when still PNG capture can try the more accurate path.
+  return createNodeGraphViewportFallbackCanvas(options);
+}
+
+function setNodeGraphViewportImageButtonStatus(text, options = {}) {
+  const buttons = Array.isArray(options.buttons)
+    ? options.buttons.filter(Boolean)
+    : [
+      document.getElementById("nodeCopyViewportImageButton"),
+      document.getElementById("nodeCopyViewportImageOverlayButton"),
+    ].filter(Boolean);
   for (const button of buttons) {
     if (!button.dataset.defaultText) {
       button.dataset.defaultText = button.textContent;
@@ -173,7 +446,7 @@ async function copyNodeGraphViewportImageToClipboard() {
       button.disabled = true;
     }
     image = await createNodeGraphViewportImage();
-    if (!image?.pngBlob && !image?.svgBlob) {
+    if (!image?.pngBlob) {
       setNodeGraphViewportImageButtonStatus("Copy Failed");
       return;
     }
@@ -186,14 +459,134 @@ async function copyNodeGraphViewportImageToClipboard() {
     return;
   }
   try {
-    const clipboardType = image.pngBlob ? "image/png" : "image/svg+xml";
-    const clipboardBlob = image.pngBlob || image.svgBlob;
     await navigator.clipboard.write([
-      new ClipboardItem({ [clipboardType]: clipboardBlob }),
+      new ClipboardItem({ "image/png": image.pngBlob }),
     ]);
-    setNodeGraphViewportImageButtonStatus(image.pngBlob ? "Viewport Copied" : "SVG Copied");
+    setNodeGraphViewportImageButtonStatus("PNG Copied");
   } catch (_error) {
     setNodeGraphViewportImageButtonStatus("Copy Blocked");
+  } finally {
+    for (const button of buttons) {
+      button.disabled = false;
+    }
+  }
+}
+
+async function exportNodeGraphViewportGif() {
+  setNodeGraphViewportImageButtonStatus("GIF Unsupported");
+}
+
+async function exportNodeGraphViewportWav() {
+  if (typeof saveNodeGraphRenderedWav !== "function") {
+    setNodeGraphViewportImageButtonStatus("WAV Unavailable");
+    return;
+  }
+  saveNodeGraphRenderedWav();
+  const rendered = typeof nodeGraphVideoExportRendered === "function"
+    ? nodeGraphVideoExportRendered()
+    : null;
+  setNodeGraphViewportImageButtonStatus(rendered ? "WAV Saved" : "Render First");
+}
+
+async function exportNodeGraphViewportOgg() {
+  if (typeof exportNodeGraphRenderedOgg === "function") {
+    await exportNodeGraphRenderedOgg();
+  }
+  setNodeGraphViewportImageButtonStatus("OGG Unsupported");
+}
+
+async function exportNodeGraphViewportFlac() {
+  if (typeof exportNodeGraphRenderedFlac === "function") {
+    await exportNodeGraphRenderedFlac();
+  }
+  setNodeGraphViewportImageButtonStatus("FLAC Unsupported");
+}
+
+async function exportNodeGraphViewportMp4() {
+  const buttons = [
+    document.getElementById("nodeExportViewportMp4Button"),
+  ].filter(Boolean);
+  const setMp4Status = (text) => setNodeGraphViewportImageButtonStatus(text, { buttons });
+  document.body.dataset.nodeViewportMp4Error = "";
+  if (typeof MediaRecorder !== "function") {
+    setMp4Status("MP4 Unsupported");
+    return;
+  }
+  const mimeType = typeof nodeGraphVideoExportMimeForFormat === "function"
+    ? nodeGraphVideoExportMimeForFormat("mp4", true)
+    : "";
+  if (!mimeType) {
+    setMp4Status("MP4 Unsupported");
+    return;
+  }
+  const targetWidth = nodeGraphViewportExportTargetWidth();
+  const firstFrame = await createNodeGraphViewportVideoFrameCanvas({ targetWidth });
+  if (!firstFrame) {
+    setMp4Status("MP4 Capture Failed");
+    return;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = firstFrame.width;
+  canvas.height = firstFrame.height;
+  const context = canvas.getContext("2d");
+  context.drawImage(firstFrame, 0, 0, canvas.width, canvas.height);
+  if (!canvas.captureStream) {
+    setMp4Status("MP4 Unsupported");
+    return;
+  }
+  for (const button of buttons) {
+    button.disabled = true;
+  }
+  try {
+    const fps = 12;
+    const durationMs = Math.ceil(nodeGraphViewportExportSeconds() * 1000);
+    const stream = canvas.captureStream(fps);
+    const [track] = stream.getVideoTracks();
+    const chunks = [];
+    const recorder = new MediaRecorder(stream, { mimeType });
+    recorder.addEventListener("dataavailable", (event) => {
+      if (event.data?.size) {
+        chunks.push(event.data);
+      }
+    });
+    const finished = new Promise((resolve, reject) => {
+      recorder.addEventListener("stop", resolve, { once: true });
+      recorder.addEventListener("error", () => reject(new Error("viewport mp4 export failed")), { once: true });
+    });
+    const frameMs = 1000 / fps;
+    recorder.start(Math.ceil(frameMs));
+    const startedAt = performance.now();
+    let nextFrameAt = startedAt + frameMs;
+    while (performance.now() - startedAt < durationMs) {
+      await new Promise((resolve) => window.setTimeout(resolve, Math.max(1, nextFrameAt - performance.now())));
+      const frame = await createNodeGraphViewportVideoFrameCanvas({ targetWidth: canvas.width });
+      if (frame) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(frame, 0, 0, canvas.width, canvas.height);
+        if (typeof track?.requestFrame === "function") {
+          track.requestFrame();
+        }
+      }
+      nextFrameAt += frameMs;
+    }
+    if (typeof recorder.requestData === "function" && recorder.state === "recording") {
+      recorder.requestData();
+    }
+    recorder.stop();
+    await finished;
+    stream.getTracks().forEach((track) => track.stop());
+    const blob = new Blob(chunks, { type: mimeType });
+    if (!blob.size) {
+      setMp4Status("MP4 Failed");
+      return;
+    }
+    const saved = downloadNodeGraphViewportBlob(blob, nodeGraphViewportExportFileName("mp4"));
+    setMp4Status(saved ? "MP4 Saved" : "MP4 Ready");
+  } catch (_error) {
+    const message = String(_error?.message || _error || "unknown");
+    document.body.dataset.nodeViewportMp4Error = message;
+    console.warn("Viewport MP4 export failed", _error);
+    setMp4Status("MP4 Failed");
   } finally {
     for (const button of buttons) {
       button.disabled = false;

@@ -75,14 +75,23 @@ function nodeGraphGridToPixel(point) {
   };
 }
 
-function nodeGraphPixelToGrid(point) {
+function nodeGraphGridSnapUnits(options = {}) {
+  return options.halfGrid ? 2 : 1;
+}
+
+function roundNodeGraphGridCoordinate(value, options = {}) {
+  const units = nodeGraphGridSnapUnits(options);
+  return Math.round((Number(value) || 0) * units) / units;
+}
+
+function nodeGraphPixelToGrid(point, options = {}) {
   const offset = nodeGraphGridSnapOffset();
   return {
-    gx: Math.round((point.x - offset) / nodeGraphGridWidth()),
-    gy: Math.round((point.y - offset) / nodeGraphGridHeight()),
+    gx: roundNodeGraphGridCoordinate((point.x - offset) / nodeGraphGridWidth(), options),
+    gy: roundNodeGraphGridCoordinate((point.y - offset) / nodeGraphGridHeight(), options),
   };
 }
 
-function snapNodeGraphPointToGrid(point) {
-  return nodeGraphGridToPixel(nodeGraphPixelToGrid(point));
+function snapNodeGraphPointToGrid(point, options = {}) {
+  return nodeGraphGridToPixel(nodeGraphPixelToGrid(point, options));
 }

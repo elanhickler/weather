@@ -63,6 +63,14 @@ function syncNodeGraphPatchParameterFromSlider(slider, options = {}) {
       patchNode.paramMeta[key],
     ),
   };
+  if (
+    nodeGraphModuleIsGraphType(patchNode.type) &&
+    typeof nodeGraphGraphEndpointYLockEnabledForNode === "function" &&
+    typeof nodeGraphGraphWithLockedEndpointY === "function" &&
+    nodeGraphGraphEndpointYLockEnabledForNode(patchNode)
+  ) {
+    patchNode.graph = nodeGraphGraphWithLockedEndpointY(patchNode.graph);
+  }
   if (options.deferUi) {
     return;
   }
@@ -70,6 +78,9 @@ function syncNodeGraphPatchParameterFromSlider(slider, options = {}) {
   renderNodeGraphExecutionPlanDebug();
   syncNodeGraphGhostSliders();
   syncNodeGraphFilterCurveDisplays();
+  if (nodeGraphModuleIsGraphType(patchNode.type) && typeof syncNodeGraphGraphDisplaysForNode === "function") {
+    syncNodeGraphGraphDisplaysForNode(node, patchNode);
+  }
   if (options.record) {
     recordNodeGraphHistory();
   } else {
@@ -166,6 +177,66 @@ function nodeSliderFineTuneScale(event) {
     return 0.1;
   }
   return 1;
+}
+
+function nodeSliderKeyboardStep(slider, event) {
+  const choices = parseNodeMetadataChoices(slider?.dataset?.choices || "");
+  if (
+    nodeSliderShouldDisplayChoices(slider) &&
+    nodeSliderShouldDivideChoicesVisibly(slider) &&
+    choices.length > 0
+  ) {
+    return 1;
+  }
+  const declaredStep = Number(slider?.dataset?.step);
+  if (Number.isFinite(declaredStep) && declaredStep > 0) {
+    return declaredStep * (event.shiftKey ? 10 : 1) * (event.ctrlKey || event.metaKey ? 0.1 : 1);
+  }
+  const min = Number(slider?.min);
+  const max = Number(slider?.max);
+  const range = Number.isFinite(max - min) && max > min ? max - min : 1;
+  return range * (event.shiftKey ? 0.1 : 0.01) * (event.ctrlKey || event.metaKey ? 0.1 : 1);
+}
+
+function stepNodeSliderFromKeyboard(event) {
+  const surface = event.currentTarget?.classList?.contains("node-slider-readout")
+    ? event.currentTarget
+    : event.target?.closest?.(".node-slider-readout");
+  const slider = document.getElementById(surface?.dataset?.sliderTarget || "");
+  if (!surface || !slider) {
+    return false;
+  }
+
+  const keySteps = {
+    ArrowDown: -1,
+    ArrowLeft: -1,
+    ArrowRight: 1,
+    ArrowUp: 1,
+    PageDown: -10,
+    PageUp: 10,
+  };
+  const min = Number(slider.min);
+  const max = Number(slider.max);
+  const current = Number(slider.value);
+  let nextValue = current;
+  if (event.key === "Home") {
+    nextValue = min;
+  } else if (event.key === "End") {
+    nextValue = max;
+  } else if (Object.hasOwn(keySteps, event.key)) {
+    nextValue = current + keySteps[event.key] * nodeSliderKeyboardStep(slider, event);
+  } else {
+    return false;
+  }
+
+  setNodeSliderValue(slider, quantizeNodeSliderDragValue(slider, nextValue));
+  syncNodeGraphPatchParameterFromSlider(slider, {
+    record: true,
+    status: "parameter changed",
+  });
+  event.preventDefault();
+  event.stopPropagation();
+  return true;
 }
 
 function reanchorNodeSliderDragAtPointer(drag, event) {

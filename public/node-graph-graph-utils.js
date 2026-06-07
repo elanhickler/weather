@@ -1,4 +1,5 @@
 const nodeGraphGraphShapes = Object.freeze(["linear", "smooth", "rational", "exponential", "hold"]);
+const nodeGraphGraph2SmoothingModes = Object.freeze(["linear", "smooth", "meander", "quadratic", "cubic"]);
 
 const nodeGraphDefaultGraphData = Object.freeze({
   cursorX: 0.5,
@@ -247,6 +248,34 @@ function normalizeNodeGraphGraph(value = {}) {
   };
 }
 
+function nodeGraphGraphEndpointYLockEnabledForNode(patchNode) {
+  return nodeGraphModuleIsGraphType(patchNode?.type) && Number(patchNode?.params?.lockEndpointY) >= 0.5;
+}
+
+function nodeGraphGraphWithLockedEndpointY(graphValue, selectedIndex = 0) {
+  const graph = normalizeNodeGraphGraph(graphValue);
+  if (graph.nodes.length < 2) {
+    return graph;
+  }
+  const lastIndex = graph.nodes.length - 1;
+  const endpointIndex = nodeGraphGraphNodeIndexFromValue(graph, selectedIndex);
+  const anchorIndex = endpointIndex >= lastIndex ? lastIndex : 0;
+  const anchorY = normalizeNodeGraphGraphNumber(graph.nodes[anchorIndex]?.y, graph.nodes[0]?.y ?? 0);
+  const nodes = graph.nodes.map((node, index) => (
+    index === 0 || index === lastIndex
+      ? normalizeNodeGraphGraphNode({ ...node, y: anchorY }, index)
+      : node
+  ));
+  return normalizeNodeGraphGraph({ ...graph, nodes });
+}
+
+function nodeGraphGraphForNode(patchNode, selectedIndex = 0) {
+  const graph = normalizeNodeGraphGraph(patchNode?.graph);
+  return nodeGraphGraphEndpointYLockEnabledForNode(patchNode)
+    ? nodeGraphGraphWithLockedEndpointY(graph, selectedIndex)
+    : graph;
+}
+
 function nodeGraphGraphRationalCurve(position, contour = 0) {
   const p = normalizeNodeGraphGraphNumber(position, 0, 0, 1);
   const c = normalizeNodeGraphGraphNumber(contour, 0, -0.999, 0.999);
@@ -277,7 +306,142 @@ function nodeGraphGraphSmoothCurve(position) {
   return p * p * (3 - 2 * p);
 }
 
-function nodeGraphGraphSegmentValue(graph, x, index) {
+function normalizeNodeGraphGraph2SmoothingMode(value) {
+  if (Number.isFinite(Number(value))) {
+    return nodeGraphGraph2SmoothingModes[Math.max(0, Math.min(
+      nodeGraphGraph2SmoothingModes.length - 1,
+      Math.round(Number(value)),
+    ))];
+  }
+  const mode = String(value || "").trim().toLowerCase();
+  return nodeGraphGraph2SmoothingModes.includes(mode) ? mode : "smooth";
+}
+
+function nodeGraphGraphMeanderCurve(position, index = 0) {
+  const p = nodeGraphGraphSmoothCurve(position);
+  const wobblePhase = (index * 0.371) % 1;
+  const wobble = Math.sin(Math.PI * p) * Math.sin((p * 1.5 + wobblePhase) * Math.PI * 2) * 0.075;
+  return normalizeNodeGraphGraphNumber(p + wobble, p, 0, 1);
+}
+
+function nodeGraphGraphBezierPointAt(nodes, position = 0) {
+  const t = normalizeNodeGraphGraphNumber(position, 0, 0, 1);
+  let points = nodes.map((node) => ({
+    x: normalizeNodeGraphGraphNumber(node.x, 0),
+    y: normalizeNodeGraphGraphNumber(node.y, 0),
+  }));
+  if (!points.length) {
+    return { x: 0, y: 0 };
+  }
+  while (points.length > 1) {
+    points = points.slice(0, -1).map((point, index) => {
+      const next = points[index + 1];
+      return {
+        x: point.x + (next.x - point.x) * t,
+        y: point.y + (next.y - point.y) * t,
+      };
+    });
+  }
+  return points[0];
+}
+
+function nodeGraphGraphBezierValueAt(graph, xValue) {
+  const x = normalizeNodeGraphGraphNumber(xValue, 0, -Infinity, Infinity);
+  if (graph.nodes.length < 2) {
+    return graph.nodes[0]?.y ?? 0;
+  }
+  if (x <= graph.nodes[0].x) {
+    return graph.nodes[0].y;
+  }
+  const last = graph.nodes[graph.nodes.length - 1];
+  if (x >= last.x) {
+    return last.y;
+  }
+  let low = 0;
+  let high = 1;
+  let point = nodeGraphGraphBezierPointAt(graph.nodes, x);
+  for (let iteration = 0; iteration < 28; iteration += 1) {
+    const t = (low + high) * 0.5;
+    point = nodeGraphGraphBezierPointAt(graph.nodes, t);
+    if (point.x < x) {
+      low = t;
+    } else {
+      high = t;
+    }
+  }
+  return point.y;
+}
+
+function nodeGraphGraphInterpolationWindowStart(nodes, x, degree) {
+  const targetCount = Math.max(2, Math.min(nodes.length, degree + 1));
+  let segmentIndex = 0;
+  for (let index = 0; index < nodes.length - 1; index += 1) {
+    if (x <= nodes[index + 1].x) {
+      segmentIndex = index;
+      break;
+    }
+    segmentIndex = index;
+  }
+  const start = segmentIndex - Math.max(0, Math.floor((targetCount - 2) * 0.5));
+  return Math.max(0, Math.min(nodes.length - targetCount, start));
+}
+
+function nodeGraphGraphLagrangeValueAt(graph, xValue, degree = 3) {
+  const x = normalizeNodeGraphGraphNumber(xValue, 0, -Infinity, Infinity);
+  const nodes = graph.nodes;
+  if (nodes.length < 2) {
+    return nodes[0]?.y ?? 0;
+  }
+  for (const node of nodes) {
+    if (Math.abs(x - node.x) < 0.000001) {
+      return node.y;
+    }
+  }
+  const targetCount = Math.max(2, Math.min(nodes.length, degree + 1));
+  const start = nodeGraphGraphInterpolationWindowStart(nodes, x, degree);
+  const windowNodes = nodes.slice(start, start + targetCount);
+  let value = 0;
+  for (let index = 0; index < windowNodes.length; index += 1) {
+    const point = windowNodes[index];
+    let basis = 1;
+    for (let otherIndex = 0; otherIndex < windowNodes.length; otherIndex += 1) {
+      if (otherIndex === index) {
+        continue;
+      }
+      const other = windowNodes[otherIndex];
+      const denominator = point.x - other.x;
+      if (Math.abs(denominator) < 0.000001) {
+        continue;
+      }
+      basis *= (x - other.x) / denominator;
+    }
+    value += point.y * basis;
+  }
+  return value;
+}
+
+function nodeGraphGraphControlPolygonPath(graphValue) {
+  const graph = normalizeNodeGraphGraph(graphValue);
+  return graph.nodes
+    .map((node, index) => {
+      const point = nodeGraphGraphPointToSvg(node.x, node.y);
+      return `${index === 0 ? "M" : "L"} ${point.x.toFixed(3)} ${point.y.toFixed(3)}`;
+    })
+    .join(" ");
+}
+
+function nodeGraphGraphModeCurve(position, mode, index = 0) {
+  const normalizedMode = normalizeNodeGraphGraph2SmoothingMode(mode);
+  if (normalizedMode === "linear") {
+    return normalizeNodeGraphGraphNumber(position, 0, 0, 1);
+  }
+  if (normalizedMode === "meander") {
+    return nodeGraphGraphMeanderCurve(position, index);
+  }
+  return nodeGraphGraphSmoothCurve(position);
+}
+
+function nodeGraphGraphSegmentValue(graph, x, index, smoothingMode = "legacy") {
   const left = graph.nodes[index];
   const right = graph.nodes[index + 1];
   const dx = right.x - left.x;
@@ -285,6 +449,10 @@ function nodeGraphGraphSegmentValue(graph, x, index) {
     return 0.5 * (left.y + right.y);
   }
   const p = normalizeNodeGraphGraphNumber((x - left.x) / dx, 0, 0, 1);
+  if (smoothingMode !== "legacy") {
+    const shaped = nodeGraphGraphModeCurve(p, smoothingMode, index);
+    return left.y + (right.y - left.y) * shaped;
+  }
   const contour = normalizeNodeGraphGraphNumber(right.c, 0, -0.999, 0.999);
   const shaped = right.shape === "exponential"
     ? nodeGraphGraphExponentialCurve(p, contour)
@@ -298,18 +466,31 @@ function nodeGraphGraphSegmentValue(graph, x, index) {
   return left.y + (right.y - left.y) * shaped;
 }
 
-function nodeGraphGraphValueAt(graphValue, xValue) {
+function nodeGraphGraphValueAt(graphValue, xValue, smoothingMode = "legacy") {
   const graph = normalizeNodeGraphGraph(graphValue);
   const x = normalizeNodeGraphGraphNumber(xValue, 0, -Infinity, Infinity);
   if (!graph.nodes.length) {
     return 0;
   }
+  const normalizedMode = normalizeNodeGraphGraph2SmoothingMode(smoothingMode);
+  if (normalizedMode === "meander") {
+    return normalizeNodeGraphGraphNumber(nodeGraphGraphBezierValueAt(graph, x), 0, -Infinity, Infinity);
+  }
   if (x < graph.nodes[0].x) {
     return graph.nodes[0].y;
   }
+  if (x > graph.nodes[graph.nodes.length - 1].x) {
+    return graph.nodes[graph.nodes.length - 1].y;
+  }
+  if (normalizedMode === "quadratic") {
+    return normalizeNodeGraphGraphNumber(nodeGraphGraphLagrangeValueAt(graph, x, 2), 0, -Infinity, Infinity);
+  }
+  if (normalizedMode === "cubic") {
+    return normalizeNodeGraphGraphNumber(nodeGraphGraphLagrangeValueAt(graph, x, 3), 0, -Infinity, Infinity);
+  }
   for (let index = 0; index < graph.nodes.length - 1; index += 1) {
     if (x <= graph.nodes[index + 1].x) {
-      return normalizeNodeGraphGraphNumber(nodeGraphGraphSegmentValue(graph, x, index), 0, -Infinity, Infinity);
+      return normalizeNodeGraphGraphNumber(nodeGraphGraphSegmentValue(graph, x, index, smoothingMode), 0, -Infinity, Infinity);
     }
   }
   return graph.nodes[graph.nodes.length - 1].y;
@@ -322,13 +503,13 @@ function nodeGraphGraphPointToSvg(x, y) {
   };
 }
 
-function nodeGraphGraphCurvePath(graphValue, sampleCount = 96) {
+function nodeGraphGraphCurvePath(graphValue, sampleCount = 96, smoothingMode = "legacy") {
   const graph = normalizeNodeGraphGraph(graphValue);
   const count = Math.max(2, Math.round(Number(sampleCount) || 96));
   const commands = [];
   for (let index = 0; index < count; index += 1) {
     const x = index / (count - 1);
-    const y = nodeGraphGraphValueAt(graph, x);
+    const y = nodeGraphGraphValueAt(graph, x, smoothingMode);
     const point = nodeGraphGraphPointToSvg(x, y);
     commands.push(`${index === 0 ? "M" : "L"} ${point.x.toFixed(3)} ${point.y.toFixed(3)}`);
   }
@@ -445,16 +626,20 @@ function nodeGraphGraphContourFromPoint(graph, index, point) {
   return normalizeNodeGraphGraphNumber(((point.y - midpoint.y) / range) * direction * 1.8, 0, -0.999, 0.999);
 }
 
-function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null) {
+function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null, options = {}) {
   if (!element) {
     return;
   }
   const graph = normalizeNodeGraphGraph(graphValue);
+  const smoothingMode = options.smoothingMode === undefined
+    ? "legacy"
+    : normalizeNodeGraphGraph2SmoothingMode(options.smoothingMode);
+  const usesGlobalSmoothing = smoothingMode !== "legacy";
   const nodeId = element.dataset.graphNode || "";
   const activeIndex = selectedIndex === null
     ? nodeGraphGraphSelectedNodeIndex(nodeId, graph, 0)
     : nodeGraphGraphNodeIndexFromValue(graph, selectedIndex);
-  const cursorValue = nodeGraphGraphValueAt(graph, graph.cursorX);
+  const cursorValue = nodeGraphGraphValueAt(graph, graph.cursorX, smoothingMode);
   const cursor = nodeGraphGraphPointToSvg(graph.cursorX, 0);
   const cursorPoint = nodeGraphGraphPointToSvg(graph.cursorX, cursorValue);
   element.replaceChildren();
@@ -517,43 +702,53 @@ function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null) 
     y1: cursorPoint.y.toFixed(3),
     y2: cursorPoint.y.toFixed(3),
   }));
+  if (smoothingMode === "meander") {
+    svg.append(createNodeGraphGraphSvgElement("path", {
+      class: "node-module-graph-control-line",
+      d: nodeGraphGraphControlPolygonPath(graph),
+    }));
+  }
   svg.append(createNodeGraphGraphSvgElement("path", {
     class: "node-module-graph-curve",
-    d: nodeGraphGraphCurvePath(graph),
+    d: nodeGraphGraphCurvePath(graph, 96, smoothingMode),
   }));
-  svg.append(createNodeGraphGraphSvgElement("circle", {
-    class: "node-module-graph-cursor-value",
-    cx: cursorPoint.x.toFixed(3),
-    cy: cursorPoint.y.toFixed(3),
-    "data-graph-cursor": "true",
-    r: "2.5",
-  }));
-  graph.nodes.forEach((node, index) => {
-    if (index <= 0) {
-      return;
-    }
-    const point = nodeGraphGraphContourHandlePoint(graph, index);
-    if (!point) {
-      return;
-    }
-    svg.append(createNodeGraphGraphSvgElement("circle", {
-      class: `node-module-graph-contour-handle${index === activeIndex ? " selected" : ""}`,
-      cx: point.x.toFixed(3),
-      cy: point.y.toFixed(3),
-      "data-graph-contour-index": String(index),
-      "data-selected": index === activeIndex ? "true" : "false",
-      r: "2.7",
-    }));
-    const shapeBadge = createNodeGraphGraphSvgElement("text", {
-      class: `node-module-graph-shape-badge${index === activeIndex ? " selected" : ""}`,
-      "data-graph-shape-index": String(index),
-      "data-selected": index === activeIndex ? "true" : "false",
-      x: Math.min(90, point.x + 4).toFixed(3),
-      y: Math.max(12, point.y - 3).toFixed(3),
+  if (!usesGlobalSmoothing) {
+    graph.nodes.forEach((node, index) => {
+      if (index <= 0) {
+        return;
+      }
+      const point = nodeGraphGraphContourHandlePoint(graph, index);
+      if (!point) {
+        return;
+      }
+      svg.append(createNodeGraphGraphSvgElement("circle", {
+        class: `node-module-graph-contour-handle${index === activeIndex ? " selected" : ""}`,
+        cx: point.x.toFixed(3),
+        cy: point.y.toFixed(3),
+        "data-graph-contour-index": String(index),
+        "data-selected": index === activeIndex ? "true" : "false",
+        r: "2.7",
+      }));
+      const shapeBadge = createNodeGraphGraphSvgElement("text", {
+        class: `node-module-graph-shape-badge${index === activeIndex ? " selected" : ""}`,
+        "data-graph-shape-index": String(index),
+        "data-selected": index === activeIndex ? "true" : "false",
+        x: Math.min(90, point.x + 4).toFixed(3),
+        y: Math.max(12, point.y - 3).toFixed(3),
+      });
+      shapeBadge.textContent = normalizeNodeGraphGraphShape(node.shape).slice(0, 3);
+      svg.append(shapeBadge);
     });
-    shapeBadge.textContent = normalizeNodeGraphGraphShape(node.shape).slice(0, 3);
-    svg.append(shapeBadge);
-  });
+  }
+  if (usesGlobalSmoothing) {
+    const modeLabel = createNodeGraphGraphSvgElement("text", {
+      class: "node-module-graph-shape-badge",
+      x: "10",
+      y: "14",
+    });
+    modeLabel.textContent = normalizeNodeGraphGraph2SmoothingMode(smoothingMode).slice(0, 3);
+    svg.append(modeLabel);
+  }
   graph.nodes.forEach((node, index) => {
     const point = nodeGraphGraphPointToSvg(node.x, node.y);
     svg.append(createNodeGraphGraphSvgElement("circle", {
@@ -576,12 +771,19 @@ function renderNodeGraphGraphDisplay(element, graphValue, selectedIndex = null) 
   element.append(svg);
 }
 
+function nodeGraphGraphSmoothingModeForNode(patchNode) {
+  return patchNode?.type === "graph2"
+    ? normalizeNodeGraphGraph2SmoothingMode(patchNode?.params?.smoothingMode)
+    : "legacy";
+}
+
 function syncNodeGraphGraphElement(moduleElement, patchNode) {
-  const graph = normalizeNodeGraphGraph(patchNode?.graph);
+  const graph = nodeGraphGraphForNode(patchNode);
   renderNodeGraphGraphDisplay(
     moduleElement?.querySelector?.(".node-module-graph-display"),
     graph,
     nodeGraphGraphSelectedNodeIndex(patchNode?.id || "", graph, 0),
+    { smoothingMode: nodeGraphGraphSmoothingModeForNode(patchNode) },
   );
 }
 
@@ -594,13 +796,15 @@ function syncNodeGraphGraphDisplaysForNode(nodeId, patchNode) {
   if (!id) {
     return;
   }
-  const graph = normalizeNodeGraphGraph(patchNode?.graph);
+  const graph = nodeGraphGraphForNode(patchNode);
   const selectedIndex = nodeGraphGraphSelectedNodeIndex(id, graph, 0);
   document
     .querySelectorAll(".node-module-graph-display")
     .forEach((display) => {
       if (nodeGraphGraphNodeIdFromDisplay(display) === id) {
-        renderNodeGraphGraphDisplay(display, graph, selectedIndex);
+        renderNodeGraphGraphDisplay(display, graph, selectedIndex, {
+          smoothingMode: nodeGraphGraphSmoothingModeForNode(patchNode),
+        });
       }
     });
 }
@@ -614,7 +818,7 @@ function beginNodeGraphGraphNodeDrag(event) {
     return;
   }
   const shapeBadge = event.target?.closest?.(".node-module-graph-shape-badge");
-  if (shapeBadge) {
+  if (shapeBadge?.dataset.graphShapeIndex !== undefined) {
     cycleNodeGraphGraphShapeFromDisplayEvent(event, shapeBadge);
     return;
   }
@@ -636,11 +840,11 @@ function beginNodeGraphGraphNodeDrag(event) {
   const display = nodeGraphGraphDisplayFromEventTarget(circle);
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const patchNode = nodeGraphPatchNode(nodeId);
-  if (!patchNode || patchNode.type !== "graph") {
+  if (!patchNode || !nodeGraphModuleIsGraphType(patchNode.type)) {
     return;
   }
   const svg = circle.closest(".node-module-graph-svg");
-  const graph = normalizeNodeGraphGraph(patchNode.graph);
+  const graph = nodeGraphGraphForNode(patchNode);
   const index = nodeGraphGraphNodeIndexFromValue(graph, circle.dataset.graphNodeIndex);
   display?.focus?.({ preventScroll: true });
   setNodeGraphGraphSelectedNodeIndex(nodeId, graph, index);
@@ -661,11 +865,11 @@ function beginNodeGraphGraphCursorDrag(event, cursorElement) {
   const display = nodeGraphGraphDisplayFromEventTarget(cursorElement);
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const patchNode = nodeGraphPatchNode(nodeId);
-  if (!patchNode || patchNode.type !== "graph") {
+  if (!patchNode || !nodeGraphModuleIsGraphType(patchNode.type)) {
     return;
   }
   const svg = cursorElement.closest(".node-module-graph-svg");
-  const graph = normalizeNodeGraphGraph(patchNode.graph);
+  const graph = nodeGraphGraphForNode(patchNode);
   display?.focus?.({ preventScroll: true });
   nodeGraphMvp.graphNodeDragging = {
     display,
@@ -689,7 +893,7 @@ function beginNodeGraphGraphContourDrag(event, contour) {
     return;
   }
   const svg = contour.closest(".node-module-graph-svg");
-  const graph = normalizeNodeGraphGraph(patchNode.graph);
+  const graph = nodeGraphGraphForNode(patchNode);
   const index = nodeGraphGraphNodeIndexFromValue(graph, contour.dataset.graphContourIndex);
   display?.focus?.({ preventScroll: true });
   setNodeGraphGraphSelectedNodeIndex(nodeId, graph, index);
@@ -715,21 +919,23 @@ function addNodeGraphGraphNodeFromDisplayEvent(event) {
   const display = nodeGraphGraphDisplayFromEventTarget(event.target);
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const patchNode = nodeGraphPatchNode(nodeId);
-  if (!display || !patchNode || patchNode.type !== "graph") {
+  if (!display || !patchNode || !nodeGraphModuleIsGraphType(patchNode.type)) {
     return;
   }
   display?.focus?.({ preventScroll: true });
   const point = nodeGraphGraphSvgToGraphPoint(svg, event.clientX, event.clientY);
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === nodeId);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return;
   }
   const addition = addNodeGraphGraphNodeData(targetNode.graph, point);
   if (!addition.added) {
     return;
   }
-  targetNode.graph = addition.graph;
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(addition.graph, addition.selectedIndex)
+    : addition.graph;
   commitNodeGraphPatch(patch, { status: "graph node added" });
   setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, addition.selectedIndex);
   syncNodeGraphGraphDisplaysForNode(nodeId, targetNode);
@@ -747,12 +953,14 @@ function cycleNodeGraphGraphShapeFromDisplayEvent(event, shapeBadge) {
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === nodeId);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return false;
   }
-  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  const graph = nodeGraphGraphForNode(targetNode);
   const shape = cycleNodeGraphGraphShapeData(graph, shapeBadge.dataset.graphShapeIndex);
-  targetNode.graph = shape.graph;
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(shape.graph, shape.selectedIndex)
+    : shape.graph;
   display?.focus?.({ preventScroll: true });
   setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, shape.selectedIndex);
   commitNodeGraphPatch(patch, { status: "graph curve shape changed" });
@@ -768,13 +976,14 @@ function dragNodeGraphGraphNode(event) {
   if (!drag?.svg || !drag?.display) {
     return;
   }
+  const smoothingMode = nodeGraphGraphSmoothingModeForNode(nodeGraphPatchNode(drag.nodeId));
   const point = nodeGraphGraphSvgToGraphPoint(drag.svg, event.clientX, event.clientY);
   if (drag.mode === "cursor") {
     drag.graph = normalizeNodeGraphGraph({
       ...drag.graph,
       cursorX: point.x,
     });
-    renderNodeGraphGraphDisplay(drag.display, drag.graph);
+    renderNodeGraphGraphDisplay(drag.display, drag.graph, null, { smoothingMode });
     drag.svg = drag.display.querySelector(".node-module-graph-svg");
     if (nodeGraphModuleActionTargetNodeId() === drag.nodeId) {
       syncNodeGraphGraphControls(drag.graph);
@@ -792,7 +1001,7 @@ function dragNodeGraphGraphNode(event) {
     }, drag.index);
     drag.graph = normalizeNodeGraphGraph(drag.graph);
     setNodeGraphGraphSelectedNodeIndex(drag.nodeId, drag.graph, drag.index);
-    renderNodeGraphGraphDisplay(drag.display, drag.graph, drag.index);
+    renderNodeGraphGraphDisplay(drag.display, drag.graph, drag.index, { smoothingMode });
     drag.svg = drag.display.querySelector(".node-module-graph-svg");
     if (nodeGraphModuleActionTargetNodeId() === drag.nodeId) {
       syncNodeGraphGraphControls(drag.graph, drag.index);
@@ -808,10 +1017,12 @@ function dragNodeGraphGraphNode(event) {
     x: constrained.x,
     y: constrained.y,
   }, drag.index);
-  drag.graph = normalizeNodeGraphGraph(drag.graph);
+  drag.graph = nodeGraphGraphEndpointYLockEnabledForNode(nodeGraphPatchNode(drag.nodeId))
+    ? nodeGraphGraphWithLockedEndpointY(drag.graph, drag.index)
+    : normalizeNodeGraphGraph(drag.graph);
   drag.index = nodeGraphGraphNodeIndexFromValue(drag.graph, drag.index);
   setNodeGraphGraphSelectedNodeIndex(drag.nodeId, drag.graph, drag.index);
-  renderNodeGraphGraphDisplay(drag.display, drag.graph, drag.index);
+  renderNodeGraphGraphDisplay(drag.display, drag.graph, drag.index, { smoothingMode });
   drag.svg = drag.display.querySelector(".node-module-graph-svg");
   if (nodeGraphModuleActionTargetNodeId() === drag.nodeId) {
     syncNodeGraphGraphControls(drag.graph, drag.index);
@@ -829,8 +1040,10 @@ function endNodeGraphGraphNodeDrag(event) {
   nodeGraphMvp.graphNodeDragging = null;
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === drag.nodeId);
-  if (targetNode?.type === "graph") {
-    targetNode.graph = normalizeNodeGraphGraph(drag.graph);
+  if (nodeGraphModuleIsGraphType(targetNode?.type)) {
+    targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+      ? nodeGraphGraphWithLockedEndpointY(drag.graph, drag.index ?? 0)
+      : normalizeNodeGraphGraph(drag.graph);
     const status = drag.mode === "cursor"
       ? "graph cursor moved"
       : drag.mode === "contour"
@@ -849,10 +1062,10 @@ function endNodeGraphGraphNodeDrag(event) {
 function removeSelectedNodeGraphGraphNodeFromDisplay(display) {
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const sourceNode = nodeGraphPatchNode(nodeId);
-  if (!display || !sourceNode || sourceNode.type !== "graph") {
+  if (!display || !sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return false;
   }
-  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const graph = nodeGraphGraphForNode(sourceNode);
   if (graph.nodes.length <= 2) {
     return false;
   }
@@ -860,11 +1073,14 @@ function removeSelectedNodeGraphGraphNodeFromDisplay(display) {
   graph.nodes.splice(selectedIndex, 1);
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === nodeId);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return false;
   }
-  targetNode.graph = graph;
-  const nextIndex = setNodeGraphGraphSelectedNodeIndex(nodeId, graph, Math.max(0, selectedIndex - 1));
+  const fallbackIndex = Math.max(0, selectedIndex - 1);
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(graph, fallbackIndex)
+    : normalizeNodeGraphGraph(graph);
+  const nextIndex = setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, fallbackIndex);
   commitNodeGraphPatch(patch, { status: "graph node removed" });
   syncNodeGraphGraphDisplaysForNode(nodeId, targetNode);
   syncNodeGraphGraphControls(targetNode.graph, nextIndex);
@@ -881,19 +1097,21 @@ function addFocusedNodeGraphGraphNode() {
   const display = document.activeElement?.closest?.(".node-module-graph-display");
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const sourceNode = nodeGraphPatchNode(nodeId);
-  if (!display || !sourceNode || sourceNode.type !== "graph") {
+  if (!display || !sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return false;
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === nodeId);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return false;
   }
   const addition = addNodeGraphGraphNodeData(targetNode.graph);
   if (!addition.added) {
     return false;
   }
-  targetNode.graph = addition.graph;
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(addition.graph, addition.selectedIndex)
+    : addition.graph;
   commitNodeGraphPatch(patch, { status: "graph node added" });
   setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, addition.selectedIndex);
   syncNodeGraphGraphDisplaysForNode(nodeId, targetNode);
@@ -908,21 +1126,23 @@ function duplicateFocusedNodeGraphGraphNode() {
   const display = document.activeElement?.closest?.(".node-module-graph-display");
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const sourceNode = nodeGraphPatchNode(nodeId);
-  if (!display || !sourceNode || sourceNode.type !== "graph") {
+  if (!display || !sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return false;
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === nodeId);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return false;
   }
-  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  const graph = nodeGraphGraphForNode(targetNode);
   const selectedIndex = nodeGraphGraphSelectedNodeIndex(nodeId, graph, graph.nodes.length - 1);
   const duplicate = duplicateNodeGraphGraphNodeData(graph, selectedIndex);
   if (!duplicate.duplicated) {
     return false;
   }
-  targetNode.graph = duplicate.graph;
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(duplicate.graph, duplicate.selectedIndex)
+    : duplicate.graph;
   commitNodeGraphPatch(patch, { status: "graph node duplicated" });
   setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, duplicate.selectedIndex);
   syncNodeGraphGraphDisplaysForNode(nodeId, targetNode);
@@ -945,10 +1165,12 @@ function cycleFocusedNodeGraphGraphShape() {
   if (!targetNode || targetNode.type !== "graph") {
     return false;
   }
-  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  const graph = nodeGraphGraphForNode(targetNode);
   const selectedIndex = nodeGraphGraphSelectedNodeIndex(nodeId, graph, graph.nodes.length - 1);
   const shape = cycleNodeGraphGraphShapeData(graph, selectedIndex);
-  targetNode.graph = shape.graph;
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(shape.graph, shape.selectedIndex)
+    : shape.graph;
   commitNodeGraphPatch(patch, { status: "graph curve shape changed" });
   setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, shape.selectedIndex);
   syncNodeGraphGraphDisplaysForNode(nodeId, targetNode);
@@ -963,10 +1185,10 @@ function selectFocusedNodeGraphGraphNodeOffset(offset) {
   const display = document.activeElement?.closest?.(".node-module-graph-display");
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const sourceNode = nodeGraphPatchNode(nodeId);
-  if (!display || !sourceNode || sourceNode.type !== "graph") {
+  if (!display || !sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return false;
   }
-  const graph = normalizeNodeGraphGraph(sourceNode.graph);
+  const graph = nodeGraphGraphForNode(sourceNode);
   const selectedIndex = nodeGraphGraphSelectedNodeIndex(nodeId, graph, graph.nodes.length - 1);
   const nextIndex = nodeGraphGraphNodeIndexFromValue(graph, selectedIndex + Number(offset || 0));
   setNodeGraphGraphSelectedNodeIndex(nodeId, graph, nextIndex);
@@ -992,15 +1214,15 @@ function nudgeFocusedNodeGraphGraphNode(event) {
   }
   const nodeId = nodeGraphGraphNodeIdFromDisplay(display);
   const sourceNode = nodeGraphPatchNode(nodeId);
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return false;
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === nodeId);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return false;
   }
-  const graph = normalizeNodeGraphGraph(targetNode.graph);
+  const graph = nodeGraphGraphForNode(targetNode);
   const index = nodeGraphGraphSelectedNodeIndex(nodeId, graph, graph.nodes.length - 1);
   const current = graph.nodes[index];
   const step = event.altKey ? 0.001 : event.shiftKey ? 0.05 : 0.01;
@@ -1011,7 +1233,9 @@ function nudgeFocusedNodeGraphGraphNode(event) {
       y: current.y + move.y * step,
     }),
   }, index);
-  targetNode.graph = normalizeNodeGraphGraph(graph);
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(graph, index)
+    : normalizeNodeGraphGraph(graph);
   setNodeGraphGraphSelectedNodeIndex(nodeId, targetNode.graph, index);
   commitNodeGraphPatch(patch, { status: "graph node nudged" });
   syncNodeGraphGraphDisplaysForNode(nodeId, targetNode);

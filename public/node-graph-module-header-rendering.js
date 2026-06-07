@@ -2,6 +2,11 @@ function nodeGraphPatchTimingValue(key) {
   return normalizeNodeGraphPatchTiming(nodeGraphMvp?.patch?.timing)[key];
 }
 
+const nodeGraphTapTempoState = {
+  lastTapMs: 0,
+  intervals: [],
+};
+
 function syncNodeGraphHeaderTimingWidgets() {
   const timing = normalizeNodeGraphPatchTiming(nodeGraphMvp?.patch?.timing);
   for (const input of document.querySelectorAll(".node-header-timing-input")) {
@@ -80,6 +85,50 @@ function createNodeGraphHeaderTimingInput(key, label, options = {}) {
   return field;
 }
 
+function resetNodeGraphTapTempo(nowMs = 0) {
+  nodeGraphTapTempoState.lastTapMs = nowMs;
+  nodeGraphTapTempoState.intervals = [];
+}
+
+function handleNodeGraphTapTempo() {
+  const nowMs = performance.now();
+  if (!nodeGraphTapTempoState.lastTapMs || nowMs - nodeGraphTapTempoState.lastTapMs > 2500) {
+    resetNodeGraphTapTempo(nowMs);
+    return;
+  }
+
+  const intervalMs = nowMs - nodeGraphTapTempoState.lastTapMs;
+  nodeGraphTapTempoState.lastTapMs = nowMs;
+  nodeGraphTapTempoState.intervals.push(intervalMs);
+  if (nodeGraphTapTempoState.intervals.length > 4) {
+    nodeGraphTapTempoState.intervals.shift();
+  }
+  const averageIntervalMs = nodeGraphTapTempoState.intervals.reduce((total, value) => total + value, 0)
+    / nodeGraphTapTempoState.intervals.length;
+  const tempoBpm = Math.max(1, Math.min(320, Math.round(60000 / averageIntervalMs)));
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  patch.timing = normalizeNodeGraphPatchTiming({
+    ...patch.timing,
+    tempoBpm,
+  });
+  commitNodeGraphPatch(patch, {
+    markPending: false,
+    status: "tap tempo synced",
+  });
+}
+
+function createNodeGraphTapTempoButton() {
+  const button = document.createElement("button");
+  button.id = "nodeTapTempoButton";
+  button.className = "node-header-tap-tempo-button";
+  button.type = "button";
+  button.innerHTML = '<span class="node-header-tap-tempo-symbol" aria-hidden="true">&#x23F1;</span>';
+  button.setAttribute("aria-label", "Tap tempo for patch BPM");
+  button.title = "Tap tempo";
+  button.addEventListener("click", handleNodeGraphTapTempo);
+  return button;
+}
+
 function createNodeGraphHeaderTimingWidgets() {
   const group = document.createElement("div");
   group.className = "node-header-timing-widgets";
@@ -88,6 +137,7 @@ function createNodeGraphHeaderTimingWidgets() {
     createNodeGraphHeaderTimingInput("tempoBpm", "BPM", { max: 320 }),
     createNodeGraphHeaderTimingInput("timeSignatureNumerator", "Beats"),
     createNodeGraphHeaderTimingInput("timeSignatureDenominator", "Unit"),
+    createNodeGraphTapTempoButton(),
   );
   return group;
 }

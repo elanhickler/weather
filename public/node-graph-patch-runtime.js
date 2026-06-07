@@ -44,6 +44,7 @@ function nextNodeGraphTypeCounts(nodes = nodeGraphMvp.patch.nodes) {
     clockDivider: counts.clockDivider || 0,
     cookbookFilter: counts.cookbookFilter || 0,
     delayedTrigger: counts.delayedTrigger || 0,
+    ellipsoid: counts.ellipsoid || 0,
     expAdsr: counts.expAdsr || 0,
     flowerChildEnvelopeFollower: counts.flowerChildEnvelopeFollower || 0,
     fractalBrownianNoise: counts.fractalBrownianNoise || 0,

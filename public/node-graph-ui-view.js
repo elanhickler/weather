@@ -1,5 +1,5 @@
 function nodeGraphUiItemTypeForNode(node) {
-  return node?.type === "graph" ? "graphEditor" : "moduleControl";
+  return nodeGraphModuleIsGraphType(node?.type) ? "graphEditor" : "moduleControl";
 }
 
 function nodeGraphUiItemsPatchClone() {
@@ -176,12 +176,12 @@ function resizeNodeGraphUiItemHeightGu(button, delta) {
 }
 
 function updateNodeGraphUiGraphSelectedPoint(sourceNode, updates = {}) {
-  if (!sourceNode || sourceNode.type !== "graph") {
+  if (!sourceNode || !nodeGraphModuleIsGraphType(sourceNode.type)) {
     return false;
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
-  if (!targetNode || targetNode.type !== "graph") {
+  if (!targetNode || !nodeGraphModuleIsGraphType(targetNode.type)) {
     return false;
   }
   const graph = normalizeNodeGraphGraph(targetNode.graph);
@@ -193,12 +193,16 @@ function updateNodeGraphUiGraphSelectedPoint(sourceNode, updates = {}) {
 
   const nextNode = {
     ...selectedNode,
-    ...(Object.hasOwn(updates, "shape") ? { shape: normalizeNodeGraphGraphShape(updates.shape) } : {}),
+    ...(targetNode.type !== "graph2" && Object.hasOwn(updates, "shape")
+      ? { shape: normalizeNodeGraphGraphShape(updates.shape) }
+      : {}),
     ...(Object.hasOwn(updates, "x") ? { x: normalizeNodeGraphGraphNumber(updates.x, selectedNode.x) } : {}),
     ...(Object.hasOwn(updates, "y") ? { y: normalizeNodeGraphGraphNumber(updates.y, selectedNode.y) } : {}),
   };
   graph.nodes[selectedIndex] = nextNode;
-  targetNode.graph = normalizeNodeGraphGraph(graph);
+  targetNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(targetNode)
+    ? nodeGraphGraphWithLockedEndpointY(graph, selectedIndex)
+    : normalizeNodeGraphGraph(graph);
   const nextIndex = targetNode.graph.nodes.reduce((bestIndex, node, index) => {
     const bestNode = targetNode.graph.nodes[bestIndex];
     const distance = Math.abs(node.x - nextNode.x) + Math.abs(node.y - nextNode.y);
@@ -230,6 +234,7 @@ function runNodeGraphUiGraphAction(button, action) {
 
 function createNodeGraphUiGraphToolbar(sourceNode, item) {
   const summary = nodeGraphUiGraphSelectionSummary(sourceNode);
+  const usesGlobalSmoothing = sourceNode?.type === "graph2";
   const toolbar = document.createElement("div");
   toolbar.className = "node-ui-graph-toolbar";
 
@@ -264,8 +269,11 @@ function createNodeGraphUiGraphToolbar(sourceNode, item) {
     },
     {
       action: cycleFocusedNodeGraphGraphShape,
+      disabled: usesGlobalSmoothing,
       label: "Shape",
-      title: "Cycle selected point curve shape",
+      title: usesGlobalSmoothing
+        ? "Graph 2 uses one global smoothing mode."
+        : "Cycle selected point curve shape",
     },
     {
       action: (button) => resizeNodeGraphUiItemHeightGu(button, -1),
@@ -302,6 +310,7 @@ function createNodeGraphUiGraphToolbar(sourceNode, item) {
 
 function createNodeGraphUiGraphInspector(sourceNode) {
   const summary = nodeGraphUiGraphSelectionSummary(sourceNode);
+  const usesGlobalSmoothing = sourceNode?.type === "graph2";
   const inspector = document.createElement("div");
   inspector.className = "node-ui-graph-inspector";
 
@@ -325,17 +334,26 @@ function createNodeGraphUiGraphInspector(sourceNode) {
   });
 
   const shapeLabel = document.createElement("label");
-  shapeLabel.textContent = "curve";
-  const shape = document.createElement("select");
-  (Array.isArray(nodeGraphGraphShapes) ? nodeGraphGraphShapes : ["rational", "linear", "smooth", "hold"]).forEach((optionValue) => {
-    const option = document.createElement("option");
-    option.value = optionValue;
-    option.textContent = optionValue;
-    option.selected = optionValue === summary.shape;
-    shape.append(option);
-  });
-  shape.addEventListener("change", () => updateNodeGraphUiGraphSelectedPoint(sourceNode, { shape: shape.value }));
-  shapeLabel.append(shape);
+  if (usesGlobalSmoothing) {
+    shapeLabel.textContent = "smoothing";
+    const mode = document.createElement("input");
+    mode.type = "text";
+    mode.readOnly = true;
+    mode.value = normalizeNodeGraphGraph2SmoothingMode(sourceNode?.params?.smoothingMode);
+    shapeLabel.append(mode);
+  } else {
+    shapeLabel.textContent = "curve";
+    const shape = document.createElement("select");
+    (Array.isArray(nodeGraphGraphShapes) ? nodeGraphGraphShapes : ["rational", "linear", "smooth", "hold"]).forEach((optionValue) => {
+      const option = document.createElement("option");
+      option.value = optionValue;
+      option.textContent = optionValue;
+      option.selected = optionValue === summary.shape;
+      shape.append(option);
+    });
+    shape.addEventListener("change", () => updateNodeGraphUiGraphSelectedPoint(sourceNode, { shape: shape.value }));
+    shapeLabel.append(shape);
+  }
   inspector.append(shapeLabel);
 
   return inspector;
@@ -366,13 +384,13 @@ function createNodeGraphUiItemElement(item) {
   const title = document.createElement("strong");
   title.textContent = sourceNode ? nodeGraphPatchNodeTitle(sourceNode) : item.label;
   const meta = document.createElement("span");
-  meta.textContent = sourceNode?.type === "graph" ? "graph editor" : "ui item";
+  meta.textContent = nodeGraphModuleIsGraphType(sourceNode?.type) ? "graph editor" : "ui item";
   header.append(title, meta);
   article.append(header);
 
   const body = document.createElement("div");
   body.className = "node-ui-item-body";
-  if (sourceNode?.type === "graph") {
+  if (nodeGraphModuleIsGraphType(sourceNode?.type)) {
     body.append(createNodeGraphUiGraphToolbar(sourceNode, item));
     const display = document.createElement("div");
     display.className = "node-module-graph-display node-ui-graph-display";
@@ -380,7 +398,9 @@ function createNodeGraphUiItemElement(item) {
     display.tabIndex = 0;
     display.setAttribute("aria-label", `${nodeGraphNodeDisplayName(sourceNode.id)} UI graph editor`);
     display.addEventListener("pointerdown", beginNodeGraphGraphNodeDrag, true);
-    renderNodeGraphGraphDisplay(display, sourceNode.graph);
+    renderNodeGraphGraphDisplay(display, nodeGraphGraphForNode(sourceNode), null, {
+      smoothingMode: nodeGraphGraphSmoothingModeForNode(sourceNode),
+    });
     body.append(display);
     body.append(createNodeGraphUiGraphInspector(sourceNode));
     body.append(createNodeGraphUiGraphStatus(sourceNode, item));

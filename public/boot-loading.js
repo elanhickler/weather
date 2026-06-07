@@ -1,8 +1,3 @@
-document.documentElement.style.setProperty(
-  "--node-boot-cursor-delay",
-  `${-(Date.now() % 1000)}ms`,
-);
-
 function finishNodeBootLoading() {
   if (!document.body.classList.contains("node-boot-loading")) {
     return;

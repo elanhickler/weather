@@ -129,6 +129,36 @@ function nodeGraphForwardBackwardPolyBlepWaveformSample(runtime, nodeId, phase, 
   return nodeGraphOscillatorWaveformSample(runtime, nodeId, phase, phaseIncrement, waveform);
 }
 
+function nodeGraphEllipsoidSample(phase, offset = 0, shape = 0, scale = 1) {
+  const phaseRadians = Number(phase) || 0;
+  const sinPhase = Math.sin(phaseRadians);
+  const cosPhase = Math.cos(phaseRadians);
+  const shapeRadians = (Number(shape) || 0) * Math.PI;
+  const shapeSin = Math.sin(shapeRadians);
+  const shapeCos = Math.cos(shapeRadians);
+  const safeOffset = clampNodeSliderValue(Number(offset) || 0, -1, 1);
+  const safeScale = Math.max(0, Number(scale) || 0);
+  const x = safeOffset + cosPhase;
+  const y = safeScale * sinPhase;
+  const denominator = Math.sqrt((x * x) + (y * y));
+  if (denominator <= 1e-12) {
+    return 0;
+  }
+  return clampNodeSliderValue(((x * shapeCos) + (y * shapeSin)) / denominator, -1, 1);
+}
+
+function nodeGraphEllipsoidVectorSample(phase, params = {}) {
+  const level = clampNodeSliderValue(Number(params.level) || 0, 0, 1);
+  const x = nodeGraphEllipsoidSample(phase, params.offsetX, params.shapeX, params.scaleX) * level;
+  const y = nodeGraphEllipsoidSample(phase - Math.PI * 0.5, params.offsetY, params.shapeY, params.scaleY) * level;
+  return {
+    Out: x,
+    X: x,
+    Y: y,
+    "Wave Out": x,
+  };
+}
+
 const nodeGraphAdditiveWaveformChoices = Object.freeze([
   "Sine",
   "Sawtooth",

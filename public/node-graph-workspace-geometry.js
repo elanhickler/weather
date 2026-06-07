@@ -73,7 +73,8 @@ function positionNodeGraphNode(node, point, options = {}) {
   const graphRect = nodeGraphGraphRect();
   const maxX = Math.max(0, graphRect.width - node.offsetWidth - 10);
   const maxY = Math.max(0, graphRect.height - node.offsetHeight - 10);
-  const positionedPoint = options.snap === false ? point : snapNodeGraphPointToGrid(point);
+  const snapOptions = { halfGrid: options.halfGrid === true };
+  const positionedPoint = options.snap === false ? point : snapNodeGraphPointToGrid(point, snapOptions);
   const x = options.clamp === false
     ? positionedPoint.x
     : Math.max(0, Math.min(maxX, positionedPoint.x));

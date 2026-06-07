@@ -30,7 +30,7 @@ function createNodeGraphPatchNode(type, options = {}) {
   } else if (nodeGraphModuleDefinitions[type]?.layout === "led") {
     node.led = normalizeNodeGraphLedLayout(options.led);
   }
-  if (type === "graph") {
+  if (nodeGraphModuleIsGraphType(type)) {
     node.graph = normalizeNodeGraphGraph(options.graph);
   }
   if (type === "codeblock") {
@@ -69,7 +69,7 @@ const nodeGraphDefaultConnections = Object.freeze([
 const nodeGraphDefaultPatch = Object.freeze({
   activeCameraId: "camera-1",
   audio: {
-    targetSampleRate: 88200,
+    targetSampleRate: 44100,
   },
   bypassedNodes: [],
   cameras: [

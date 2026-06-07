@@ -124,7 +124,7 @@ function toggleNodeGlobalScopeMenu() {
 }
 
 function beginNodeSceneContextMenuDrag(event) {
-  if (event.button > 0) {
+  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
     return;
   }
 
@@ -182,7 +182,7 @@ function endNodeSceneContextMenuDrag(event) {
 }
 
 function beginNodeScopeContextMenuDrag(event) {
-  if (event.button > 0) {
+  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
     return;
   }
 
@@ -207,7 +207,7 @@ function beginNodeScopeContextMenuDrag(event) {
 }
 
 function beginNodeGlobalScopeMenuDrag(event) {
-  if (event.button > 0) {
+  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
     return;
   }
   const menu = document.getElementById("nodeGlobalScopeMenu");
@@ -403,21 +403,22 @@ function configureNodeSceneContextMenu(mode) {
   menu.setAttribute("aria-label", wireMode ? "Wire actions" : "Module actions");
   copyButton.hidden = !moduleMode;
   addToGroupButton.hidden = !moduleMode;
+  const targetIsGraphType = nodeGraphModuleIsGraphType(targetNode?.type);
   if (addToUiButton) {
-    addToUiButton.hidden = !(moduleMode && targetNode?.type === "graph");
+    addToUiButton.hidden = !(moduleMode && targetIsGraphType);
   }
   deleteButton.hidden = !(moduleMode || wireMode);
   selectedModule.hidden = !(moduleMode || wireMode);
   wireTypeControl.hidden = !wireMode;
   aliasControl.hidden = !moduleMode;
   widthControls.hidden = !moduleMode;
-  const canResizeHeight = moduleMode && ["graph", "textBox", "valueSlider"].includes(targetNode?.type);
-  textBoxHeightControls.hidden = !canResizeHeight || targetNode?.type === "graph";
-  graphHeightControls.hidden = !(moduleMode && targetNode?.type === "graph");
+  const canResizeHeight = moduleMode && (targetIsGraphType || ["textBox", "valueSlider"].includes(targetNode?.type));
+  textBoxHeightControls.hidden = !canResizeHeight || targetIsGraphType;
+  graphHeightControls.hidden = !(moduleMode && targetIsGraphType);
   textBoxTextSizeControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   textBoxTextControls.hidden = !(moduleMode && targetNode?.type === "textBox");
   codeblockControls.hidden = !(moduleMode && targetNode?.type === "codeblock");
-  graphControls.hidden = !(moduleMode && targetNode?.type === "graph");
+  graphControls.hidden = !(moduleMode && targetIsGraphType);
   toggleButtonsButton.hidden = !moduleMode;
   toggleTitleButton.hidden = !moduleMode;
   imageControls.hidden = !(moduleMode && targetNode?.type === "image");
@@ -448,7 +449,7 @@ function configureNodeSceneContextMenu(mode) {
       ? "Save the selected circuit as a reusable group preset."
       : "Select one or more modules to save a group.";
     if (addToUiButton) {
-      const canAddToUi = targetNode?.type === "graph";
+      const canAddToUi = targetIsGraphType;
       const uiItems = normalizeNodeGraphPatchUiItems(nodeGraphMvp.patch.uiItems);
       const alreadyAddedToUi = canAddToUi && uiItems.some((item) => item.sourceNodeId === targetNode.id);
       addToUiButton.disabled = !canAddToUi;
@@ -468,15 +469,15 @@ function configureNodeSceneContextMenu(mode) {
     widthDecrease.title = nodeGraphTooltipText("actions.widthDecrease");
     widthIncrease.disabled = !targetNode || widthGu >= nodeGraphModuleWidthLimits.maxGu;
     widthIncrease.title = nodeGraphTooltipText("actions.widthIncrease");
-    textBoxHeightValue.textContent = targetNode?.type === "graph" ? `${heightGu} height gu` : `${heightGu} gu high`;
+    textBoxHeightValue.textContent = targetIsGraphType ? `${heightGu} height gu` : `${heightGu} gu high`;
     textBoxHeightDecrease.disabled = !canResizeHeight || heightGu <= nodeGraphModuleHeightLimits.minGu;
     textBoxHeightDecrease.title = nodeGraphTooltipText("actions.textBoxHeightDecrease");
     textBoxHeightIncrease.disabled = !canResizeHeight || heightGu >= nodeGraphModuleHeightLimits.maxGu;
     textBoxHeightIncrease.title = nodeGraphTooltipText("actions.textBoxHeightIncrease");
     graphHeightValue.textContent = `${heightGu} height gu`;
-    graphHeightDecrease.disabled = !targetNode || targetNode.type !== "graph" || heightGu <= nodeGraphModuleHeightLimits.minGu;
+    graphHeightDecrease.disabled = !targetNode || !targetIsGraphType || heightGu <= nodeGraphModuleHeightLimits.minGu;
     graphHeightDecrease.title = "Make this graph module one grid unit shorter.";
-    graphHeightIncrease.disabled = !targetNode || targetNode.type !== "graph" || heightGu >= nodeGraphModuleHeightLimits.maxGu;
+    graphHeightIncrease.disabled = !targetNode || !targetIsGraphType || heightGu >= nodeGraphModuleHeightLimits.maxGu;
     graphHeightIncrease.title = "Make this graph module one grid unit taller.";
     textBoxTextSizeValue.textContent = `${textBoxLayout.textSizePercent}% text`;
     textBoxTextSizeDecrease.disabled =
@@ -535,16 +536,16 @@ function configureNodeSceneContextMenu(mode) {
       codeblockSource.value = "";
       codeblockStatus.textContent = "";
     }
-    if (targetNode?.type === "graph") {
-      syncNodeGraphGraphControls(targetNode.graph);
+    if (targetIsGraphType) {
+      syncNodeGraphGraphControls(nodeGraphGraphForNode(targetNode));
       graphCursorX.disabled = false;
       graphNodeIndex.disabled = false;
       graphPreviousNode.disabled = false;
       graphNextNode.disabled = false;
       graphNodeX.disabled = false;
       graphNodeY.disabled = false;
-      graphNodeContour.disabled = false;
-      graphNodeShape.disabled = false;
+      graphNodeContour.disabled = targetNode.type === "graph2";
+      graphNodeShape.disabled = targetNode.type === "graph2";
       graphCursorX.title = "Move the vertical graph cursor.";
       graphNodeIndex.title = "Choose the graph node to edit.";
       graphPreviousNode.title = "Select the previous graph node.";

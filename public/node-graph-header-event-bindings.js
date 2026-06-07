@@ -12,6 +12,12 @@ function bindNodeGraphHeaderControlEvents() {
   document.getElementById("nodeRedoButton").addEventListener("click", redoNodeGraphPatch);
   document.getElementById("nodeVisibilityMenuButton").addEventListener("click", toggleNodeGraphVisibilityMenu);
   document.getElementById("nodeVisibilityMenuClose").addEventListener("click", () => setNodeGraphVisibilityMenuOpen(false));
+  document
+    .querySelector("#nodeVisibilityMenu .node-visibility-menu-heading")
+    .addEventListener("pointerdown", beginNodeGraphVisibilityMenuDrag);
+  document.addEventListener("pointermove", dragNodeGraphVisibilityMenu);
+  document.addEventListener("pointerup", endNodeGraphVisibilityMenuDrag);
+  document.addEventListener("pointercancel", endNodeGraphVisibilityMenuDrag);
   document.getElementById("nodeGridToggleButton").addEventListener("click", toggleNodeGraphGridVisibility);
   document.getElementById("nodeVideoViewButton").addEventListener("click", toggleNodeGraphVideoView);
   document.getElementById("nodeMappingViewButton").addEventListener("click", () => setNodeGraphViewMode("mapping"));
@@ -24,8 +30,26 @@ function bindNodeGraphHeaderControlEvents() {
   document
     .getElementById("nodeCopyViewportImageOverlayButton")
     .addEventListener("click", copyNodeGraphViewportImageToClipboard);
+  document
+    .getElementById("nodeExportViewportGifButton")
+    .addEventListener("click", exportNodeGraphViewportGif);
+  document
+    .getElementById("nodeExportViewportMp4Button")
+    .addEventListener("click", exportNodeGraphViewportMp4);
+  document
+    .getElementById("nodeExportViewportWavButton")
+    .addEventListener("click", exportNodeGraphViewportWav);
+  document
+    .getElementById("nodeExportViewportOggButton")
+    .addEventListener("click", exportNodeGraphViewportOgg);
+  document
+    .getElementById("nodeExportViewportFlacButton")
+    .addEventListener("click", exportNodeGraphViewportFlac);
   document.getElementById("nodeGlobalScopeCloseMenu").addEventListener("click", closeNodeGlobalScopeMenu);
   document.getElementById("nodeGlobalScopeDragHandle").addEventListener("pointerdown", beginNodeGlobalScopeMenuDrag);
+  document
+    .querySelector("#nodeGlobalScopeMenu .scene-context-heading")
+    .addEventListener("pointerdown", beginNodeGlobalScopeMenuDrag);
   document
     .getElementById("nodeMasterScopeBackgroundColor")
     .addEventListener("input", (event) => setNodeGraphModuleScopeBackgroundColor(event.currentTarget.value));
@@ -186,9 +210,21 @@ function bindNodeGraphHeaderControlEvents() {
     .getElementById("nodeModuleDepartmentSearchShell")
     .addEventListener("contextmenu", openNodeGraphModuleCollectionsMenu);
   document
+    .getElementById("nodeModuleDepartmentSearch")
+    .addEventListener("input", handleNodeGraphModuleDepartmentSearchInput);
+  document
+    .getElementById("nodeModuleDepartmentSearch")
+    .addEventListener("keydown", handleNodeGraphModuleDepartmentSearchKeydown);
+  document
     .getElementById("nodeModuleCollectionsClose")
     .addEventListener("click", closeNodeGraphModuleCollectionsMenu);
+  document
+    .querySelector("#nodeModuleCollectionsMenu .scene-context-heading")
+    .addEventListener("pointerdown", beginNodeGraphModuleCollectionsMenuDrag);
   document.addEventListener("pointerdown", handleNodeGraphModuleCollectionsPointerDown);
+  document.addEventListener("pointermove", dragNodeGraphModuleCollectionsMenu);
+  document.addEventListener("pointerup", endNodeGraphModuleCollectionsMenuDrag);
+  document.addEventListener("pointercancel", endNodeGraphModuleCollectionsMenuDrag);
   document
     .getElementById("nodeModularOnlyViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("modular-only"));

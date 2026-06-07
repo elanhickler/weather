@@ -1279,7 +1279,7 @@ async function createNodeGraphLiveWorkletNode(context) {
   if (!context.audioWorklet || typeof AudioWorkletNode === "undefined") {
     throw new Error("AudioWorklet unavailable");
   }
-  await context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=external-graph-inputs-1780816800000");
+  await context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=stereo-noise-xy-1");
   const workletNode = new AudioWorkletNode(
     context,
     "node-live-audio-processor",

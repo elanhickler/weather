@@ -170,8 +170,12 @@ function cloneNodeGraphPatch(patch) {
         ...(nodeGraphModuleDefinitions[node.type]?.layout === "led"
           ? { led: normalizeNodeGraphLedLayout(node.led) }
           : {}),
-        ...(node.type === "graph"
-          ? { graph: normalizeNodeGraphGraph(node.graph) }
+        ...(nodeGraphModuleIsGraphType(node.type)
+          ? {
+            graph: nodeGraphGraphEndpointYLockEnabledForNode(node)
+              ? nodeGraphGraphWithLockedEndpointY(node.graph)
+              : normalizeNodeGraphGraph(node.graph),
+          }
           : {}),
         ...(node.type === "codeblock"
           ? { codeblock: normalizeNodeGraphCodeblock(node.codeblock) }

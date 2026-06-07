@@ -178,7 +178,9 @@ function createNodeGraphModuleElement(type, node) {
     graphSection.tabIndex = 0;
     graphSection.setAttribute("aria-label", `${nodeGraphNodeDisplayName(node)} graph display`);
     article.append(graphSection);
-    renderNodeGraphGraphDisplay(graphSection, patchNode.graph);
+    renderNodeGraphGraphDisplay(graphSection, nodeGraphGraphForNode(patchNode), null, {
+      smoothingMode: nodeGraphGraphSmoothingModeForNode(patchNode),
+    });
 
     const ioSection = document.createElement("div");
     ioSection.className = "dsp-node-io-section";

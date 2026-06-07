@@ -1,7 +1,7 @@
 {
   "activeCameraId": "camera-1",
   "audio": {
-    "targetSampleRate": 88200
+    "targetSampleRate": 44100
   },
   "bypassedNodes": [],
   "cameras": [
@@ -21,9 +21,37 @@
   ],
   "connections": [
     {
-      "destinationNode": "output",
-      "destinationPort": "Mono",
+      "destinationNode": "visualOscilloscope-1",
+      "destinationPort": "In",
       "sourceNode": "clock-1",
+      "sourcePort": "Digital Out",
+      "tracePoints": []
+    },
+    {
+      "destinationNode": "ladderFilter-1",
+      "destinationPort": "In",
+      "sourceNode": "stereoNoise-1",
+      "sourcePort": "Left",
+      "tracePoints": []
+    },
+    {
+      "destinationNode": "ladderFilter-2",
+      "destinationPort": "In",
+      "sourceNode": "stereoNoise-1",
+      "sourcePort": "Right",
+      "tracePoints": []
+    },
+    {
+      "destinationNode": "output",
+      "destinationPort": "Left",
+      "sourceNode": "ladderFilter-1",
+      "sourcePort": "Out",
+      "tracePoints": []
+    },
+    {
+      "destinationNode": "output",
+      "destinationPort": "Right",
+      "sourceNode": "ladderFilter-2",
       "sourcePort": "Out",
       "tracePoints": []
     }
@@ -43,12 +71,20 @@
     "name": "Patch name",
     "tags": "tags"
   },
-  "modulations": [],
+  "modulations": [
+    {
+      "destinationNode": "stereoNoise-1",
+      "destinationParam": "level",
+      "sourceNode": "clock-1",
+      "sourcePort": "Analog Out",
+      "tracePoints": []
+    }
+  ],
   "monitors": [],
   "nodes": [
     {
-      "gx": 22,
-      "gy": 9,
+      "gx": 14,
+      "gy": -3,
       "id": "output",
       "paramMeta": {
         "volume": {
@@ -70,7 +106,7 @@
         }
       },
       "params": {
-        "volume": 0.1
+        "volume": 1
       },
       "type": "output",
       "widthGu": 7,
@@ -80,8 +116,8 @@
       }
     },
     {
-      "gx": 13,
-      "gy": 8,
+      "gx": -11,
+      "gy": -3,
       "id": "clock-1",
       "paramMeta": {
         "rate": {
@@ -91,7 +127,7 @@
           "divideChoicesVisibly": false,
           "kind": "frequency",
           "linearSmoothing": true,
-          "max": 40,
+          "max": 100,
           "maxDigits": 5,
           "mid": 2,
           "min": 0,
@@ -139,9 +175,220 @@
       "params": {
         "rate": 2,
         "duty": 0.5,
-        "level": 1
+        "level": 0.700480258776247
       },
       "type": "clock"
+    },
+    {
+      "gx": -3,
+      "gy": -7,
+      "id": "visualOscilloscope-1",
+      "paramMeta": {},
+      "params": {},
+      "type": "visualOscilloscope",
+      "heightGu": 8
+    },
+    {
+      "gx": -3,
+      "gy": 1,
+      "id": "stereoNoise-1",
+      "paramMeta": {
+        "level": {
+          "choices": [],
+          "def": 1,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 1,
+          "maxDigits": 3,
+          "mid": 0.5,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unit": "",
+          "wraparound": false
+        }
+      },
+      "params": {
+        "level": 0.200349233227177
+      },
+      "type": "stereoNoise"
+    },
+    {
+      "gx": 5,
+      "gy": -7,
+      "id": "ladderFilter-1",
+      "paramMeta": {
+        "mode": {
+          "choices": [
+            "Flat",
+            "Lowpass",
+            "Highpass",
+            "Bandpass"
+          ],
+          "def": 1,
+          "displayChoices": true,
+          "divideChoicesVisibly": true,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 3,
+          "maxDigits": 3,
+          "mid": 1,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 1,
+          "unit": "",
+          "wraparound": false
+        },
+        "frequency": {
+          "choices": [],
+          "def": 1000,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "frequency",
+          "linearSmoothing": true,
+          "max": 20000,
+          "maxDigits": 5,
+          "mid": 1000,
+          "min": 0,
+          "nonlinearSlider": true,
+          "showSign": false,
+          "step": 0,
+          "unit": "Hz",
+          "wraparound": false
+        },
+        "resonance": {
+          "choices": [],
+          "def": 0.2,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 0.999,
+          "maxDigits": 5,
+          "mid": 0.2,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unit": "",
+          "wraparound": false
+        },
+        "stages": {
+          "choices": [],
+          "def": 4,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 4,
+          "maxDigits": 3,
+          "mid": 4,
+          "min": 1,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 1,
+          "unit": "",
+          "wraparound": false
+        }
+      },
+      "params": {
+        "mode": 1,
+        "frequency": 1805.81129950136,
+        "resonance": 0.357137618768006,
+        "stages": 4
+      },
+      "type": "ladderFilter"
+    },
+    {
+      "gx": 5,
+      "gy": 3,
+      "id": "ladderFilter-2",
+      "paramMeta": {
+        "mode": {
+          "choices": [
+            "Flat",
+            "Lowpass",
+            "Highpass",
+            "Bandpass"
+          ],
+          "def": 1,
+          "displayChoices": true,
+          "divideChoicesVisibly": true,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 3,
+          "maxDigits": 3,
+          "mid": 1,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 1,
+          "unit": "",
+          "wraparound": false
+        },
+        "frequency": {
+          "choices": [],
+          "def": 1000,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "frequency",
+          "linearSmoothing": true,
+          "max": 20000,
+          "maxDigits": 5,
+          "mid": 1000,
+          "min": 0,
+          "nonlinearSlider": true,
+          "showSign": false,
+          "step": 0,
+          "unit": "Hz",
+          "wraparound": false
+        },
+        "resonance": {
+          "choices": [],
+          "def": 0.2,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 0.999,
+          "maxDigits": 5,
+          "mid": 0.2,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unit": "",
+          "wraparound": false
+        },
+        "stages": {
+          "choices": [],
+          "def": 4,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 4,
+          "maxDigits": 3,
+          "mid": 4,
+          "min": 1,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 1,
+          "unit": "",
+          "wraparound": false
+        }
+      },
+      "params": {
+        "mode": 1,
+        "frequency": 1805.81129950136,
+        "resonance": 0.289061305607037,
+        "stages": 4
+      },
+      "type": "ladderFilter"
     }
   ],
   "timing": {
@@ -151,8 +398,8 @@
   },
   "uiItems": [],
   "view": {
-    "heightGu": 20,
-    "widthGu": 31
+    "heightGu": 21,
+    "widthGu": 35
   },
   "visual": {
     "background": {

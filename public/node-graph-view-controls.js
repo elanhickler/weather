@@ -212,7 +212,7 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const dotCore2Brightness = normalizeNodeGraphModuleScopeDotCoreBrightness(nodeGraphMvp.moduleScopeDotCore2Brightness ?? 0.45, 0.45);
   const dotCore2Color = normalizeNodeGraphModuleScopeDotCoreColor(nodeGraphMvp.moduleScopeDotCore2Color ?? "#17002f", "#17002f");
   const framesPerSecond = normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp.moduleScopeFramesPerSecond ?? 60);
-  const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp.moduleScopeLineThickness ?? 2);
+  const lineThickness = normalizeNodeGraphModuleScopeLineThickness(nodeGraphMvp.moduleScopeLineThickness ?? 1);
   const discontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
   );
@@ -322,6 +322,29 @@ function renderNodeGraphModuleScopeBrightnessControl() {
 
 function setNodeGraphModuleButtonsVisibility(visible, options = {}) {
   nodeGraphMvp.moduleButtonsVisible = Boolean(visible);
+  if (nodeGraphMvp.moduleButtonsVisible && options.clearNodeOverrides !== false) {
+    const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+    let changed = false;
+    for (const node of patch.nodes) {
+      const ui = normalizeNodeGraphPatchNodeUi(node.ui);
+      if (!ui.buttonsHidden) {
+        continue;
+      }
+      ui.buttonsHidden = false;
+      if (ui.titleHidden) {
+        node.ui = ui;
+      } else {
+        delete node.ui;
+      }
+      changed = true;
+    }
+    if (changed) {
+      commitNodeGraphPatch(patch, {
+        markPending: false,
+        status: "module buttons shown",
+      });
+    }
+  }
   renderNodeGraphModuleVisibilityToggles();
   if (options.help !== false) {
     setNodeInteractionHelp(nodeGraphMvp.moduleButtonsVisible ? "Module buttons shown." : "Module buttons hidden.");
@@ -488,6 +511,16 @@ function cycleNodeGraphSliderLayout() {
   setNodeInteractionHelp(`Slider layout: ${nodeGraphSliderLayoutLabel(nodeGraphMvp.sliderLayout)}.`);
 }
 
+function nodeGraphDialogDragTargetIsInteractive(event) {
+  const target = event?.target;
+  if (!target || target === event.currentTarget) {
+    return false;
+  }
+  return Boolean(target.closest?.(
+    "button, a, input, textarea, select, option, label, [contenteditable='true']",
+  ));
+}
+
 function renderNodeGraphTooltipToggle() {
   const helpStack = document.querySelector(".node-help-stack");
   const help = document.getElementById("nodeInteractionHelp");
@@ -511,6 +544,76 @@ function setNodeGraphVisibilityMenuOpen(open) {
     menu.hidden = !open;
   }
   renderNodeGraphVisibilityMenuButton();
+}
+
+function positionNodeGraphVisibilityMenu(menu, x, y) {
+  if (!menu) {
+    return;
+  }
+  const margin = 8;
+  menu.hidden = false;
+  menu.style.position = "fixed";
+  const rect = menu.getBoundingClientRect();
+  const left = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, x));
+  const top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, y));
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+  menu.style.right = "auto";
+}
+
+function beginNodeGraphVisibilityMenuDrag(event) {
+  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
+    return;
+  }
+  const menu = document.getElementById("nodeVisibilityMenu");
+  if (!menu || menu.hidden) {
+    return;
+  }
+  const rect = menu.getBoundingClientRect();
+  nodeGraphMvp.visibilityMenuDragging = {
+    handle: event.currentTarget,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top,
+    pointerId: event.pointerId ?? null,
+  };
+  event.currentTarget.classList.add("dragging");
+  positionNodeGraphVisibilityMenu(menu, rect.left, rect.top);
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphVisibilityMenu(event) {
+  const drag = nodeGraphMvp.visibilityMenuDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  positionNodeGraphVisibilityMenu(
+    document.getElementById("nodeVisibilityMenu"),
+    event.clientX - drag.offsetX,
+    event.clientY - drag.offsetY,
+  );
+  event.preventDefault();
+}
+
+function endNodeGraphVisibilityMenuDrag(event) {
+  const drag = nodeGraphMvp.visibilityMenuDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  drag.handle.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.visibilityMenuDragging = null;
 }
 
 function toggleNodeGraphVisibilityMenu() {

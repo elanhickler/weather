@@ -91,7 +91,7 @@ function connectNodeGraphGraphInput(sourceNode, sourcePort, destinationNode, des
   const destination = nodeGraphPatchNode(destinationNode);
   const canonicalSourcePort = nodeGraphCanonicalOutputPort(source?.type, sourcePort);
   if (
-    source?.type !== "graph" ||
+    !nodeGraphModuleIsGraphType(source?.type) ||
     canonicalSourcePort !== "Out" ||
     !nodeGraphModuleGraphInputs(destination?.type).includes(destinationGraphInput)
   ) {

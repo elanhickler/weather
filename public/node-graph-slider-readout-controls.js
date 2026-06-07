@@ -137,6 +137,7 @@ function attachNodeSliderReadoutEvents(readout) {
   readout.addEventListener("pointerdown", beginNodeSliderDrag);
   readout.addEventListener("lostpointercapture", endNodeSliderDrag);
   readout.addEventListener("mousedown", beginNodeSliderDrag);
+  readout.addEventListener("keydown", stepNodeSliderFromKeyboard);
 }
 
 function createNodeSliderReadout(slider) {

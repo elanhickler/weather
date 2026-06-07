@@ -12,7 +12,7 @@ function normalizeNodeGraphPatchAudio(audio = {}) {
   return {
     targetSampleRate: Number.isFinite(targetSampleRate)
       ? Math.max(8000, Math.min(768000, targetSampleRate))
-      : 88200,
+      : 44100,
   };
 }
 
@@ -63,14 +63,20 @@ dot2.color      = dot2.global.color;
 dot2.size       = 1.0 * dot2.global.size;
 dot2.blur       = 0.00;
 dot2.brightness = 0.45;
-// Scope modes: 1d_full, 1d_scan
-// Sync options: inherit, on, off
-// Blend options: laser, led, light, paint, solid
-// Change the word after = to switch modes.
 blend.mode      = laser;`;
 
-const nodeGraphScopeShaderModes = Object.freeze(["1d_full", "1d_scan"]);
+const nodeGraphScopeShaderVisualOscilloscopeDefaultSource = nodeGraphScopeShaderDefaultSource
+  .replace("scope.mode      = 1d_full;", "scope.mode      = x_y;");
+
+const nodeGraphScopeShaderModes = Object.freeze(["1d_full", "1d_scan", "x_y", "one_value"]);
 const nodeGraphScopeShaderSyncModes = Object.freeze(["inherit", "on", "off"]);
+
+function nodeGraphScopeShaderDefaultSourceForType(type) {
+  const moduleType = String(type || "");
+  return moduleType === "visualOscilloscope" || moduleType === "spiral" || moduleType === "ellipsoid"
+    ? nodeGraphScopeShaderVisualOscilloscopeDefaultSource
+    : nodeGraphScopeShaderDefaultSource;
+}
 
 function normalizeNodeGraphScopeShaderVideoInput(value = "~") {
   const text = String(value || "~").trim().toLowerCase();
@@ -94,7 +100,7 @@ function normalizeNodeGraphScopeShaderMode(value = "1d_full") {
 }
 
 function parseNodeGraphScopeShaderMode(source = "") {
-  const match = String(source || "").match(/(?:^|\n)\s*scope\.mode\s*=\s*(1d_full|1d_scan)\s*;/i);
+  const match = String(source || "").match(/(?:^|\n)\s*scope\.mode\s*=\s*(1d_full|1d_scan|x_y|one_value)\s*;/i);
   return normalizeNodeGraphScopeShaderMode(match?.[1] || "1d_full");
 }
 

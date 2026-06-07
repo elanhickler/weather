@@ -1530,7 +1530,11 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
     return wrapNodeSliderValue(((absoluteFrame - resetFrame) / safeRate) * rate + phase, 0, 1);
   };
   const graphOutputValue = (node, nodeId) => {
-    const normalizedValue = nodeGraphGraphValueAt(node.graph, graphSampleX(node, nodeId));
+    const normalizedValue = nodeGraphGraphValueAt(
+      nodeGraphGraphForNode(node),
+      graphSampleX(node, nodeId),
+      nodeGraphGraphSmoothingModeForNode(node),
+    );
     const outputMin = readNodeGraphLiveEffectiveParam(runtime, node, "outputMin", 0, frame, frames, frameValues);
     const outputMax = readNodeGraphLiveEffectiveParam(runtime, node, "outputMax", 1, frame, frames, frameValues);
     return outputMin + normalizedValue * (outputMax - outputMin);
@@ -1538,10 +1542,14 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
   const graphInputValue = (nodeId, graphInput, x, fallback) => {
     const connection = (runtime.graphInputConnections?.get(nodeGraphGraphInputKey(nodeId, graphInput)) || [])[0];
     const source = connection ? runtime.nodes.get(connection.sourceNode) : null;
-    if (!source || source.type !== "graph") {
+    if (!source || !nodeGraphModuleIsGraphType(source.type)) {
       return fallback;
     }
-    return nodeGraphGraphValueAt(source.graph, clampNodeSliderValue(Number(x) || 0, 0, 1));
+    return nodeGraphGraphValueAt(
+      nodeGraphGraphForNode(source),
+      clampNodeSliderValue(Number(x) || 0, 0, 1),
+      nodeGraphGraphSmoothingModeForNode(source),
+    );
   };
 
   for (const nodeId of runtime.order || []) {
@@ -1735,6 +1743,59 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         nodeId,
         wrapNodeSliderValue(phase + Math.PI * 2 * phaseIncrement, 0, Math.PI * 2),
       );
+    } else if (node?.type === "ellipsoid") {
+      const resetState = runtime.oscResetStates.get(nodeId) || createNodeGraphOscResetState();
+      runtime.oscResetStates.set(nodeId, resetState);
+      const resetValue = nodeGraphSafeFilterNumber(
+        mixInput(nodeId, "Reset"),
+        runtime,
+        nodeId,
+        resetState,
+        "ellipsoid reset",
+      );
+      const resetEdge = resetState.lastReset <= 0 && resetValue > 0;
+      resetState.lastReset = resetValue;
+      const phase = resetEdge ? 0 : runtime.phases.get(nodeId) || 0;
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        key,
+        fallback,
+        frame,
+        frames,
+        frameValues,
+      );
+      const phaseOffset = nodeGraphPhaseRadians(read("phase", 0));
+      const frequency = read("frequency", 220);
+      const pitchInput = clampNodeSliderValue(nodeGraphSafeFilterNumber(
+        mixInput(nodeId, "0.1V/Oct"),
+        runtime,
+        nodeId,
+        null,
+        "ellipsoid 0.1v/oct input",
+      ), -1, 1);
+      const pitchedFrequency = Math.max(0, frequency * (2 ** (pitchInput / 0.1)));
+      const incrementInput = nodeGraphSafeFilterNumber(
+        mixInput(nodeId, "Increment"),
+        runtime,
+        nodeId,
+        null,
+        "ellipsoid increment input",
+      );
+      const phaseIncrement = (pitchedFrequency / sampleRate) + incrementInput;
+      value = nodeGraphEllipsoidVectorSample(phase + phaseOffset, {
+        level: read("level", 1),
+        offsetX: read("offsetX", 0),
+        offsetY: read("offsetY", 0),
+        scaleX: read("scaleX", 1),
+        scaleY: read("scaleY", 1),
+        shapeX: read("shapeX", 0),
+        shapeY: read("shapeY", 0),
+      });
+      runtime.phases.set(
+        nodeId,
+        wrapNodeSliderValue(phase + Math.PI * 2 * phaseIncrement, 0, Math.PI * 2),
+      );
     } else if (node?.type === "noise") {
       const state = runtime.noiseSampleHoldStates.get(nodeId) || createNodeGraphNoiseSampleHoldState();
       runtime.noiseSampleHoldStates.set(nodeId, state);
@@ -1792,9 +1853,9 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       const left = nextNodeGraphSeededNoiseSample(runtime, nodeId, seed, "left") * level;
       const right = nextNodeGraphSeededNoiseSample(runtime, nodeId, seed, "right") * level;
       value = {
-        Left: left,
         Out: (left + right) * 0.5,
-        Right: right,
+        X: left,
+        Y: right,
       };
     } else if (node?.type === "noiseGenerator") {
       const state = runtime.noiseGeneratorStates.get(nodeId) || createNodeGraphNoiseGeneratorState();
@@ -2106,7 +2167,7 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
       value = nodeGraphEvaluateModuleGroup(runtime, node, mixInput, sampleRate, frame, frames);
     } else if (node?.type === "codeblock") {
       value = nodeGraphEvaluateCodeblock(runtime, node, mixInput, sampleRate, frame, frames);
-    } else if (node?.type === "graph") {
+    } else if (nodeGraphModuleIsGraphType(node?.type)) {
       value = graphOutputValue(node, nodeId);
     } else if (node?.type === "bias") {
       value = mixInput(nodeId) + readNodeGraphLiveEffectiveParam(

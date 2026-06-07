@@ -69,8 +69,8 @@ function validateNodeGraphPatch(patch) {
     if (type === "output" && id !== "output") {
       throw new Error("output module id must be output");
     }
-    const gx = Math.round(Number(node.gx));
-    const gy = Math.round(Number(node.gy));
+    const gx = roundNodeGraphGridCoordinate(Number(node.gx));
+    const gy = roundNodeGraphGridCoordinate(Number(node.gy));
     if (!Number.isFinite(gx) || !Number.isFinite(gy)) {
       throw new Error(`node ${id} grid position invalid`);
     }
@@ -142,8 +142,10 @@ function validateNodeGraphPatch(patch) {
     } else if (nodeGraphModuleDefinitions[type].layout === "led") {
       normalizedNode.led = normalizeNodeGraphLedLayout(node.led);
     }
-    if (type === "graph") {
-      normalizedNode.graph = normalizeNodeGraphGraph(node.graph);
+    if (nodeGraphModuleIsGraphType(type)) {
+      normalizedNode.graph = nodeGraphGraphEndpointYLockEnabledForNode(normalizedNode)
+        ? nodeGraphGraphWithLockedEndpointY(node.graph)
+        : normalizeNodeGraphGraph(node.graph);
     }
     if (type === "codeblock") {
       normalizedNode.codeblock = normalizeNodeGraphCodeblock(node.codeblock);
@@ -289,8 +291,8 @@ function validateNodeGraphPatch(patch) {
       throw new Error("graph connection references missing node");
     }
     sourcePort = nodeGraphCanonicalOutputPort(sourceType, sourcePort);
-    if (sourceType !== "graph" || sourcePort !== "Out") {
-      throw new Error(`graph connection source must be Graph.Out: ${sourceNode}.${sourcePort}`);
+    if (!nodeGraphModuleIsGraphType(sourceType) || sourcePort !== "Out") {
+      throw new Error(`graph connection source must be Graph.Out or Graph 2.Out: ${sourceNode}.${sourcePort}`);
     }
     if (!nodeGraphModuleGraphInputs(destinationType).includes(destinationGraphInput)) {
       throw new Error(`graph connection destination invalid: ${destinationNode}.${destinationGraphInput}`);

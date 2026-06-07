@@ -113,7 +113,7 @@
     "moduleScopeDotCore2Brightness": 0.45,
     "moduleScopeDotCore2Color": "#17002f",
     "moduleScopeFramesPerSecond": 60,
-    "moduleScopeLineThickness": 2,
+    "moduleScopeLineThickness": 1,
     "moduleScopeDiscontinuitySkipSamples": 1,
     "moduleScopeOverdrawPoints": 1,
     "moduleScopeOverdrawFade": 0.5,
