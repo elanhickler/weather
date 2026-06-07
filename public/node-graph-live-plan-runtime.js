@@ -29,6 +29,7 @@ function nodeGraphBuildLivePlan() {
     sourceNodes: [...compiled.sourceNodes],
     visualSinks: (compiled.visualSinks || []).map((sink) => ({
       ...sink,
+      bufferedInputs: [...(sink.bufferedInputs || [])],
       inputs: (sink.inputs || []).map((input) => ({ ...input })),
     })),
   };
@@ -111,6 +112,9 @@ function nodeGraphBuildLiveParameterNodes(activeNodeIds = null) {
       if (node.type === "clapPlugin") {
         runtimeNode.clap = normalizeNodeGraphClapPluginBinding(node.clap);
       }
+      if (node.type === "samplePlayer" || node.type === "sampleLooper") {
+        runtimeNode.sample = { id: normalizeNodeGraphSampleId(node.sample?.id) };
+      }
       return runtimeNode;
     });
 }
@@ -170,6 +174,9 @@ function nodeGraphBuildLiveParameterNodesForPatch(patch, activeNodeIds = null) {
       if (node.type === "clapPlugin") {
         runtimeNode.clap = normalizeNodeGraphClapPluginBinding(node.clap);
       }
+      if (node.type === "samplePlayer" || node.type === "sampleLooper") {
+        runtimeNode.sample = { id: normalizeNodeGraphSampleId(node.sample?.id) };
+      }
       return runtimeNode;
     });
 }
@@ -222,6 +229,7 @@ function createNodeGraphLiveRuntime(plan) {
   const cookbookFilterStates = new Map();
   const clockDividerStates = new Map();
   const delayedTriggerStates = new Map();
+  const delayEffectStates = new Map();
   const expAdsrStates = new Map();
   const fractalBrownianNoiseStates = new Map();
   const flowerChildEnvelopeFollowerStates = new Map();
@@ -239,6 +247,8 @@ function createNodeGraphLiveRuntime(plan) {
   const randomClockStates = new Map();
   const randomWalkStates = new Map();
   const sampleHoldStates = new Map();
+  const samplePlaybackStates = new Map();
+  const samples = new Map((plan.samples || []).map((sample) => [sample.id, sample]));
   const slewLimiterStates = new Map();
   const stepSequencerStates = new Map();
   const spiralStates = new Map();
@@ -294,11 +304,17 @@ function createNodeGraphLiveRuntime(plan) {
     if (node.type === "delayedTrigger") {
       delayedTriggerStates.set(node.id, createNodeGraphDelayedTriggerState());
     }
+    if (node.type === "delayEffect") {
+      delayEffectStates.set(node.id, createNodeGraphDelayEffectState());
+    }
     if (node.type === "randomClock") {
       randomClockStates.set(node.id, createNodeGraphRandomClockState());
     }
     if (node.type === "sampleHold") {
       sampleHoldStates.set(node.id, createNodeGraphSampleHoldState());
+    }
+    if (node.type === "samplePlayer" || node.type === "sampleLooper") {
+      samplePlaybackStates.set(node.id, createNodeGraphSamplePlaybackState());
     }
     if (node.type === "slewLimiter") {
       slewLimiterStates.set(node.id, createNodeGraphSlewLimiterState());
@@ -353,7 +369,7 @@ function createNodeGraphLiveRuntime(plan) {
       );
     }
   }
-  return {
+  const runtime = {
     inputConnections,
     badNumberCount: 0,
     bandpassStates,
@@ -362,6 +378,7 @@ function createNodeGraphLiveRuntime(plan) {
     codeblockFunctions,
     cookbookFilterStates,
     delayedTriggerStates,
+    delayEffectStates,
     expAdsrStates,
     fractalBrownianNoiseStates,
     flowerChildEnvelopeFollowerStates,
@@ -401,6 +418,8 @@ function createNodeGraphLiveRuntime(plan) {
     phases,
     randomWalkStates,
     sampleHoldStates,
+    samplePlaybackStates,
+    samples,
     slewLimiterStates,
     smoothers,
     spiralStates,
@@ -411,11 +430,16 @@ function createNodeGraphLiveRuntime(plan) {
     vactrolEnvelopeStates,
     visualSinks: (plan.visualSinks || []).map((sink) => ({
       ...sink,
+      bufferedInputs: [...(sink.bufferedInputs || [])],
       inputs: (sink.inputs || []).map((input) => ({ ...input })),
     })),
     visualControls: visualControlState.controls,
     visualControlStates: visualControlState.states,
   };
+  if (typeof syncNodeGraphVisualInputBuffers === "function") {
+    syncNodeGraphVisualInputBuffers(runtime);
+  }
+  return runtime;
 }
 
 function updateNodeGraphLiveRuntimePlan(runtime, plan) {
@@ -427,8 +451,12 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   runtime.outputNode = plan.outputNode || "output";
   runtime.visualSinks = (plan.visualSinks || []).map((sink) => ({
     ...sink,
+    bufferedInputs: [...(sink.bufferedInputs || [])],
     inputs: (sink.inputs || []).map((input) => ({ ...input })),
   }));
+  if (typeof syncNodeGraphVisualInputBuffers === "function") {
+    syncNodeGraphVisualInputBuffers(runtime);
+  }
   const nodeIds = new Set(runtime.nodes.keys());
   if (!runtime.nodeOutputs) {
     runtime.nodeOutputs = new Map();
@@ -489,6 +517,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   }
   if (!runtime.delayedTriggerStates) {
     runtime.delayedTriggerStates = new Map();
+  }
+  if (!runtime.delayEffectStates) {
+    runtime.delayEffectStates = new Map();
   }
   if (!runtime.sampleHoldStates) {
     runtime.sampleHoldStates = new Map();
@@ -592,6 +623,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     }
     if (node.type === "delayedTrigger" && !runtime.delayedTriggerStates.has(node.id)) {
       runtime.delayedTriggerStates.set(node.id, createNodeGraphDelayedTriggerState());
+    }
+    if (node.type === "delayEffect" && !runtime.delayEffectStates.has(node.id)) {
+      runtime.delayEffectStates.set(node.id, createNodeGraphDelayEffectState());
     }
     if (node.type === "randomClock" && !runtime.randomClockStates.has(node.id)) {
       runtime.randomClockStates.set(node.id, createNodeGraphRandomClockState());
@@ -773,6 +807,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.delayedTriggerStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.delayedTriggerStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.delayEffectStates.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.delayEffectStates.delete(id);
     }
   }
   for (const id of [...runtime.sampleHoldStates.keys()]) {

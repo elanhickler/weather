@@ -203,7 +203,7 @@ function nodeGraphWireSelectionLabel(selection = nodeGraphMvp.selected) {
 }
 
 function nodeGraphNodeCanBeDeleted(node) {
-  return Boolean(node && node.type !== "output");
+  return Boolean(node && node.type !== "output" && !["canvas-origin", "home", "goods", "services"].includes(node.id));
 }
 
 function nodeGraphNodeDeleteHidesOnly(node) {

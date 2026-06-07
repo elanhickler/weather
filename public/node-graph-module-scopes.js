@@ -2959,6 +2959,9 @@ function captureNodeGraphLiveModuleScopeFrame(runtime, sampleRate) {
       );
       value += inputValue;
       const inputPort = String(input.port || "").trim();
+      if (input?.buffered && inputPort) {
+        writeNodeGraphVisualInputBufferSample(runtime, nodeId, inputPort, inputValue, sink.bufferSampleLimit);
+      }
       if (inputPort) {
         const portId = `${nodeId}:${inputPort}`;
         const portSamples = runtime.scopeBuffers.get(portId) || [];
@@ -2980,6 +2983,74 @@ function captureNodeGraphLiveModuleScopeFrame(runtime, sampleRate) {
     sampleRate,
   });
   runtime.scopeBuffers = new Map();
+}
+
+function createNodeGraphVisualInputBuffer(capacity = nodeGraphBufferedInputSampleLimit) {
+  const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || nodeGraphBufferedInputSampleLimit)));
+  return {
+    absoluteFrame: 0,
+    buffer: new Float32Array(safeCapacity),
+    capacity: safeCapacity,
+    length: 0,
+    writeIndex: 0,
+  };
+}
+
+function syncNodeGraphVisualInputBuffers(runtime) {
+  if (!runtime) {
+    return;
+  }
+  runtime.visualInputBuffers ||= new Map();
+  const expected = new Map();
+  for (const sink of runtime.visualSinks || []) {
+    const nodeId = String(sink?.nodeId || "");
+    if (!nodeId) {
+      continue;
+    }
+    for (const input of sink.inputs || []) {
+      if (!input?.buffered) {
+        continue;
+      }
+      const port = String(input.port || "").trim();
+      if (!port) {
+        continue;
+      }
+      expected.set(`${nodeId}:${port}`, Math.max(1, Math.min(1048576, Math.round(Number(sink.bufferSampleLimit) || nodeGraphBufferedInputSampleLimit))));
+    }
+  }
+  for (const [key, capacity] of expected) {
+    const current = runtime.visualInputBuffers.get(key);
+    if (!current || current.capacity !== capacity) {
+      runtime.visualInputBuffers.set(key, createNodeGraphVisualInputBuffer(capacity));
+    }
+  }
+  for (const key of [...runtime.visualInputBuffers.keys()]) {
+    if (!expected.has(key)) {
+      runtime.visualInputBuffers.delete(key);
+    }
+  }
+}
+
+function writeNodeGraphVisualInputBufferSample(runtime, nodeId, port, value, capacity = nodeGraphBufferedInputSampleLimit) {
+  if (!runtime || !nodeId || !port) {
+    return;
+  }
+  runtime.visualInputBuffers ||= new Map();
+  const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || nodeGraphBufferedInputSampleLimit)));
+  const key = `${nodeId}:${port}`;
+  let state = runtime.visualInputBuffers.get(key);
+  if (!state || state.capacity !== safeCapacity) {
+    state = createNodeGraphVisualInputBuffer(safeCapacity);
+    runtime.visualInputBuffers.set(key, state);
+  }
+  state.buffer[state.writeIndex] = nodeGraphModuleScopeScalarValue(value);
+  state.writeIndex = (state.writeIndex + 1) % state.capacity;
+  state.length = Math.min(state.capacity, state.length + 1);
+  state.absoluteFrame += 1;
+}
+
+function writeVisualInputBufferSample(runtime, nodeId, port, value, capacity = nodeGraphBufferedInputSampleLimit) {
+  writeNodeGraphVisualInputBufferSample(runtime, nodeId, port, value, capacity);
 }
 
 function nodeGraphModuleScopeBuffersCurrent() {

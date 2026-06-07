@@ -1,5 +1,12 @@
 function defaultNodeGraphModuleGridPoint(type) {
   const count = nodeGraphMvp.nodeTypeCounts[type] || 1;
+  const originNode = nodeGraphMvp.patch.nodes.find((node) => node.id === "canvas-origin");
+  if (originNode) {
+    return {
+      gx: originNode.gx + nodeGraphPatchNodeGridWidthUnits(originNode) + 1 + count * 2,
+      gy: originNode.gy + count * 2,
+    };
+  }
   return {
     gx: 3 + count * 2,
     gy: 3 + count * 2,
@@ -1441,7 +1448,7 @@ function copySelectedNodeGraphModule() {
 
 function deleteNodeGraphModuleFromContext() {
   const targetNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
-  if (targetNode && targetNode.type !== "output") {
+  if (nodeGraphNodeCanBeDeleted(targetNode)) {
     const targetNodeIds = new Set([targetNode.id]);
     const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
     patch.nodes = patch.nodes.filter((node) => !targetNodeIds.has(node.id));

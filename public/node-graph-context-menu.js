@@ -805,11 +805,7 @@ function openNodeSceneContextMenu(event) {
     return;
   }
 
-  event.preventDefault();
-  event.stopPropagation();
-  const shopPoint = nodeGraphClientPoint(event);
-  nodeGraphMvp.sceneContextPoint = shopPoint;
+  nodeGraphMvp.sceneContextPoint = null;
   nodeGraphMvp.sceneContextTargetNode = null;
   nodeGraphMvp.sceneContextTargetWire = null;
-  openNodeGraphModuleShop(shopPoint);
 }

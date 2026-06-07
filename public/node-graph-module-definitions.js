@@ -6,6 +6,10 @@ const nodeGraphNodeLabels = Object.freeze({
   groupInput: "Group Input",
   groupOutput: "Group Output",
   moduleGroup: "Module Group",
+  moduleGoods: "Goods",
+  moduleHome: "Home",
+  moduleServices: "Services",
+  moduleShop: "Shop",
   osc: "Osc",
   fbPolyBlepOsc: "F/B PolyBLEP Osc",
   additiveOsc: "Additive Osc",
@@ -34,11 +38,14 @@ const nodeGraphNodeLabels = Object.freeze({
   bandpass: "Bandpass",
   cookbookFilter: "Multi Stage Filter",
   ladderFilter: "Ladder Filter",
+  delayEffect: "Delay",
   slewLimiter: "Up/Down Slew",
   sampleHold: "Sample & Hold",
   midiOut: "Midi Out",
   midiNotePitch: "Midi Note Pitch",
   keyboardController: "MIDI Keyboard",
+  samplePlayer: "Sample Player",
+  sampleLooper: "Sample Looper",
   macroControls: "Macro Controls",
   pitchModWheel: "Pitch / Mod Wheel",
   expAdsr: "Exp ADSR",
@@ -129,6 +136,30 @@ const nodeGraphModuleDefinitions = Object.freeze({
     parameters: [],
   },
   moduleGroup: {
+    inputs: [],
+    outputs: [],
+    parameters: [],
+  },
+  moduleGoods: {
+    layout: "modulePlaceholder",
+    inputs: [],
+    outputs: [],
+    parameters: [],
+  },
+  moduleShop: {
+    layout: "moduleShop",
+    inputs: [],
+    outputs: [],
+    parameters: [],
+  },
+  moduleHome: {
+    layout: "moduleHome",
+    inputs: [],
+    outputs: [],
+    parameters: [],
+  },
+  moduleServices: {
+    layout: "modulePlaceholder",
     inputs: [],
     outputs: [],
     parameters: [],
@@ -1025,6 +1056,20 @@ const nodeGraphModuleDefinitions = Object.freeze({
       },
     ],
   },
+  delayEffect: {
+    inputs: ["In"],
+    outputs: ["Out", "Wet"],
+    parameters: [
+      { defaultValue: "0.18", key: "time", kind: "time", label: "Time", max: "4", maxDigits: 5, mid: "0.18", min: "0.001", step: "any", unit: "s" },
+      { defaultValue: "0.25", key: "feedback", label: "Feedback", max: "0.95", mid: "0.25", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.35", key: "mix", label: "Mix", max: "1", mid: "0.35", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.02", key: "modAmount", label: "Mod", max: "0.5", maxDigits: 5, mid: "0.02", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0.1", key: "modRate", kind: "frequency", label: "Mod Rate", max: "90", maxDigits: 5, mid: "0.1", min: "0", step: "any", unit: "Hz" },
+      { defaultValue: "0", key: "modVariation", label: "Variation", max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "any" },
+      { choices: ["Delay", "Diffuse"], defaultValue: "0", displayChoices: true, divideChoicesVisibly: true, key: "mode", label: "Mode", linearSmoothing: false, max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "1" },
+    ],
+  },
   slewLimiter: {
     inputs: ["In"],
     outputs: ["Out"],
@@ -1101,6 +1146,35 @@ const nodeGraphModuleDefinitions = Object.freeze({
   keyboardController: {
     outputs: ["Gate", "1 Sample Gate", "Key", "Q", "MIDI", "Double", "0.1V/Oct", "Increment", "Frequency", "Pitch", "X", "Y"],
     parameters: [],
+  },
+  samplePlayer: {
+    inputs: ["Trigger", "Reset", "Pitch", "Start", "End"],
+    outputs: ["Out"],
+    parameters: [
+      { defaultValue: "0", key: "sample", label: "Sample", linearSmoothing: false, max: "4096", mid: "0", min: "0", step: "1" },
+      { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0", key: "pitch", label: "Pitch", max: "4", mid: "0", min: "-4", step: "any" },
+      { defaultValue: "0", key: "start", label: "Start", max: "1", mid: "0", min: "0", step: "any" },
+      { defaultValue: "1", key: "end", label: "End", max: "1", mid: "1", min: "0", step: "any" },
+      { defaultValue: "0.002", key: "attack", kind: "time", label: "Attack", max: "1", maxDigits: 5, mid: "0.002", min: "0", step: "any", unit: "s" },
+      { defaultValue: "0.01", key: "release", kind: "time", label: "Release", max: "1", maxDigits: 5, mid: "0.01", min: "0", step: "any", unit: "s" },
+      { choices: ["Off", "On"], defaultValue: "1", displayChoices: true, divideChoicesVisibly: true, key: "oneShot", label: "One Shot", linearSmoothing: false, max: "1", mid: "1", min: "0", nonlinearSlider: false, step: "1" },
+    ],
+  },
+  sampleLooper: {
+    inputs: ["Gate", "Reset", "Pitch", "Start", "End", "Loop Start", "Loop End"],
+    outputs: ["Out", "Phase"],
+    parameters: [
+      { defaultValue: "0", key: "sample", label: "Sample", linearSmoothing: false, max: "4096", mid: "0", min: "0", step: "1" },
+      { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0", key: "pitch", label: "Pitch", max: "4", mid: "0", min: "-4", step: "any" },
+      { defaultValue: "0", key: "start", label: "Start", max: "1", mid: "0", min: "0", step: "any" },
+      { defaultValue: "1", key: "end", label: "End", max: "1", mid: "1", min: "0", step: "any" },
+      { defaultValue: "0", key: "loopStart", label: "Loop Start", max: "1", mid: "0", min: "0", step: "any" },
+      { defaultValue: "1", key: "loopEnd", label: "Loop End", max: "1", mid: "1", min: "0", step: "any" },
+      { defaultValue: "0.005", key: "crossfade", kind: "time", label: "Crossfade", max: "0.25", maxDigits: 5, mid: "0.005", min: "0", step: "any", unit: "s" },
+      { choices: ["Forward", "One Shot"], defaultValue: "0", displayChoices: true, divideChoicesVisibly: true, key: "mode", label: "Mode", linearSmoothing: false, max: "1", mid: "0", min: "0", nonlinearSlider: false, step: "1" },
+    ],
   },
   macroControls: {
     outputs: ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10"],
@@ -1396,6 +1470,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     parameters: [],
   },
   canvas: {
+    bufferedInputs: ["A", "B", "X", "Y", "Opacity"],
     inputs: ["A", "B", "X", "Y", "Opacity"],
     layout: "canvas",
     outputs: ["RGBA"],
@@ -1493,6 +1568,20 @@ const nodeGraphPatchFormat = Object.freeze({
 function nodeGraphModuleVisualInputs(type) {
   const inputs = nodeGraphModuleDefinitions[type]?.visualInputs;
   return Array.isArray(inputs) ? inputs.map((input) => ({ ...input })) : [];
+}
+
+function nodeGraphModuleBufferedInputs(type) {
+  const inputs = nodeGraphModuleDefinitions[type]?.bufferedInputs;
+  const ports = nodeGraphModuleDefinitions[type]?.inputs || [];
+  return normalizeNodeGraphBufferedInputList(Array.isArray(inputs) ? inputs : [], ports);
+}
+
+function nodeGraphPatchNodeBufferedInputs(node) {
+  const metadataInputs = nodeGraphModuleBufferedInputs(node?.type);
+  const scriptInputs = node?.type === "canvas"
+    ? normalizeNodeGraphCanvasScript(node.canvasScript).bufferedInputs
+    : [];
+  return normalizeNodeGraphBufferedInputList([...metadataInputs, ...scriptInputs], nodeGraphPatchNodeInputPorts(node));
 }
 
 function nodeGraphModuleGraphInputs(type) {

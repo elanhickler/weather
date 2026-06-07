@@ -565,17 +565,24 @@ function nodeGraphCompiledVisualSinks(graph, reachableNodes) {
       reachableNodes.has(node.id) &&
       nodeGraphModuleDefinitions[node.type]?.visualSink
     )
-    .map((node) => ({
-      hasParameters: (nodeGraphModuleDefinitions[node.type]?.parameters || []).length > 0,
-      inputs: nodeGraphModuleVisualInputs(node.type).map((input) => ({
-        ...input,
-        connected: (graph.inputConnections.get(nodeGraphInputKey(node.id, input.port)) || []).length > 0,
-        connections: (graph.inputConnections.get(nodeGraphInputKey(node.id, input.port)) || [])
-          .map((connection) => ({ ...connection })),
-      })),
-      nodeId: node.id,
-      type: node.type,
-    }));
+    .map((node) => {
+      const bufferedInputs = nodeGraphPatchNodeBufferedInputs(node);
+      const bufferedSet = new Set(bufferedInputs);
+      return {
+        bufferSampleLimit: nodeGraphBufferedInputSampleLimit,
+        bufferedInputs,
+        hasParameters: (nodeGraphModuleDefinitions[node.type]?.parameters || []).length > 0,
+        inputs: nodeGraphModuleVisualInputs(node.type).map((input) => ({
+          ...input,
+          buffered: bufferedSet.has(input.port),
+          connected: (graph.inputConnections.get(nodeGraphInputKey(node.id, input.port)) || []).length > 0,
+          connections: (graph.inputConnections.get(nodeGraphInputKey(node.id, input.port)) || [])
+            .map((connection) => ({ ...connection })),
+        })),
+        nodeId: node.id,
+        type: node.type,
+      };
+    });
 }
 
 function nodeGraphNodeSignalOutputRequired(graph, nodeId) {

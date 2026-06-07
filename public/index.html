@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=canvas-game-foundation-1">
+  <link rel="stylesheet" href="./public/styles.css?v=module-shelf-policy-1">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -118,6 +118,7 @@
             id="nodeModuleShopButton"
             class="node-module-shop-button"
             type="button"
+            hidden
             aria-pressed="false"><span>Module</span><span>Browser</span></button>
           <button
             id="nodeMidiKeyboardToggleButton"
@@ -207,7 +208,7 @@
       <div
         id="nodeGraphWorkspace"
         class="node-graph-workspace"
-        aria-label="Drag wires between DSP node ports; right-click empty scene space to add modules">
+        aria-label="Drag wires between DSP node ports">
         <button
           id="nodeModularOnlyBackButton"
           class="node-modular-only-back-button"
@@ -2881,17 +2882,19 @@
   <script src="./public/node-graph-file-actions.js?v=patch-script-editor-actions-1"></script>
   <script src="./public/node-graph-default-buttons.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-cookbook-filter.js?v=filter-curve-zero-cutoffs-1780822200000"></script>
-  <script src="./public/node-graph-module-definitions.js?v=canvas-module-1"></script>
-  <script src="./public/node-graph-module-store.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>
+  <script src="./public/node-graph-module-definitions.js?v=goods-services-1"></script>
+  <script src="./public/node-graph-module-store.js?v=module-shelf-policy-1"></script>
   <script src="./public/node-graph-module-sizing.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-metadata-kinds.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-parameter-metadata.js?v=codeblock-state-context-1"></script>
   <script src="./public/node-graph-metadata-defaults.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-text-box-utils.js?v=slider-unit-color-1780307400000"></script>
+  <script src="./public/node-graph-text-box-utils.js?v=text-box-size-1000-1"></script>
   <script src="./public/node-graph-image-utils.js?v=canvas-game-foundation-1"></script>
   <script src="./public/node-graph-graph-utils.js?v=graph2-through-curves-1"></script>
+  <script src="./public/node-graph-samples.js?v=sample-playback-1"></script>
   <script src="./public/node-graph-text-box-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-patch-normalizers.js?v=canvas-game-foundation-1"></script>
+  <script src="./public/node-graph-patch-normalizers.js?v=buffered-inputs-1"></script>
   <script src="./public/node-graph-ui-view.js?v=graph-endpoint-lock-1"></script>
   <script src="./public/node-graph-audio-derivation.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-grid-utils.js?v=half-grid-window-drag-1"></script>
@@ -2903,7 +2906,7 @@
   <script src="./public/node-graph-settings-text-fit.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-preset.js?v=camera-output-wires-1780801800000"></script>
   <script src="./public/node-graph-script-status.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-view-controls.js?v=draggable-dialog-headings-1"></script>
+  <script src="./public/node-graph-view-controls.js?v=shop-module-1"></script>
   <script src="./public/node-graph-workspace-geometry.js?v=module-whole-grid-pan-half-grid-1"></script>
   <script src="./public/node-graph-workspace-zoom.js?v=wheel-zoom-tenth-step-1"></script>
   <script src="./public/node-graph-workspace-view.js?v=module-whole-grid-pan-half-grid-1"></script>
@@ -2911,23 +2914,23 @@
   <script src="./public/node-graph-clap-host.js?v=clap-diagnostics-1"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-node-dragging.js?v=module-whole-grid-pan-half-grid-1"></script>
-  <script src="./public/node-graph-context-menu.js?v=canvas-module-1"></script>
-  <script src="./public/node-graph-module-actions.js?v=module-whole-grid-pan-half-grid-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=shop-module-1"></script>
+  <script src="./public/node-graph-module-actions.js?v=canvas-origin-1"></script>
   <script src="./public/node-graph-code-screen.js?v=canvas-game-foundation-1"></script>
-  <script src="./public/node-graph-module-scopes.js?v=scope-padding-1"></script>
+  <script src="./public/node-graph-module-scopes.js?v=buffered-inputs-1"></script>
   <script src="./public/node-graph-shader-script.js?v=one-value-line-length-1"></script>
   <script src="./public/node-graph-canvas-script.js?v=canvas-game-foundation-1"></script>
-  <script src="./public/node-graph-module-factories.js?v=external-graph-inputs-1780816800000"></script>
+  <script src="./public/node-graph-module-factories.js?v=module-shelf-policy-1"></script>
   <script src="./public/node-graph-module-header-rendering.js?v=tap-tempo-symbol-1"></script>
-  <script src="./public/node-graph-module-rendering.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-module-rendering.js?v=goods-services-1"></script>
   <script src="./public/node-graph-history.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-visual-utils.js?v=text-light-registry-1780800000000"></script>
-  <script src="./public/node-graph-patch-clone.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-patch-clone.js?v=sample-playback-1"></script>
   <script src="./public/node-graph-slider-metadata.js?v=slider-math-input-1780438200000"></script>
   <script src="./public/node-graph-slider-values.js?v=slider-zoom-geometry-1780615800000"></script>
   <script src="./public/node-graph-slider-dragging.js?v=graph-endpoint-lock-1"></script>
   <script src="./public/node-graph-node-accessors.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-selection.js?v=external-graph-inputs-1780816800000"></script>
+  <script src="./public/node-graph-selection.js?v=goods-services-1"></script>
   <script src="./public/node-graph-port-geometry.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-slider-readout.js?v=choice-square-bottom-plus-2"></script>
   <script src="./public/node-graph-slider-readout-controls.js?v=graph2-smoothing-3"></script>
@@ -2941,7 +2944,7 @@
   <script src="./public/node-graph-av-export.js?v=video-export-auto-render-1"></script>
   <script src="./public/node-graph-rendered-output-canvases.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-execution-wires.js?v=external-graph-inputs-1780816800000"></script>
-  <script src="./public/node-graph-execution-plan.js?v=graph2-smoothing-3"></script>
+  <script src="./public/node-graph-execution-plan.js?v=buffered-inputs-1"></script>
   <script src="./public/node-graph-execution-summary.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-wire-actions.js?v=graph2-smoothing-3"></script>
   <script src="./public/node-graph-trace-router.js?v=no-self-burst-1780321400000"></script>
@@ -2966,21 +2969,21 @@
   <script src="./public/node-graph-live-input-status.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-live-evidence.js?v=sample-rate-oversampling-1780468200000"></script>
   <script src="./public/node-graph-live-control-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-default-patch.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-default-patch.js?v=goods-services-1"></script>
   <script src="./public/node-graph-state.js?v=metadata-script-dirty-1"></script>
-  <script src="./public/node-graph-patch-core.js?v=canvas-module-1"></script>
-  <script src="./public/node-graph-live-plan-runtime.js?v=graph2-smoothing-3"></script>
+  <script src="./public/node-graph-patch-core.js?v=goods-services-1"></script>
+  <script src="./public/node-graph-live-plan-runtime.js?v=buffered-inputs-1"></script>
   <script src="./public/node-graph-live-parameter-runtime.js?v=clap-tail-source-silence-1"></script>
   <script src="./public/node-graph-oscillator-runtime.js?v=ellipsoid-audio-1"></script>
   <script src="./public/node-graph-gpu-additive-backend.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-jerobeam-spiral.js?v=node-graph-jerobeam-spiral-refactor-1780371000000"></script>
   <script src="./public/node-graph-lorenz-attractor.js?v=lorenz-attractor-1"></script>
-  <script src="./public/node-graph-live-frame-evaluator.js?v=stereo-noise-xy-1"></script>
-  <script src="./public/node-graph-live-runtime.js?v=stereo-noise-xy-1"></script>
+  <script src="./public/node-graph-live-frame-evaluator.js?v=modulated-delay-1"></script>
+  <script src="./public/node-graph-live-runtime.js?v=modulated-delay-1"></script>
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=external-graph-inputs-1780816800000"></script>
-  <script src="./public/node-graph-workspace-event-bindings.js?v=constraint-overlay-toggles-1"></script>
+  <script src="./public/node-graph-workspace-event-bindings.js?v=canvas-origin-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=copy-visual-output-1"></script>
-  <script src="./public/node-graph-header-event-bindings.js?v=canvas-module-1"></script>
+  <script src="./public/node-graph-header-event-bindings.js?v=shop-module-1"></script>
   <script src="./public/node-graph-help-event-bindings.js?v=node-graph-help-event-bindings-refactor-1780369200000"></script>
   <script src="./public/node-graph-scene-menu-event-bindings.js?v=canvas-module-1"></script>
   <script src="./public/node-graph-uidev-event-bindings.js?v=text-light-registry-1780800000000"></script>

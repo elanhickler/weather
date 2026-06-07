@@ -49,6 +49,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.codeblockFunctions = new Map();
     this.cookbookFilterStates = new Map();
     this.delayedTriggerStates = new Map();
+    this.delayEffectStates = new Map();
     this.expAdsrStates = new Map();
     this.fractalBrownianNoiseStates = new Map();
     this.graphInputConnections = new Map();
@@ -86,6 +87,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.triggerDividerStates = new Map();
     this.triangleStates = new Map();
     this.vactrolEnvelopeStates = new Map();
+    this.visualInputBuffers = new Map();
     this.visualSinks = [];
     this.resetVisualControls();
     this.earProtector = this.createEarProtector(sampleRate);
@@ -265,6 +267,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.codeblockFunctions = new Map();
     this.cookbookFilterStates = new Map();
     this.delayedTriggerStates = new Map();
+    this.delayEffectStates = new Map();
     this.expAdsrStates = new Map();
     this.fractalBrownianNoiseStates = new Map();
     this.gpuAdditiveQueues = new Map();
@@ -435,8 +438,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.outputNode = plan?.outputNode || "output";
     this.visualSinks = (Array.isArray(plan?.visualSinks) ? plan.visualSinks : []).map((sink) => ({
       ...sink,
+      bufferedInputs: Array.isArray(sink?.bufferedInputs) ? [...sink.bufferedInputs] : [],
       inputs: (Array.isArray(sink?.inputs) ? sink.inputs : []).map((input) => ({ ...input })),
     }));
+    this.syncVisualInputBuffers();
     this.inputConnections = this.buildInputConnectionMap(plan?.connections, ids);
     this.graphInputConnections = this.buildGraphInputConnectionMap(plan?.graphConnections, ids);
     this.modulationConnections = this.buildModulationConnectionMap(plan?.modulations, ids);
@@ -499,6 +504,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       }
       if (node?.type === "delayedTrigger" && !this.delayedTriggerStates.has(id)) {
         this.delayedTriggerStates.set(id, this.createDelayedTriggerState());
+      }
+      if (node?.type === "delayEffect" && !this.delayEffectStates.has(id)) {
+        this.delayEffectStates.set(id, this.createDelayEffectState());
       }
       if (node?.type === "randomClock" && !this.randomClockStates.has(id)) {
         this.randomClockStates.set(id, this.createRandomClockState());
@@ -669,6 +677,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     for (const id of [...this.delayedTriggerStates.keys()]) {
       if (!ids.has(id)) {
         this.delayedTriggerStates.delete(id);
+      }
+    }
+    for (const id of [...this.delayEffectStates.keys()]) {
+      if (!ids.has(id)) {
+        this.delayEffectStates.delete(id);
       }
     }
     for (const id of [...this.sampleHoldStates.keys()]) {
@@ -1298,6 +1311,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         );
         value += inputValue;
         const inputPort = String(input.port || "").trim();
+        if (input?.buffered && inputPort) {
+          this.writeVisualInputBufferSample(nodeId, inputPort, inputValue, sink.bufferSampleLimit);
+        }
         if (inputPort) {
           const portId = `${nodeId}:${inputPort}`;
           const portSamples = this.scopeBuffers.get(portId) || [];
@@ -1309,6 +1325,63 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       samples.push(this.scopeScalarValue(value));
       this.scopeBuffers.set(nodeId, samples);
     }
+  }
+
+  createVisualInputBuffer(capacity = 262144) {
+    const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || 262144)));
+    return {
+      absoluteFrame: 0,
+      buffer: new Float32Array(safeCapacity),
+      capacity: safeCapacity,
+      length: 0,
+      writeIndex: 0,
+    };
+  }
+
+  syncVisualInputBuffers() {
+    const expected = new Map();
+    for (const sink of this.visualSinks || []) {
+      const nodeId = String(sink?.nodeId || "");
+      if (!nodeId) {
+        continue;
+      }
+      for (const input of sink.inputs || []) {
+        if (!input?.buffered) {
+          continue;
+        }
+        const port = String(input.port || "").trim();
+        if (!port) {
+          continue;
+        }
+        const key = `${nodeId}:${port}`;
+        expected.set(key, Math.max(1, Math.min(1048576, Math.round(Number(sink.bufferSampleLimit) || 262144))));
+      }
+    }
+    for (const [key, capacity] of expected) {
+      const current = this.visualInputBuffers.get(key);
+      if (!current || current.capacity !== capacity) {
+        this.visualInputBuffers.set(key, this.createVisualInputBuffer(capacity));
+      }
+    }
+    for (const key of [...this.visualInputBuffers.keys()]) {
+      if (!expected.has(key)) {
+        this.visualInputBuffers.delete(key);
+      }
+    }
+  }
+
+  writeVisualInputBufferSample(nodeId, port, value, capacity = 262144) {
+    const key = `${nodeId}:${port}`;
+    let buffer = this.visualInputBuffers.get(key);
+    const safeCapacity = Math.max(1, Math.min(1048576, Math.round(Number(capacity) || 262144)));
+    if (!buffer || buffer.capacity !== safeCapacity) {
+      buffer = this.createVisualInputBuffer(safeCapacity);
+      this.visualInputBuffers.set(key, buffer);
+    }
+    buffer.buffer[buffer.writeIndex] = this.scopeScalarValue(value);
+    buffer.writeIndex = (buffer.writeIndex + 1) % buffer.capacity;
+    buffer.length = Math.min(buffer.capacity, buffer.length + 1);
+    buffer.absoluteFrame += 1;
   }
 
   captureModuleScopeOutput(nodeId, output) {
@@ -1984,6 +2057,17 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     };
   }
 
+  createDelayEffectState() {
+    return {
+      buffer: new Float32Array(1),
+      bufferSize: 1,
+      lfoPhase: 0,
+      lfoVariationState: 0,
+      position: 0,
+      wet: 0,
+    };
+  }
+
   createSampleHoldState() {
     return {
       held: 0,
@@ -2373,6 +2457,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.codeblockFunctions = new Map();
     runtime.cookbookFilterStates = new Map();
     runtime.delayedTriggerStates = new Map();
+    runtime.delayEffectStates = new Map();
     runtime.expAdsrStates = new Map();
     runtime.fractalBrownianNoiseStates = new Map();
     runtime.flowerChildEnvelopeFollowerStates = new Map();
@@ -2453,6 +2538,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "graph" || node?.type === "graph2") this.graphLfoStates.set(id, this.createGraphLfoState());
       if (node?.type === "clockDivider") this.clockDividerStates.set(id, this.createTriggerDividerState());
       if (node?.type === "delayedTrigger") this.delayedTriggerStates.set(id, this.createDelayedTriggerState());
+      if (node?.type === "delayEffect") this.delayEffectStates.set(id, this.createDelayEffectState());
       if (node?.type === "randomClock") this.randomClockStates.set(id, this.createRandomClockState());
       if (node?.type === "sampleHold") this.sampleHoldStates.set(id, this.createSampleHoldState());
       if (node?.type === "slewLimiter") this.slewLimiterStates.set(id, this.createSlewLimiterState());
@@ -2990,6 +3076,67 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const output = state.remainingSamples > 0 ? level : 0;
     state.remainingSamples = Math.max(0, state.remainingSamples - 1);
     return this.safeFilterNumber(output, null);
+  }
+
+  delayParabolSample(phase) {
+    const wrapped = phase - Math.floor(phase);
+    return wrapped < 0.5 ? wrapped * 4 - 1 : 3 - wrapped * 4;
+  }
+
+  delayInterpolateLinear(buffer, where) {
+    const length = buffer.length;
+    if (!length) {
+      return 0;
+    }
+    const before = Math.floor(where) % length;
+    const after = (before + 1) % length;
+    const mix = where - Math.floor(where);
+    return buffer[before] * (1 - mix) + buffer[after] * mix;
+  }
+
+  delayEffectSample(state, input, params, rateHz = sampleRate, nodeId = "") {
+    const safeRate = Math.max(1, Number(rateHz) || 44100);
+    const maxDelaySeconds = 4.25;
+    const requiredSize = Math.max(2, Math.ceil(safeRate * maxDelaySeconds) + 2);
+    if (!state.buffer || state.bufferSize !== requiredSize) {
+      state.buffer = new Float32Array(requiredSize);
+      state.bufferSize = requiredSize;
+      state.position = 0;
+      state.lfoPhase = 0;
+      state.lfoVariationState = 0;
+      state.wet = 0;
+    }
+    const dry = this.safeFilterNumber(input, null);
+    const time = this.clampValue(this.safeFilterNumber(params.time, null), 0.001, maxDelaySeconds);
+    const feedback = this.clampValue(this.safeFilterNumber(params.feedback, null), 0, 0.95);
+    const mix = this.clampValue(this.safeFilterNumber(params.mix, null), 0, 1);
+    const level = this.clampValue(this.safeFilterNumber(params.level, null), 0, 2);
+    const modAmount = this.clampValue(this.safeFilterNumber(params.modAmount, null), 0, 0.5);
+    const modRate = this.clampValue(this.safeFilterNumber(params.modRate, null), 0, 90);
+    const modVariation = this.clampValue(this.safeFilterNumber(params.modVariation, null), 0, 1);
+    const mode = Math.round(this.safeFilterNumber(params.mode, null)) >= 1 ? 1 : 0;
+
+    const variationTarget = this.hashBipolar(
+      Math.floor(state.lfoPhase * 997) + state.position,
+      this.stableSeed(`${nodeId}:delayVariation`),
+    );
+    state.lfoVariationState += (variationTarget - state.lfoVariationState) * Math.min(1, modRate / safeRate);
+    const variedRate = Math.max(0, modRate * (1 + state.lfoVariationState * modVariation));
+    state.lfoPhase = (state.lfoPhase + variedRate / safeRate) % 1;
+    const lfo = (this.delayParabolSample(state.lfoPhase) + 1) * 0.5;
+
+    const delaySamples = this.clampValue(time * safeRate, 1, state.bufferSize - 2);
+    const bufferOffset = delaySamples - delaySamples * lfo * modAmount + 1;
+    state.position = (state.position + 1) % state.bufferSize;
+    const readPosition = (state.position + state.bufferSize - bufferOffset) % state.bufferSize;
+    const wet = this.delayInterpolateLinear(state.buffer, readPosition);
+    const write = mode ? ((0 - dry) - wet * feedback) : (dry + wet * feedback);
+    state.buffer[state.position] = this.clampValue(write, -8, 8);
+    state.wet = mode ? (dry * feedback - wet * (1 - feedback * feedback)) : wet;
+    return {
+      Out: (dry * (1 - mix) + state.wet * mix) * level,
+      Wet: state.wet * level,
+    };
   }
 
   sampleHoldSample(state, input, trigger, threshold) {
@@ -4473,6 +4620,26 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             stages: this.readEffectiveParameter(node, "stages", 4, frame, frames, frameValues),
           },
           safeRate,
+        );
+      } else if (node?.type === "delayEffect") {
+        const state = this.delayEffectStates.get(nodeId) || this.createDelayEffectState();
+        this.delayEffectStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        value = this.delayEffectSample(
+          state,
+          mixInput(nodeId),
+          {
+            feedback: read("feedback", 0.25),
+            level: read("level", 1),
+            mix: read("mix", 0.35),
+            mode: read("mode", 0),
+            modAmount: read("modAmount", 0.02),
+            modRate: read("modRate", 0.1),
+            modVariation: read("modVariation", 0),
+            time: read("time", 0.18),
+          },
+          safeRate,
+          nodeId,
         );
       } else if (node?.type === "slewLimiter") {
         const state = this.slewLimiterStates.get(nodeId) || this.createSlewLimiterState();

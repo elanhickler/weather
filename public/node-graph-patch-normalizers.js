@@ -72,6 +72,11 @@ const nodeGraphScopeShaderVisualOscilloscopeDefaultSource = nodeGraphScopeShader
 
 const nodeGraphCanvasScriptDefaultSource = `canvas.size(1024, 1024);
 canvas.background = transparent;
+bufferInput("A");
+bufferInput("B");
+bufferInput("X");
+bufferInput("Y");
+bufferInput("Opacity");
 
 layer("A").input   = A;
 layer("A").x       = 0.5;
@@ -89,6 +94,7 @@ output = canvas;`;
 
 const nodeGraphScopeShaderModes = Object.freeze(["1d_full", "1d_scan", "x_y", "one_value"]);
 const nodeGraphScopeShaderSyncModes = Object.freeze(["inherit", "on", "off"]);
+const nodeGraphBufferedInputSampleLimit = 262144;
 
 function nodeGraphScopeShaderDefaultSourceForType(type) {
   const moduleType = String(type || "");
@@ -219,6 +225,32 @@ function normalizeNodeGraphCanvasScriptToken(value = "", fallback = "") {
   return text.replace(/^["']|["']$/g, "") || fallback;
 }
 
+function normalizeNodeGraphBufferedInputName(value = "") {
+  return String(value || "").trim().replace(/^["']|["']$/g, "").slice(0, 64);
+}
+
+function normalizeNodeGraphBufferedInputList(inputs = [], allowedPorts = []) {
+  const allowed = new Set((allowedPorts || []).map((port) => String(port || "").trim()).filter(Boolean));
+  const result = [];
+  for (const input of inputs || []) {
+    const name = normalizeNodeGraphBufferedInputName(input);
+    if (!name || (allowed.size && !allowed.has(name)) || result.includes(name)) {
+      continue;
+    }
+    result.push(name);
+  }
+  return result;
+}
+
+function parseNodeGraphCanvasScriptBufferedInputs(source = "", allowedPorts = []) {
+  const names = [];
+  const text = String(source || "");
+  for (const match of text.matchAll(/(?:^|\n)\s*bufferInput\s*\(\s*([^)\n]+?)\s*\)\s*;/gi)) {
+    names.push(normalizeNodeGraphCanvasScriptToken(match[1], ""));
+  }
+  return normalizeNodeGraphBufferedInputList(names, allowedPorts);
+}
+
 function parseNodeGraphCanvasScriptBackground(source = "") {
   const match = String(source || "").match(/(?:^|\n)\s*canvas\.background\s*=\s*([^;\n]+)\s*;/i);
   return normalizeNodeGraphCanvasScriptToken(match?.[1], "transparent").slice(0, 64);
@@ -276,8 +308,10 @@ function parseNodeGraphCanvasScriptLayers(source = "") {
 function parseNodeGraphCanvasScriptModel(source = "") {
   const normalizedSource = String(source || "").trim() || nodeGraphCanvasScriptDefaultSource;
   const size = parseNodeGraphCanvasScriptSize(normalizedSource);
+  const canvasPorts = nodeGraphModuleDefinitions?.canvas?.inputs || [];
   return {
     background: parseNodeGraphCanvasScriptBackground(normalizedSource),
+    bufferedInputs: parseNodeGraphCanvasScriptBufferedInputs(normalizedSource, canvasPorts),
     height: size.height,
     layers: parseNodeGraphCanvasScriptLayers(normalizedSource),
     output: parseNodeGraphCanvasScriptOutput(normalizedSource),
@@ -296,6 +330,8 @@ function normalizeNodeGraphCanvasScript(canvasScript = {}) {
   const model = parseNodeGraphCanvasScriptModel(normalizedSource || nodeGraphCanvasScriptDefaultSource);
   return {
     background: model.background,
+    bufferedInputs: model.bufferedInputs,
+    bufferSampleLimit: nodeGraphBufferedInputSampleLimit,
     enabled: canvasScript?.enabled !== false,
     height: model.height,
     kind: "canvasScript",

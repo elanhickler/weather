@@ -192,11 +192,17 @@ function cloneNodeGraphPatch(patch) {
         ...(node.type === "clapPlugin"
           ? { clap: normalizeNodeGraphClapPluginBinding(node.clap) }
           : {}),
+        ...((node.type === "samplePlayer" || node.type === "sampleLooper") && normalizeNodeGraphSampleId(node.sample?.id)
+          ? { sample: { id: normalizeNodeGraphSampleId(node.sample?.id) } }
+          : {}),
         paramMeta: cloneNodeGraphParamMeta(node.paramMeta),
         params: { ...(node.params || {}) },
         ...(ui.buttonsHidden || ui.titleHidden ? { ui } : {}),
       };
     }),
+    samples: typeof normalizeNodeGraphPatchSamples === "function"
+      ? normalizeNodeGraphPatchSamples(patch.samples)
+      : [],
     timing: normalizeNodeGraphPatchTiming(patch.timing),
     uiItems: normalizeNodeGraphPatchUiItems(patch.uiItems),
     view: normalizeNodeGraphPatchView(patch.view),

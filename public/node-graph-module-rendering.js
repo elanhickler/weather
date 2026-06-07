@@ -34,9 +34,6 @@ function attachNodeGraphNodeEvents(node) {
   node.querySelector(".node-led-face")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
   node.querySelector(".node-bypass-button")?.addEventListener("click", toggleNodeGraphModuleBypass);
   node.querySelector(".node-action-button")?.addEventListener("click", openNodeModuleActionMenu);
-  node.addEventListener("pointermove", dragNodeGraphNode);
-  node.addEventListener("pointerup", endNodeGraphNodeDrag);
-  node.addEventListener("pointercancel", endNodeGraphNodeDrag);
   node.addEventListener("lostpointercapture", endNodeGraphNodeDrag);
   for (const port of node.querySelectorAll(".node-port")) {
     port.addEventListener("pointerdown", toggleNodeGraphMonitorFromPortEvent, true);
@@ -67,6 +64,16 @@ function attachNodeGraphNodeEvents(node) {
       scheduleNodeGraphLiveParameterSync();
     });
   }
+  node.querySelector(".node-module-shop-open-button")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openNodeGraphModuleShop(null);
+  });
+  node.querySelector(".node-module-home-open-button")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openNodeGraphModuleShop(null);
+  });
 }
 
 function nodeGraphModuleButtonsHiddenForNode(node) {
@@ -128,7 +135,7 @@ function createNodeGraphModuleElement(type, node) {
     (port) => !parameterDefinitions.some((parameter) => parameter.key === port),
   );
   const article = document.createElement("article");
-  article.className = `dsp-node${definition.output ? " output-node" : ""}${definition.layout === "textBox" ? " text-box-layout" : ""}${definition.layout === "image" ? " image-node-layout" : ""}${definition.layout === "canvas" ? " canvas-node-layout" : ""}${definition.layout === "visualScope" ? " visual-scope-layout" : ""}${definition.layout === "graph" ? " graph-node-layout" : ""}${definition.layout === "filterCurve" ? " filter-curve-layout" : ""}${definition.layout === "sliderWidget" ? " slider-widget-layout" : ""}${definition.layout === "clapPlugin" ? " clap-plugin-layout" : ""}${definition.layout === "led" ? " led-layout" : ""}`;
+  article.className = `dsp-node${definition.output ? " output-node" : ""}${definition.layout === "textBox" ? " text-box-layout" : ""}${definition.layout === "image" ? " image-node-layout" : ""}${definition.layout === "canvas" ? " canvas-node-layout" : ""}${definition.layout === "visualScope" ? " visual-scope-layout" : ""}${definition.layout === "graph" ? " graph-node-layout" : ""}${definition.layout === "filterCurve" ? " filter-curve-layout" : ""}${definition.layout === "sliderWidget" ? " slider-widget-layout" : ""}${definition.layout === "moduleShop" ? " module-shop-layout" : ""}${definition.layout === "moduleHome" ? " module-home-layout" : ""}${definition.layout === "modulePlaceholder" ? " module-placeholder-layout" : ""}${definition.layout === "clapPlugin" ? " clap-plugin-layout" : ""}${definition.layout === "led" ? " led-layout" : ""}`;
   article.dataset.node = node;
   article.dataset.nodeType = type;
   article.dataset.portSignature = `${inputPorts.join(",")}=>${outputPorts.join(",")}`;
@@ -208,6 +215,14 @@ function createNodeGraphModuleElement(type, node) {
     const outputColumn = createNodeGraphIoColumn(node, type, outputPorts, "output");
     ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
+  } else if (definition.layout === "moduleShop") {
+    article.append(createNodeGraphModuleShopBody(node));
+  } else if (definition.layout === "moduleHome") {
+    article.append(createNodeGraphModuleHomeBody(node));
+  } else if (definition.layout === "modulePlaceholder") {
+    const label = type === "moduleGoods" ? "Goods" : "Services";
+    const note = type === "moduleGoods" ? "Placeholder catalog shelf" : "Placeholder workbench shelf";
+    article.append(createNodeGraphModulePlaceholderBody(node, label, note));
   } else if (definition.layout === "clapPlugin") {
     if (typeof createNodeGraphClapPluginBody === "function") {
       article.append(createNodeGraphClapPluginBody(node));
@@ -233,6 +248,9 @@ function createNodeGraphModuleElement(type, node) {
   } else {
     const scopeSection = createNodeGraphModuleScopeSection(node, type);
     article.append(scopeSection);
+    if ((type === "samplePlayer" || type === "sampleLooper") && typeof createNodeGraphSampleModuleBody === "function") {
+      article.append(createNodeGraphSampleModuleBody(node));
+    }
     registerNodeGraphModuleScopeSlot(article, { nodeId: node, type, scopeElement: scopeSection });
 
     const ioSection = document.createElement("div");

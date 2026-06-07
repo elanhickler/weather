@@ -59,6 +59,9 @@ function bindNodeGraphWorkspaceInteractionEvents() {
   bindNodeGraphConstraintOverlayToggles();
 
   document.addEventListener("pointermove", nodeGraphWireInteractions.dragWire);
+  document.addEventListener("pointermove", dragNodeGraphNode);
+  document.addEventListener("pointerup", endNodeGraphNodeDrag);
+  document.addEventListener("pointercancel", endNodeGraphNodeDrag);
   document.addEventListener("pointermove", dragNodeGraphModulePlacement);
   document.addEventListener("pointermove", dragNodeSlider);
   document.addEventListener("pointermove", dragNodeGraphScopeNumber);

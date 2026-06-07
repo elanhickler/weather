@@ -31,7 +31,7 @@ function normalizeNodeGraphTextBoxVerticalAlignPercent(value) {
 }
 
 const nodeGraphTextBoxTextSizeLimits = Object.freeze({
-  maxPercent: 200,
+  maxPercent: 1000,
   minPercent: 50,
   stepPercent: 10,
 });

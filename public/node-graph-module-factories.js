@@ -160,6 +160,51 @@ function createNodeGraphSliderWidgetBody(node, type) {
   return body;
 }
 
+function createNodeGraphModuleShopBody(node) {
+  const body = document.createElement("div");
+  body.className = "node-module-shop-body";
+  const title = document.createElement("div");
+  title.className = "node-module-shop-title";
+  title.textContent = "Public Modules: Shown";
+  const button = document.createElement("button");
+  button.className = "node-module-shop-open-button";
+  button.type = "button";
+  button.dataset.node = node;
+  button.setAttribute("aria-label", "Open module browser");
+  button.textContent = "Open Shop";
+  body.append(title, button);
+  return body;
+}
+
+function createNodeGraphModuleHomeBody(node) {
+  const body = document.createElement("div");
+  body.className = "node-module-home-body";
+  const title = document.createElement("div");
+  title.className = "node-module-home-title";
+  title.textContent = "Offline Modules: Hidden";
+  const button = document.createElement("button");
+  button.className = "node-module-home-open-button";
+  button.type = "button";
+  button.dataset.node = node;
+  button.setAttribute("aria-label", "Open user module collection");
+  button.textContent = "Open Home";
+  body.append(title, button);
+  return body;
+}
+
+function createNodeGraphModulePlaceholderBody(node, label, note) {
+  const body = document.createElement("div");
+  body.className = "node-module-placeholder-body";
+  const title = document.createElement("div");
+  title.className = "node-module-placeholder-title";
+  title.textContent = label;
+  const detail = document.createElement("div");
+  detail.className = "node-module-placeholder-detail";
+  detail.textContent = note;
+  body.append(title, detail);
+  return body;
+}
+
 function createNodeGraphParameter(node, type, parameter) {
   const row = document.createElement("div");
   row.className = "node-parameter-row";

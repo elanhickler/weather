@@ -84,6 +84,7 @@ PUBLIC_SCRIPT_PATHS = (
     "./public/node-graph-file-actions.js",
     "./public/node-graph-default-buttons.js",
     "./public/node-graph-cookbook-filter.js",
+    "./public/node-graph-color-standards.js",
     "./public/node-graph-module-definitions.js",
     "./public/node-graph-module-store.js",
     "./public/node-graph-module-sizing.js",
@@ -93,6 +94,7 @@ PUBLIC_SCRIPT_PATHS = (
     "./public/node-graph-text-box-utils.js",
     "./public/node-graph-image-utils.js",
     "./public/node-graph-graph-utils.js",
+    "./public/node-graph-samples.js",
     "./public/node-graph-text-box-rendering.js",
     "./public/node-graph-patch-normalizers.js",
     "./public/node-graph-ui-view.js",
@@ -964,7 +966,7 @@ def require_shell_contract(html: str) -> None:
         parser,
         "nodeGraphWorkspace",
         "div",
-        {"aria-label": "Drag wires between DSP node ports; right-click empty scene space to add modules"},
+        {"aria-label": "Drag wires between DSP node ports"},
     )
     require_shell_element(
         parser,
@@ -3420,12 +3422,17 @@ def require_node_graph_mvp_contract() -> None:
     slider_readout_source = script_sources["./public/node-graph-slider-readout.js"]
     tooltip_utils_source = script_sources["./public/node-graph-tooltips.js"]
     wire_actions_source = script_sources["./public/node-graph-wire-actions.js"]
+    color_standards_source = script_sources["./public/node-graph-color-standards.js"]
     color_widget_source = (PUBLIC / "color-widget.js").read_text(encoding="utf-8")
     server_source = (ROOT / "server.py").read_text(encoding="utf-8")
     node_graph_source = "\n".join(script_sources.values()) + f"\n{server_source}"
     style_source = (PUBLIC / "styles.css").read_text(encoding="utf-8")
     tooltip_source = (PUBLIC / "tooltips.json").read_text(encoding="utf-8")
     worklet_source = (PUBLIC / "node-live-audio-worklet.js").read_text(encoding="utf-8")
+    require(
+        '<script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>' in index_source,
+        "color standards script tag missing from index",
+    )
     for snippet in [
         'parsed.path == "/api/shader-script/to-desktop"',
         "def save_shader_script_to_desktop(self) -> None:",
@@ -3438,6 +3445,23 @@ def require_node_graph_mvp_contract() -> None:
         "filename = f\"{safe_title}-{timestamp}.metadata-script.txt\"",
     ]:
         require(snippet in server_source, f"server desktop export contract missing {snippet}")
+    for snippet in [
+        'ZRGBA: "ZRGBA"',
+        'Chroma: "Chroma"',
+        'HLSA: "HLSA"',
+        "function nodeGraphNormalizeColorSpace(space)",
+        "function nodeGraphNormalizeZrgba(color = {})",
+        "function nodeGraphNormalizeHlsa(color = {})",
+        "function nodeGraphNormalizeChroma(color = {})",
+        "function nodeGraphHlsaToZrgba(color = {})",
+        "function nodeGraphZrgbaToHlsa(color = {})",
+        "function nodeGraphChromaToZrgba(color = {})",
+        "function nodeGraphConvertColor(color = {}, from = \"ZRGBA\", to = \"ZRGBA\")",
+        'if (value === "rgba" || value === "zrgba")',
+        "Object.assign(globalThis, {",
+        "nodeGraphOfficialColorStandards",
+    ]:
+        require(snippet in color_standards_source, f"color standards contract missing {snippet}")
     for snippet in [
         "--node-shader-token-property",
         "--node-shader-token-assignment",
@@ -3976,6 +4000,65 @@ def require_node_graph_mvp_contract() -> None:
         "registerNodeGraphModuleScopeSlot" not in graph_render_branch,
         "graph module branch must not register an oscilloscope slot",
     )
+
+    delay_contract_sources = {
+        "definitions": script_sources["./public/node-graph-module-definitions.js"],
+        "store": script_sources["./public/node-graph-module-store.js"],
+        "plan": script_sources["./public/node-graph-live-plan-runtime.js"],
+        "runtime": script_sources["./public/node-graph-live-frame-evaluator.js"],
+        "live runtime": script_sources["./public/node-graph-live-runtime.js"],
+        "worklet": worklet_source,
+    }
+    for name, source, snippets in [
+        (
+            "definitions",
+            delay_contract_sources["definitions"],
+            [
+                'delayEffect: "Delay"',
+                "delayEffect: {",
+                'inputs: ["In"]',
+                'outputs: ["Out", "Wet"]',
+                'key: "time"',
+                'key: "feedback"',
+                'key: "modAmount"',
+                'choices: ["Delay", "Diffuse"]',
+            ],
+        ),
+        (
+            "store",
+            delay_contract_sources["store"],
+            [
+                '"delayEffect"',
+                "SOEMDSP-style modulated fractional delay",
+                'label: "Delay"',
+            ],
+        ),
+        (
+            "runtime",
+            "\n".join([
+                delay_contract_sources["plan"],
+                delay_contract_sources["runtime"],
+                delay_contract_sources["worklet"],
+            ]),
+            [
+                "delayEffectStates",
+                "createNodeGraphDelayEffectState",
+                "nodeGraphDelayEffectSample",
+                "createDelayEffectState",
+                "delayEffectSample",
+                "delayParabolSample",
+                "delayInterpolateLinear",
+                'node?.type === "delayEffect"',
+            ],
+        ),
+        (
+            "worklet cache",
+            delay_contract_sources["live runtime"],
+            ['node-live-audio-worklet.js?v=modulated-delay-1'],
+        ),
+    ]:
+        for snippet in snippets:
+            require(snippet in source, f"missing delay {name} contract: {snippet}")
 
     clap_contract_sources = {
         "definitions": script_sources["./public/node-graph-module-definitions.js"],
@@ -6320,7 +6403,7 @@ def require_node_graph_mvp_contract() -> None:
         '"slider"',
         '"settings"',
         '"audio"',
-        '"Mouse: middle-drag to move the modular view freely. Ctrl+middle-drag or Alt+middle-drag slowly zooms, including over modules and controls. Right-click empty space opens the add module dialog. Ctrl+Shift+G aligns the view to the grid."',
+        '"Mouse: middle-drag to move the modular view freely. Ctrl+middle-drag or Alt+middle-drag slowly zooms, including over modules and controls. Ctrl+Shift+G aligns the view to the grid."',
         '"Mouse: drag to move modules. Click to select. Ctrl/Shift+click adds or removes from selection; Ctrl/Shift+drag adds to selection while moving."',
         '"Mouse: drag to move modules. Click to select; Ctrl/Shift+click adds or removes from selection. When module buttons are hidden, Alt+click the title to toggle bypass."',
         '"Display-only text. Edit content from this module\'s actions menu. Text clips to the box height and scales down to fit width. Mouse wheel zooms the modular view."',
@@ -6415,6 +6498,11 @@ def require_node_graph_mvp_contract() -> None:
 
     for snippet in [
         'createNodeGraphPatchNode("output", { id: "output"',
+        'createNodeGraphPatchNode("canvas", { alias: "Origin", heightGu: 8, id: "canvas-origin"',
+        'createNodeGraphPatchNode("moduleHome", { id: "home"',
+        'createNodeGraphPatchNode("moduleShop", { id: "shop"',
+        'createNodeGraphPatchNode("moduleGoods", { id: "goods"',
+        'createNodeGraphPatchNode("moduleServices", { id: "services"',
         'destinationNode: "output"',
         'sourcePort: "Saw"',
         "nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node }))",
@@ -6422,7 +6510,33 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphEmptyModuleButton",
         "openNodeGraphModuleShop(null)",
         "workspace?.classList.toggle(\"empty-patch\", visiblePatchNodeCount === 0)",
-        "emptyButton.hidden = visiblePatchNodeCount !== 0",
+        "emptyButton.hidden = true",
+        "moduleShop: \"Shop\"",
+        "layout: \"moduleShop\"",
+        "moduleHome: \"Home\"",
+        "layout: \"moduleHome\"",
+        "moduleGoods: \"Goods\"",
+        "moduleServices: \"Services\"",
+        "layout: \"modulePlaceholder\"",
+        "createNodeGraphModuleShopBody",
+        "createNodeGraphModuleHomeBody",
+        "createNodeGraphModulePlaceholderBody",
+        "node-module-shop-open-button",
+        "node-module-home-open-button",
+        "Public Modules: Shown",
+        "Offline Modules: Hidden",
+        "node-module-placeholder-body",
+        "module-shop-layout",
+        "module-home-layout",
+        "module-placeholder-layout",
+        "![\"canvas-origin\", \"home\", \"goods\", \"services\"].includes(node.id)",
+        "nodes.some((node) => node.id === \"canvas-origin\")",
+        "nodes.some((node) => node.id === \"home\")",
+        "nodes.some((node) => node.id === \"goods\")",
+        "nodes.some((node) => node.id === \"services\")",
+        "const originNode = nodeGraphMvp.patch.nodes.find((node) => node.id === \"canvas-origin\")",
+        "Patch-local button that opens the module browser.",
+        "if (!nodes.some((node) => node.type === \"moduleShop\"))",
         "timing: {",
         "tempoBpm: 120",
         "timeSignatureDenominator: 4",
@@ -6665,11 +6779,19 @@ def require_node_graph_mvp_contract() -> None:
         'Image: "RGBA"',
         'outputs: ["RGBA"]',
         "canvas: {",
+        'bufferedInputs: ["A", "B", "X", "Y", "Opacity"]',
         'inputs: ["A", "B", "X", "Y", "Opacity"]',
         'layout: "canvas"',
         'outputs: ["RGBA"]',
         'key: "canvasA"',
         'key: "canvasB"',
+        'bufferInput("X")',
+        "function parseNodeGraphCanvasScriptBufferedInputs",
+        "function nodeGraphPatchNodeBufferedInputs",
+        "bufferSampleLimit: nodeGraphBufferedInputSampleLimit",
+        "input?.buffered",
+        "writeVisualInputBufferSample",
+        "writeNodeGraphVisualInputBufferSample",
         "visualOscilloscope: {",
         'outputs: ["RGBA"]',
         'inputs: ["In", "X", "Y"]',
@@ -7272,6 +7394,7 @@ def require_node_graph_mvp_contract() -> None:
         "function normalizeNodeGraphTextBoxHorizontalAlign(value)",
         "function normalizeNodeGraphTextBoxVerticalAlignPercent(value)",
         "function normalizeNodeGraphTextBoxTextSizePercent(value)",
+        "maxPercent: 1000",
         "textSizePercent: normalizeNodeGraphTextBoxTextSizePercent",
         'return ["left", "center", "right"].includes(align) ? align : "center"',
         "horizontalAlign: normalizeNodeGraphTextBoxHorizontalAlign",
@@ -7718,6 +7841,14 @@ def require_node_graph_mvp_contract() -> None:
         "positionNodeSceneContextMenu(",
         "const nodeGraphModuleGroupStorageKey",
         "const nodeGraphModuleCatalogVisibilityStorageKey",
+        "soemdsp-sandbox.moduleCatalogVisibility.v2",
+        "home: false",
+        "shop: true",
+        "homeVisible: nodeGraphModuleIsStoreVisible(type, \"home\")",
+        "shopVisible: nodeGraphModuleIsStoreVisible(type, \"shop\")",
+        "toggle.dataset.storeToggleShelf = \"shop\"",
+        "Remove From Shop",
+        "Show In Shop",
         "function loadNodeGraphModuleCatalogVisibilityLocal()",
         "function saveNodeGraphModuleCatalogVisibilityLocal(value = nodeGraphModuleCatalogVisibility())",
         "data-context-group",
@@ -7729,7 +7860,7 @@ def require_node_graph_mvp_contract() -> None:
         "scene-context-store-preview-core",
         "scene-context-store-manual-note",
         "setAttribute(\"role\", \"img\")",
-        "function setNodeGraphModuleCatalogVisibility(type, visible)",
+        "function setNodeGraphModuleCatalogVisibility(type, visible, shelf = \"shop\")",
         "const nodeGraphModuleStoreDepartments = Object.freeze([",
         "\"Oscillator\"",
         "\"Additive Engines\"",
@@ -7764,7 +7895,7 @@ def require_node_graph_mvp_contract() -> None:
         "MelodySequencer",
         "ChordSequencer",
         "Arpeggiator",
-        "DelayEffect",
+        "Delay",
         "ReverbEffect",
         "DistortionEffect",
         "DigitalCurveEnvelope",
@@ -7781,8 +7912,8 @@ def require_node_graph_mvp_contract() -> None:
         "MIDIController",
         "MIDI Keyboard",
         "XYPad",
-        "SamplePlayer",
-        "SampleLooper",
+        "Sample Player",
+        "Sample Looper",
         "Lorenz Attractor",
         "RosslerAttractor",
         "ChuaAttractor",
@@ -8840,7 +8971,7 @@ def require_node_graph_mvp_contract() -> None:
         "function renderNodeGraphMarqueeSelection()",
         "function nodeGraphWireSelectionExists(selection = nodeGraphMvp.selected)",
         "function nodeGraphNodeCanBeDeleted(node)",
-        'return Boolean(node && node.type !== "output")',
+        'return Boolean(node && node.type !== "output" && !["canvas-origin", "home", "goods", "services"].includes(node.id))',
         "function nodeGraphNodeDeleteHidesOnly(node)",
         "function nodeGraphSelectionCanDelete(selection = nodeGraphMvp.selected)",
         "function nodeGraphDeleteTitle(selection = nodeGraphMvp.selected)",

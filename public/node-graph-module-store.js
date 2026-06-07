@@ -49,6 +49,9 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "midiNotePitch",
   "midiController",
   "keyboardController",
+  "moduleGoods",
+  "moduleShop",
+  "moduleServices",
   "macroControls",
   "pitchModWheel",
   "xyPad",
@@ -96,7 +99,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
 ]);
 
 const nodeGraphModuleGroupStorageKey = "soemdsp-sandbox.moduleGroups.v1";
-const nodeGraphModuleCatalogVisibilityStorageKey = "soemdsp-sandbox.moduleCatalogVisibility.v1";
+const nodeGraphModuleCatalogVisibilityStorageKey = "soemdsp-sandbox.moduleCatalogVisibility.v2";
 
 const nodeGraphModuleStoreDepartments = Object.freeze([
   "Oscillator",
@@ -522,6 +525,24 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     label: "MIDI Keyboard",
     notes: ["keyboard input", "midi pitch", "gesture signals"],
   },
+  moduleShop: {
+    category: "Controllers",
+    description: "Patch-local button that opens the module browser.",
+    label: "Shop",
+    notes: ["module browser", "patch control", "shop"],
+  },
+  moduleGoods: {
+    category: "Controllers",
+    description: "Placeholder shelf for future goods inside the modular world.",
+    label: "Goods",
+    notes: ["placeholder", "goods", "catalog"],
+  },
+  moduleServices: {
+    category: "Controllers",
+    description: "Placeholder shelf for future services inside the modular world.",
+    label: "Services",
+    notes: ["placeholder", "services", "workbench"],
+  },
   macroControls: {
     category: "Controllers",
     description: "Reads the ten macro knobs under the modular view and emits M1 through M10 as live 0..1 control signals.",
@@ -602,15 +623,15 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   samplePlayer: {
     category: "Samples",
-    description: "Placeholder for loading and triggering one-shot samples from the patch.",
-    label: "SamplePlayer",
-    notes: ["placeholder", "one-shot", "audio clip"],
+    description: "Patch-local one-shot sample playback. Trigger starts from Start and plays to End with simple click ramps.",
+    label: "Sample Player",
+    notes: ["sample playback", "one shot", "audio source"],
   },
   sampleLooper: {
     category: "Samples",
-    description: "Placeholder for loop playback with timing controls and modulation-friendly parameters.",
-    label: "SampleLooper",
-    notes: ["placeholder", "loop playback", "timed sample"],
+    description: "Patch-local gated sample loop playback with loop bounds, pitch control, and seam crossfade.",
+    label: "Sample Looper",
+    notes: ["sample playback", "loop", "audio source"],
   },
   highpass: {
     category: "Filter",
@@ -646,9 +667,9 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   delayEffect: {
     category: "Effects",
-    description: "Placeholder for tempo-aware echo, slapback, and feedback delay effects.",
-    label: "DelayEffect",
-    notes: ["placeholder", "echo", "feedback"],
+    description: "SOEMDSP-style modulated fractional delay with feedback, wet/dry mix, and diffuse mode.",
+    label: "Delay",
+    notes: ["modulated delay", "fractional echo", "diffuse mode"],
   },
   reverbEffect: {
     category: "Effects",
@@ -774,13 +795,39 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
 });
 
 function defaultNodeGraphModuleCatalogVisibility() {
-  return Object.fromEntries(nodeGraphModuleStoreTypes.map((type) => [type, true]));
+  return Object.fromEntries(
+    nodeGraphModuleStoreTypes.map((type) => [
+      type,
+      {
+        home: false,
+        shop: true,
+      },
+    ]),
+  );
 }
 
 function normalizeNodeGraphModuleCatalogVisibility(value = {}) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return Object.fromEntries(
-    nodeGraphModuleStoreTypes.map((type) => [type, source[type] !== false]),
+    nodeGraphModuleStoreTypes.map((type) => {
+      const entry = source[type];
+      if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+        return [
+          type,
+          {
+            home: entry.home === true,
+            shop: entry.shop !== false,
+          },
+        ];
+      }
+      return [
+        type,
+        {
+          home: false,
+          shop: entry !== false,
+        },
+      ];
+    }),
   );
 }
 
@@ -788,8 +835,9 @@ function nodeGraphModuleCatalogVisibility() {
   return normalizeNodeGraphModuleCatalogVisibility(nodeGraphMvp.moduleCatalogVisibility);
 }
 
-function nodeGraphModuleIsStoreVisible(type) {
-  return nodeGraphModuleCatalogVisibility()[type] !== false;
+function nodeGraphModuleIsStoreVisible(type, shelf = "shop") {
+  const visibility = nodeGraphModuleCatalogVisibility()[type];
+  return Boolean(visibility?.[shelf === "home" ? "home" : "shop"]);
 }
 
 function applyNodeGraphModuleCatalogVisibility(value = {}) {
@@ -834,19 +882,26 @@ function nodeGraphModuleStoreEntries() {
       type,
       demoPatch: nodeGraphModuleStoreDemoPatchAvailable(type),
       demoListen: nodeGraphModuleStoreDemoListenAvailable(type),
+      homeVisible: nodeGraphModuleIsStoreVisible(type, "home"),
       implemented: Object.hasOwn(nodeGraphModuleDefinitions, type),
       label: nodeGraphModuleStoreCatalog[type]?.label || nodeGraphNodeLabels[type] || type,
-      visible: nodeGraphModuleIsStoreVisible(type),
+      shopVisible: nodeGraphModuleIsStoreVisible(type, "shop"),
+      visible: nodeGraphModuleIsStoreVisible(type, "shop"),
     }));
 }
 
-function setNodeGraphModuleCatalogVisibility(type, visible) {
+function setNodeGraphModuleCatalogVisibility(type, visible, shelf = "shop") {
   if (!nodeGraphModuleStoreTypes.includes(type)) {
     return;
   }
+  const key = shelf === "home" ? "home" : "shop";
+  const current = nodeGraphModuleCatalogVisibility();
   nodeGraphMvp.moduleCatalogVisibility = {
-    ...nodeGraphModuleCatalogVisibility(),
-    [type]: Boolean(visible),
+    ...current,
+    [type]: {
+      ...(current[type] || { home: false, shop: true }),
+      [key]: Boolean(visible),
+    },
   };
   saveNodeGraphModuleCatalogVisibilityLocal();
   renderNodeGraphModuleStoreCatalog();
@@ -1078,6 +1133,8 @@ function createNodeGraphModuleStoreButton(entry) {
   const card = document.createElement("div");
   card.className = "scene-context-store-card";
   card.dataset.moduleEnabled = String(entry.visible);
+  card.dataset.homeEnabled = String(entry.homeVisible);
+  card.dataset.shopEnabled = String(entry.shopVisible);
   card.title = `${entry.label}: ${entry.description || "Module reference entry."}`;
 
   const meta = document.createElement("span");
@@ -1138,11 +1195,12 @@ function createNodeGraphModuleStoreButton(entry) {
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.dataset.storeToggleModule = entry.type;
-  toggle.dataset.visible = String(!entry.visible);
-  toggle.textContent = entry.visible ? "Remove Module" : "Install Module";
+  toggle.dataset.storeToggleShelf = "shop";
+  toggle.dataset.visible = String(!entry.shopVisible);
+  toggle.textContent = entry.shopVisible ? "Remove From Shop" : "Show In Shop";
   toggle.addEventListener("click", (event) => {
     event.stopPropagation();
-    setNodeGraphModuleCatalogVisibility(entry.type, !entry.visible);
+    setNodeGraphModuleCatalogVisibility(entry.type, !entry.shopVisible, "shop");
   });
   actions.append(toggle);
 
