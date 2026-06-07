@@ -464,6 +464,34 @@ function nodeMetadataScriptPreviewItemHtml(assignment, details = "supported") {
     </li>`;
 }
 
+function nodeMetadataScriptPreviewSummary(source = metadataScriptSourceText()) {
+  const diagnostics = analyzeNodeMetadataScriptSource(source);
+  const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
+  const currentMetadata = slider ? nodeSliderMetadata(slider) : null;
+  const draftMetadata = currentMetadata ? {
+    ...currentMetadata,
+    choices: [...(currentMetadata.choices || [])],
+  } : null;
+  const counts = {
+    changed: 0,
+    ignored: diagnostics.ignored.length,
+    same: 0,
+    supported: diagnostics.supportedCount,
+  };
+  for (const assignment of diagnostics.supported) {
+    const details = nodeMetadataScriptPreviewDetails(assignment, draftMetadata);
+    if (details.state === "changed") {
+      counts.changed += 1;
+    } else if (details.state === "same") {
+      counts.same += 1;
+    }
+  }
+  return {
+    ...diagnostics,
+    counts,
+  };
+}
+
 function nodeMetadataScriptEffectiveRows(metadata) {
   const flags = [
     metadata.displayChoices ? "display choices" : "",
@@ -590,7 +618,7 @@ function handleNodeMetadataScriptPreviewClick(event) {
 }
 
 function nodeMetadataScriptDiagnosticMessage(source = metadataScriptSourceText()) {
-  const diagnostics = analyzeNodeMetadataScriptSource(source);
+  const diagnostics = nodeMetadataScriptPreviewSummary(source);
   const settingsText = diagnostics.supportedCount === 1
     ? "1 setting"
     : `${diagnostics.supportedCount} settings`;
@@ -608,10 +636,13 @@ function nodeMetadataScriptDiagnosticMessage(source = metadataScriptSourceText()
     return {
       detail,
       error: true,
-      message: `unsaved: ${settingsText}; ignored lines ${diagnostics.ignored.join(", ")}`,
+      message: `unsaved: ${settingsText}; ${diagnostics.counts.changed} changes; ${diagnostics.counts.same} same; ignored lines ${diagnostics.ignored.join(", ")}`,
     };
   }
-  return { error: false, message: `unsaved: ${settingsText} ready` };
+  return {
+    error: false,
+    message: `unsaved: ${settingsText}; ${diagnostics.counts.changed} changes; ${diagnostics.counts.same} same`,
+  };
 }
 
 function syncNodeMetadataScriptDiagnostics() {
@@ -648,6 +679,8 @@ this line is intentionally invalid
     nodeMetadataScriptPreviewDetails({ key: "def", rawValue: "441" }, { def: 440, kind: "decimal" }).after === "441",
     nodeMetadataScriptPreviewDetails({ key: "def", rawValue: "441" }, { def: 440, kind: "decimal" }).before === "440",
     nodeMetadataScriptUnsupportedPreviewDetails({ path: "param.frequency.unknown" }).after === "unsupported: param.frequency.unknown",
+    nodeMetadataScriptDiagnosticMessage("param.frequency.default = 441;").message.includes("changes"),
+    nodeMetadataScriptDiagnosticMessage("param.frequency.unknown = 1;").message.includes("ignored lines"),
     nodeMetadataScriptEffectiveRows({ kind: "decimal", min: 0, mid: 0.5, max: 1, def: 0.25, step: 0, unit: "", maxDigits: 2, choices: [], displayChoices: false, divideChoicesVisibly: false, linearSmoothing: true, nonlinearSlider: false, showSign: false, wraparound: false })
       .some(([key, value]) => key === "step" && value === "any"),
     nodeMetadataScriptTemplateForKind(fakeSlider, "waveform").includes("param.waveform.choices = [Saw, Square, Triangle, Sine, Noise];"),
