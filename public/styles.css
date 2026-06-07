@@ -8830,6 +8830,16 @@ audio {
   color: rgba(255, 178, 178, 0.9);
 }
 
+.metadata-script-preview li.changed span,
+.metadata-script-preview li.changed code {
+  color: rgba(244, 213, 166, 0.9);
+}
+
+.metadata-script-preview li.same span,
+.metadata-script-preview li.same code {
+  color: rgba(156, 164, 166, 0.82);
+}
+
 .metadata-script-preview li.more {
   opacity: 0.72;
 }

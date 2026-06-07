@@ -378,10 +378,48 @@ function analyzeNodeMetadataScriptSource(source) {
   };
 }
 
+function nodeMetadataScriptPreviewValueFingerprint(value) {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value.map((entry) => String(entry || "").trim()));
+  }
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+  if (Number.isFinite(Number(value)) && String(value).trim() !== "") {
+    return String(Number(value));
+  }
+  return String(value ?? "").trim();
+}
+
+function nodeMetadataScriptPreviewState(assignment, draftMetadata) {
+  if (!draftMetadata || !nodeMetadataScriptSupportedKeys.has(assignment.key)) {
+    return "supported";
+  }
+  try {
+    const before = nodeMetadataScriptPreviewValueFingerprint(draftMetadata[assignment.key]);
+    const parsedValue = parseNodeMetadataScriptValue(
+      assignment.rawValue,
+      assignment.key,
+      draftMetadata,
+    );
+    draftMetadata[assignment.key] = parsedValue;
+    const after = nodeMetadataScriptPreviewValueFingerprint(parsedValue);
+    return before === after ? "same" : "changed";
+  } catch {
+    return "supported";
+  }
+}
+
 function nodeMetadataScriptPreviewItemHtml(assignment, state = "supported") {
-  const stateText = state === "unsupported" ? "ignored" : "will set";
+  const stateText = state === "unsupported"
+    ? "ignored"
+    : state === "same"
+      ? "same"
+      : state === "changed"
+        ? "change"
+        : "will set";
   return `
-    <li class="${state === "unsupported" ? "ignored" : ""}">
+    <li class="${state === "unsupported" ? "ignored" : state}">
       <span>${escapeNodeMetadataScriptHtml(stateText)}</span>
       <strong>${escapeNodeMetadataScriptHtml(assignment.key)}</strong>
       <code>${escapeNodeMetadataScriptHtml(assignment.rawValue)}</code>
@@ -395,9 +433,18 @@ function updateNodeMetadataScriptPreview(source = metadataScriptSourceText()) {
   }
   const diagnostics = analyzeNodeMetadataScriptSource(source);
   const maxVisibleItems = 8;
+  const slider = document.getElementById(nodeGraphMvp.metadataEditorTarget);
+  const currentMetadata = slider ? nodeSliderMetadata(slider) : null;
+  const draftMetadata = slider ? {
+    ...currentMetadata,
+    choices: [...(currentMetadata.choices || [])],
+  } : null;
   const items = [
     ...diagnostics.supported.map((assignment) =>
-      nodeMetadataScriptPreviewItemHtml(assignment, "supported")),
+      nodeMetadataScriptPreviewItemHtml(
+        assignment,
+        nodeMetadataScriptPreviewState(assignment, draftMetadata),
+      )),
     ...diagnostics.unsupported.map((assignment) =>
       nodeMetadataScriptPreviewItemHtml(assignment, "unsupported")),
   ];
