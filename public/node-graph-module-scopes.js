@@ -2117,7 +2117,7 @@ function nodeGraphModuleScopeOfflineStereoNoiseXyBuffer(slot) {
   const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
     ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
     : 1;
-  const frames = Math.min(16384, Math.max(64, 64 * overdrawPoints));
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(16384, overdrawPoints);
   const stride = 8;
   const historySamples = frames * stride;
   const historyStartSample = Math.max(0, startSample - historySamples);
@@ -2473,6 +2473,12 @@ function nodeGraphModuleScopeOfflineGainAnalyzerBuffer(slot) {
   buffer.nodeGraphScopeSourceFrequency = sourceFrequency;
   buffer.nodeGraphScopeSyncBuffer = buffer;
   return buffer;
+}
+
+function nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints) {
+  const safeLength = Math.max(2, Math.floor(Number(length) || 0));
+  const safeOverdraw = Math.max(1, Math.floor(Number(overdrawPoints) || 1));
+  return Math.min(safeLength, Math.max(512, 512 * safeOverdraw));
 }
 
 function nodeGraphModuleScopeOutputInputConnections(nodeId) {
@@ -2955,7 +2961,7 @@ function nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, xPort = "X", yPort
   const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
     ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
     : 1;
-  const frames = Math.min(length, Math.max(2, 64 * overdrawPoints));
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints);
   const start = Math.max(0, length - frames);
   const x = new Float32Array(frames);
   const y = new Float32Array(frames);
@@ -3000,7 +3006,7 @@ function nodeGraphModuleScopeCapturedVisualOscilloscopeXyBuffer(slot, capturedBu
   const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
     ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
     : 1;
-  const frames = Math.min(length, Math.max(2, 64 * overdrawPoints));
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints);
   const start = Math.max(0, length - frames);
   const x = new Float32Array(frames);
   const y = new Float32Array(frames);
@@ -3035,7 +3041,7 @@ function nodeGraphModuleScopeCapturedStereoNoiseXyBuffer(slot, capturedBuffer = 
   const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
     ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
     : 1;
-  const frames = Math.min(length, Math.max(2, 64 * overdrawPoints));
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints);
   const start = Math.max(0, length - frames);
   const x = new Float32Array(frames);
   const y = new Float32Array(frames);
@@ -5411,7 +5417,7 @@ function applyNodeGraphModuleScopeCanvasAnalogFade(context, canvas, settings) {
   context.restore();
 }
 
-function nodeGraphModuleScopeFallbackBufferView(buffer, limit = 384) {
+function nodeGraphModuleScopeFallbackBufferView(buffer, limit = 2048) {
   if (!buffer || buffer.nodeGraphScopeShaderMode === "one_value") {
     return buffer;
   }
