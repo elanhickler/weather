@@ -2477,7 +2477,7 @@ function nodeGraphModuleScopeOfflineGainAnalyzerBuffer(slot) {
 
 function nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints) {
   const safeLength = Math.max(2, Math.floor(Number(length) || 0));
-  return Math.min(safeLength, nodeGraphModuleScopeOverdrawPointCount(512, overdrawPoints));
+  return Math.min(safeLength, nodeGraphModuleScopeOverdrawPointCount(safeLength, overdrawPoints));
 }
 
 function nodeGraphModuleScopeOverdrawPointCount(baseCount, overdrawPoints) {
@@ -4505,13 +4505,11 @@ function nodeGraphModuleScopeXyPoints(buffer, rect, canvas, pixelRatio, slot) {
     ? clampNodeSliderValue(Number(settings.gain), 0.01, 100)
     : 1;
   const length = Math.min(buffer.x.length, buffer.y.length);
-  const pointLimit = Math.max(2, Math.min(length, Math.floor(Number(buffer.nodeGraphScopeVisualPointLimit) || length)));
-  const step = Math.max(1, Math.ceil(length / pointLimit));
   const square = nodeGraphModuleScopeCenteredSquareRect(rect);
   const centerX = square.left + square.width * 0.5;
   const centerY = square.top + square.height * 0.5;
   const radius = Math.max(1, square.width * 0.44);
-  for (let index = 0; index < length; index += step) {
+  for (let index = 0; index < length; index += 1) {
     const x = centerX + clampNodeSliderValue((Number(buffer.x[index]) || 0) * gain, -1, 1) * radius;
     const y = centerY - clampNodeSliderValue((Number(buffer.y[index]) || 0) * gain, -1, 1) * radius;
     points.push(
