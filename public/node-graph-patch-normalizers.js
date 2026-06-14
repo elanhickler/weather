@@ -107,6 +107,7 @@ screen.pause = Pause;
 screen.traceImage = Trace Image;`;
 
 const nodeGraphScopeShaderModes = Object.freeze(["1d_full", "1d_scan", "x_y", "one_value"]);
+const nodeGraphScopeShaderBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid", "heatmap"]);
 const nodeGraphScopeShaderSyncModes = Object.freeze(["inherit", "on", "off"]);
 const nodeGraphBufferedInputSampleLimit = 262144;
 
@@ -142,8 +143,24 @@ function normalizeNodeGraphScopeShaderMode(value = "1d_full") {
 }
 
 function parseNodeGraphScopeShaderMode(source = "") {
-  const match = String(source || "").match(/(?:^|\n)\s*scope\.mode\s*=\s*(1d_full|1d_scan|x_y|one_value)\s*;/i);
-  return normalizeNodeGraphScopeShaderMode(match?.[1] || "1d_full");
+  let mode = "1d_full";
+  for (const match of String(source || "").matchAll(/(?:^|\n)\s*scope\.mode\s*=\s*["']?(1d_full|1d_scan|x_y|one_value)["']?\s*;?/gi)) {
+    mode = match[1];
+  }
+  return normalizeNodeGraphScopeShaderMode(mode);
+}
+
+function normalizeNodeGraphScopeShaderBlendMode(value = "laser") {
+  const text = String(value || "laser").trim().toLowerCase();
+  return nodeGraphScopeShaderBlendModes.includes(text) ? text : "laser";
+}
+
+function parseNodeGraphScopeShaderBlendMode(source = "") {
+  let mode = "laser";
+  for (const match of String(source || "").matchAll(/(?:^|\n)\s*blend\.mode\s*=\s*["']?(laser|led|light|paint|solid|heatmap)["']?\s*;?/gi)) {
+    mode = match[1];
+  }
+  return normalizeNodeGraphScopeShaderBlendMode(mode);
 }
 
 function normalizeNodeGraphScopeShaderSync(value = "inherit") {
@@ -185,6 +202,7 @@ function normalizeNodeGraphScopeShader(scopeShader = {}) {
   const normalizedSource = String(source || "").trim().slice(0, 100000);
   const normalizedVideoInput = parseNodeGraphScopeShaderVideoInput(normalizedSource);
   const normalizedMode = parseNodeGraphScopeShaderMode(normalizedSource);
+  const normalizedBlendMode = parseNodeGraphScopeShaderBlendMode(normalizedSource);
   const normalizedSync = parseNodeGraphScopeShaderSync(normalizedSource);
   const normalizedCycles = parseNodeGraphScopeShaderNumber(normalizedSource, "cycles", 1.7639, 1, 128);
   const normalizedZoom = parseNodeGraphScopeShaderNumber(normalizedSource, "zoom", 1, 0.01, 50);
@@ -193,6 +211,7 @@ function normalizeNodeGraphScopeShader(scopeShader = {}) {
   const normalizedSyncSpeed = parseNodeGraphScopeShaderNumber(normalizedSource, "syncSpeed", 1, 0, 50);
   return {
     cycles: normalizedCycles,
+    blendMode: normalizedBlendMode,
     enabled: scopeShader?.enabled !== false,
     kind: "scopeShader",
     language,

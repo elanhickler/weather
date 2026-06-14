@@ -244,7 +244,7 @@
         "length": 1,
         "mode": "1d_full",
         "padding": 0.04,
-        "source": "video.input     = output0;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\ndot1.color      = dot1.global.color;\ndot1.size       = 10.7 * dot1.global.size;\ndot1.blur       = 0.03;\ndot1.brightness = 1.05;\ndot2.color      = dot2.global.color;\ndot2.size       = 5.6 * dot2.global.size;\ndot2.blur       = 1.52;\ndot2.brightness = 1.21;\n// Scope modes: 1d_full, 1d_scan\n// Sync options: inherit, on, off\n// Blend options: laser, led, light, paint, solid\n// Change the word after = to switch modes.\nblend.mode      = laser;",
+        "source": "video.input     = output0;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\ndot1.color      = dot1.global.color;\ndot1.size       = 10.7 * dot1.global.size;\ndot1.blur       = 0.03;\ndot1.brightness = 1.05;\ndot2.color      = dot2.global.color;\ndot2.size       = 5.6 * dot2.global.size;\ndot2.blur       = 1.52;\ndot2.brightness = 1.21;\n// Scope modes: 1d_full, 1d_scan\n// Sync options: inherit, on, off\n// Blend options: laser, led, light, paint, solid, heatmap\n// Change the word after = to switch modes.\nblend.mode      = laser;",
         "sync": "inherit",
         "syncSpeed": 1,
         "videoInput": "output0",

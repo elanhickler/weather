@@ -9,7 +9,7 @@ const nodeGraphShaderScriptEditorFontSizeLimits = Object.freeze({
 });
 const nodeGraphShaderScriptUtilityCameraPadding = 18;
 const nodeGraphShaderScriptColorWidgetModuleUrl = "./public/color-widget.js?v=shader-token-color-widget-1";
-const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid"]);
+const nodeGraphShaderScriptBlendModes = Object.freeze(["laser", "led", "light", "paint", "solid", "heatmap"]);
 const nodeGraphShaderScriptBlendModePatternSource = nodeGraphShaderScriptBlendModes
   .map((mode) => mode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
   .join("|");

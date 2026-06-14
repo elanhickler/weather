@@ -3928,6 +3928,13 @@ function nodeGraphModuleScopeTraceColors(setting) {
   };
 }
 
+function nodeGraphModuleScopeHeatmapTraceColors() {
+  return {
+    core: [1, 1, 1],
+    halo: [0.42, 0.42, 0.42],
+  };
+}
+
 function nodeGraphModuleScopeZoomScale() {
   const zoom = typeof nodeGraphZoom === "function"
     ? nodeGraphZoom()
@@ -4687,6 +4694,34 @@ function nodeGraphModuleScopeBurnDecaySettings(settings) {
 
 function nodeGraphModuleScopeBloomEnabled() {
   return Boolean(nodeGraphMvp?.scopeBloomEnabled);
+}
+
+function applyNodeGraphModuleScopeTraceBlendMode(gl, blendMode = "laser") {
+  switch (String(blendMode || "laser").trim().toLowerCase()) {
+    case "solid":
+      gl.blendFunc(gl.ONE, gl.ZERO);
+      break;
+    case "paint":
+    case "led":
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      break;
+    case "light":
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      break;
+    case "heatmap":
+    case "laser":
+    default:
+      gl.blendFunc(gl.ONE, gl.ONE);
+      break;
+  }
+}
+
+function nodeGraphModuleScopeTraceBlendMode(slot) {
+  return nodeGraphModuleScopeShaderConfigForSlot(slot).blendMode || "laser";
+}
+
+function nodeGraphModuleScopeHeatmapEnabled(slot) {
+  return nodeGraphModuleScopeTraceBlendMode(slot) === "heatmap";
 }
 
 function nodeGraphModuleScopeTraceBrightness(slot, settings) {
@@ -5451,9 +5486,10 @@ function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
   context.globalCompositeOperation = "lighter";
   context.lineCap = "round";
   context.lineJoin = "round";
-  context.shadowColor = "rgba(61, 224, 255, 0.5)";
+  const heatmapMode = nodeGraphModuleScopeHeatmapEnabled(slot);
+  context.shadowColor = heatmapMode ? "rgba(255, 255, 255, 0.5)" : "rgba(61, 224, 255, 0.5)";
   context.shadowBlur = Math.max(2, 3.5 * pixelRatio);
-  context.strokeStyle = "rgba(61, 224, 255, 0.38)";
+  context.strokeStyle = heatmapMode ? "rgba(255, 255, 255, 0.22)" : "rgba(61, 224, 255, 0.38)";
   context.lineWidth = Math.max(1, 3 * pixelRatio);
   const xyPoints = nodeGraphModuleScopeXyPoints(fallbackBuffer, localRect, proxyCanvas, pixelRatio, slot);
   let drewTrace = false;
@@ -5477,7 +5513,7 @@ function drawNodeGraphVisualOscilloscopeLocalFallback(screenItem, pixelRatio) {
   }
   if (drewTrace) {
     context.shadowBlur = 0;
-    context.strokeStyle = "rgba(130, 244, 255, 0.82)";
+    context.strokeStyle = heatmapMode ? "rgba(255, 255, 255, 0.46)" : "rgba(130, 244, 255, 0.82)";
     context.lineWidth = Math.max(1, 1.2 * pixelRatio);
     if (xyPoints.length >= 4) {
       drawPointPath(xyPoints);
@@ -5885,27 +5921,33 @@ function drawNodeGraphModuleScopes() {
     if (buffer?.nodeGraphScopeLightDisplay) {
       continue;
     }
-    const colors = nodeGraphModuleScopeTraceColors(scopeSettings);
     gl.enable(gl.SCISSOR_TEST);
     const bloomEnabled = nodeGraphModuleScopeBloomEnabled();
     const burn = bloomEnabled ? nodeGraphModuleScopeTraceBurn(scopeSettings) : 0;
     const brightness = nodeGraphModuleScopeTraceBrightness(slot, scopeSettings);
     const lineThickness = nodeGraphModuleScopeTraceLineThickness(slot, scopeSettings);
     const zoomScale = nodeGraphModuleScopeStrokeZoomScale();
+    const blendMode = nodeGraphModuleScopeTraceBlendMode(slot);
+    const heatmapMode = blendMode === "heatmap";
+    const colors = heatmapMode
+      ? nodeGraphModuleScopeHeatmapTraceColors()
+      : nodeGraphModuleScopeTraceColors(scopeSettings);
     if (bloomEnabled) {
       setNodeGraphModuleScopeDebugPhase(`draw-halo:${slot.type}`);
+      applyNodeGraphModuleScopeTraceBlendMode(gl, blendMode);
       drawNodeGraphModuleScopeBufferWebGl(renderer, scopeRect, buffer, pixelRatio, slot, {
         color: colors.halo,
-        intensity: (0.028 + burn * 0.016) * brightness,
+        intensity: (heatmapMode ? 0.05 : 0.028 + burn * 0.016) * brightness,
         thicknessPx: 3.25 * zoomScale,
         visibleProgressRange,
         visibleRect: visibleScopeRect,
       });
     }
     setNodeGraphModuleScopeDebugPhase(`draw-core:${slot.type}`);
+    applyNodeGraphModuleScopeTraceBlendMode(gl, blendMode);
     drawNodeGraphModuleScopeBufferWebGl(renderer, scopeRect, buffer, pixelRatio, slot, {
       color: colors.core,
-      intensity: (1.0 + (bloomEnabled ? burn * 0.08 : 0)) * brightness,
+      intensity: (heatmapMode ? 0.34 : 1.0 + (bloomEnabled ? burn * 0.08 : 0)) * brightness,
       thicknessPx: 1.25 * zoomScale,
       visibleProgressRange,
       visibleRect: visibleScopeRect,
