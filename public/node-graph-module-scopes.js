@@ -3967,6 +3967,48 @@ function nodeGraphModuleScopeHeatmapTraceColors() {
   };
 }
 
+function nodeGraphModuleScopeDotStyle(slot, buffer) {
+  const source = nodeGraphModuleScopeShaderSourceForSlot(slot);
+  const coreFallback = nodeGraphModuleScopeShaderGlobalColor("dot1");
+  const haloFallback = nodeGraphModuleScopeShaderGlobalColor("dot2");
+  const coreBrightness = nodeGraphMvp?.moduleScopeDotCore1Enabled === false
+    ? 0
+    : nodeGraphModuleScopeShaderNumber(
+      source,
+      "dot1",
+      "brightness",
+      normalizeNodeGraphModuleScopeDotCoreBrightness(
+        nodeGraphMvp?.moduleScopeDotCore1Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+        nodeGraphModuleScopeDefaultDotCores.dot1.brightness,
+      ),
+    );
+  const haloBrightness = nodeGraphMvp?.moduleScopeDotCore2Enabled === false
+    ? 0
+    : nodeGraphModuleScopeShaderNumber(
+      source,
+      "dot2",
+      "brightness",
+      normalizeNodeGraphModuleScopeDotCoreBrightness(
+        nodeGraphMvp?.moduleScopeDotCore2Brightness ?? nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+        nodeGraphModuleScopeDefaultDotCores.dot2.brightness,
+      ),
+    );
+  return {
+    coreBrightness: clampNodeSliderValue(coreBrightness, 0, 40),
+    coreColor: nodeGraphScopeHexColorToRgb(
+      nodeGraphModuleScopeShaderColor(source, "dot1", coreFallback),
+    ),
+    haloBrightness: clampNodeSliderValue(haloBrightness, 0, 40),
+    haloColor: nodeGraphModuleScopeMixColor(
+      nodeGraphScopeHexColorToRgb(
+        nodeGraphModuleScopeShaderColor(source, "dot2", haloFallback),
+      ),
+      [0, 0, 0],
+      0.15,
+    ),
+  };
+}
+
 function nodeGraphModuleScopeZoomScale() {
   const zoom = typeof nodeGraphZoom === "function"
     ? nodeGraphZoom()
@@ -4873,6 +4915,7 @@ function nodeGraphModuleScopeGeneratedDotTextureData(...args) {
 function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
   const state = nodeGraphModuleScopeState.traceImageTexture;
   const core1Enabled = nodeGraphMvp?.moduleScopeDotCore1Enabled !== false;
+  const core1Enabled = nodeGraphMvp?.moduleScopeDotCore1Enabled !== false;
   const core1Size = normalizeNodeGraphModuleScopeDotCoreSize(
     nodeGraphMvp?.moduleScopeDotCore1Size ?? nodeGraphModuleScopeDefaultDotCores.dot1.size,
     nodeGraphModuleScopeDefaultDotCores.dot1.size,
@@ -4885,6 +4928,7 @@ function nodeGraphModuleScopeGeneratedDotTexture(renderer) {
     nodeGraphMvp?.moduleScopeDotCore1Color ?? nodeGraphModuleScopeDefaultDotCores.dot1.color,
     nodeGraphModuleScopeDefaultDotCores.dot1.color,
   );
+  const core2Enabled = nodeGraphMvp?.moduleScopeDotCore2Enabled !== false;
   const core2Enabled = nodeGraphMvp?.moduleScopeDotCore2Enabled !== false;
   const core2Size = normalizeNodeGraphModuleScopeDotCoreSize(
     nodeGraphMvp?.moduleScopeDotCore2Size ?? nodeGraphModuleScopeDefaultDotCores.dot2.size,
@@ -5496,9 +5540,11 @@ function nodeGraphModuleScopeCanvasDotSprite(heatmapMode = false) {
   const key = [
     "canvas-dot-generated",
     heatmapMode ? "heatmap" : "color",
+    core1Enabled ? "core1-on" : "core1-off",
     core1Size.toFixed(3),
     core1Brightness.toFixed(3),
     heatmapMode ? "#ffffff" : core1Color,
+    core2Enabled ? "core2-on" : "core2-off",
     core2Size.toFixed(3),
     core2Brightness.toFixed(3),
     heatmapMode ? "#ffffff" : core2Color,
@@ -5519,11 +5565,15 @@ function nodeGraphModuleScopeCanvasDotSprite(heatmapMode = false) {
   }
   const pixels = nodeGraphModuleScopeGeneratedDotTextureData({
     core1Blur: heatmapMode ? 0.72 : 0.58,
-    core1Brightness: heatmapMode ? Math.max(0.55, core1Brightness) : core1Brightness,
+    core1Brightness: core1Enabled
+      ? heatmapMode ? Math.max(0.55, core1Brightness) : core1Brightness
+      : 0,
     core1Color: heatmapMode ? "#ffffff" : core1Color,
     core1Size,
     core2Blur: 0.95,
-    core2Brightness: heatmapMode ? Math.max(0.18, core2Brightness * 0.65) : core2Brightness,
+    core2Brightness: core2Enabled
+      ? heatmapMode ? Math.max(0.18, core2Brightness * 0.65) : core2Brightness
+      : 0,
     core2Color: heatmapMode ? "#ffffff" : core2Color,
     core2Size,
     lineThickness,
@@ -5562,7 +5612,13 @@ function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pix
     : typeof normalizeNodeGraphModuleScopeDiscontinuitySkipSamples === "function"
       ? normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(nodeGraphMvp?.moduleScopeDiscontinuitySkipSamples ?? 1)
       : 1;
-  const colors = heatmapMode ? nodeGraphModuleScopeHeatmapTraceColors() : nodeGraphModuleScopeTraceColors(slot);
+  const colors = heatmapMode ? nodeGraphModuleScopeHeatmapTraceColors() : nodeGraphModuleScopeDotStyle(slot, null);
+  const haloBrightness = heatmapMode
+    ? (nodeGraphMvp?.moduleScopeDotCore2Enabled === false ? 0 : 1)
+    : colors.haloBrightness / nodeGraphModuleScopeDefaultDotCores.dot2.brightness;
+  const coreBrightness = heatmapMode
+    ? (nodeGraphMvp?.moduleScopeDotCore1Enabled === false ? 0 : 1)
+    : colors.coreBrightness / nodeGraphModuleScopeDefaultDotCores.dot1.brightness;
   let segmentCount = 0;
 
   context.save();
@@ -5618,8 +5674,22 @@ function drawNodeGraphModuleScopeCanvasDotPath(context, points, proxyCanvas, pix
     context.stroke();
   };
 
-  drawConnectedStroke(strokeUnit * 5.5, strokeUnit * 4.5, colors.halo, heatmapMode ? 0.14 : 0.18);
-  drawConnectedStroke(strokeUnit * 1.65, strokeUnit * 1.25, colors.core, heatmapMode ? 0.5 : 0.76);
+  if (haloBrightness > 0) {
+    drawConnectedStroke(
+      strokeUnit * 5.5,
+      strokeUnit * 4.5,
+      colors.haloColor ?? colors.halo,
+      (heatmapMode ? 0.14 : 0.18) * haloBrightness,
+    );
+  }
+  if (coreBrightness > 0) {
+    drawConnectedStroke(
+      strokeUnit * 1.65,
+      strokeUnit * 1.25,
+      colors.coreColor ?? colors.core,
+      (heatmapMode ? 0.5 : 0.76) * coreBrightness,
+    );
+  }
   context.restore();
   recordNodeGraphModuleScopeRenderMetrics(points.length / 2, segmentCount);
   return segmentCount > 0;
@@ -6094,27 +6164,35 @@ function drawNodeGraphModuleScopes() {
     const heatmapMode = blendMode === "heatmap";
     const colors = heatmapMode
       ? nodeGraphModuleScopeHeatmapTraceColors()
-      : nodeGraphModuleScopeTraceColors(slot);
-    if (bloomEnabled) {
+      : nodeGraphModuleScopeDotStyle(slot, buffer);
+    const haloBrightness = heatmapMode
+      ? (nodeGraphMvp?.moduleScopeDotCore2Enabled === false ? 0 : 1)
+      : colors.haloBrightness / nodeGraphModuleScopeDefaultDotCores.dot2.brightness;
+    const coreBrightness = heatmapMode
+      ? (nodeGraphMvp?.moduleScopeDotCore1Enabled === false ? 0 : 1)
+      : colors.coreBrightness / nodeGraphModuleScopeDefaultDotCores.dot1.brightness;
+    if (haloBrightness > 0) {
       setNodeGraphModuleScopeDebugPhase(`draw-halo:${slot.type}`);
       applyNodeGraphModuleScopeTraceBlendMode(gl, blendMode);
       drawNodeGraphModuleScopeBufferWebGl(renderer, scopeRect, buffer, pixelRatio, slot, {
-        color: colors.halo,
-        intensity: (heatmapMode ? 0.05 : 0.028 + burn * 0.016) * brightness,
+        color: colors.haloColor ?? colors.halo,
+        intensity: (heatmapMode ? 0.05 : 0.028 + (bloomEnabled ? burn * 0.016 : 0.006)) * brightness * haloBrightness,
         thicknessPx: 3.25 * zoomScale,
         visibleProgressRange,
         visibleRect: visibleScopeRect,
       });
     }
-    setNodeGraphModuleScopeDebugPhase(`draw-core:${slot.type}`);
-    applyNodeGraphModuleScopeTraceBlendMode(gl, blendMode);
-    drawNodeGraphModuleScopeBufferWebGl(renderer, scopeRect, buffer, pixelRatio, slot, {
-      color: colors.core,
-      intensity: (heatmapMode ? 0.34 : 1.0 + (bloomEnabled ? burn * 0.08 : 0)) * brightness,
-      thicknessPx: 1.25 * zoomScale,
-      visibleProgressRange,
-      visibleRect: visibleScopeRect,
-    });
+    if (coreBrightness > 0) {
+      setNodeGraphModuleScopeDebugPhase(`draw-core:${slot.type}`);
+      applyNodeGraphModuleScopeTraceBlendMode(gl, blendMode);
+      drawNodeGraphModuleScopeBufferWebGl(renderer, scopeRect, buffer, pixelRatio, slot, {
+        color: colors.coreColor ?? colors.core,
+        intensity: (heatmapMode ? 0.34 : 1.0 + (bloomEnabled ? burn * 0.08 : 0)) * brightness * coreBrightness,
+        thicknessPx: 1.25 * zoomScale,
+        visibleProgressRange,
+        visibleRect: visibleScopeRect,
+      });
+    }
   }
   setNodeGraphModuleScopeDebugPhase("composite");
   gl.disable(gl.SCISSOR_TEST);
