@@ -75,12 +75,6 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     view.moduleScopeDiscontinuitySkipSamples ?? nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
   );
-  const moduleScopeOverdrawPoints = normalizeNodeGraphModuleScopeOverdrawPoints(
-    view.moduleScopeOverdrawPoints ?? nodeGraphMvp.moduleScopeOverdrawPoints ?? 1,
-  );
-  const moduleScopeOverdrawFade = normalizeNodeGraphModuleScopeOverdrawFade(
-    view.moduleScopeOverdrawFade ?? nodeGraphMvp.moduleScopeOverdrawFade ?? 0.5,
-  );
   const sliderLayout = normalizeNodeGraphSliderLayout(view.sliderLayout ?? nodeGraphMvp.sliderLayout);
   const sliderAmountVisible = Boolean(view.sliderAmountVisible ?? nodeGraphMvp.sliderAmountVisible);
   const sliderPositionVisible = Boolean(
@@ -127,8 +121,6 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleScopeFramesPerSecond,
       moduleScopeLineThickness,
       moduleScopeDiscontinuitySkipSamples,
-      moduleScopeOverdrawPoints,
-      moduleScopeOverdrawFade,
       sliderLayout,
       sliderAmountVisible,
       sliderPositionVisible,
@@ -186,8 +178,6 @@ function readNodeUiDevSettingsFromControls() {
       moduleScopeDiscontinuitySkipSamples: normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
         nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
       ),
-      moduleScopeOverdrawPoints: normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp.moduleScopeOverdrawPoints ?? 1),
-      moduleScopeOverdrawFade: normalizeNodeGraphModuleScopeOverdrawFade(nodeGraphMvp.moduleScopeOverdrawFade ?? 0.5),
       sliderLayout: normalizeNodeGraphSliderLayout(nodeGraphMvp.sliderLayout),
       sliderAmountVisible: Boolean(nodeGraphMvp.sliderAmountVisible),
       sliderPositionVisible: Boolean(nodeGraphMvp.sliderPositionVisible),
@@ -259,12 +249,6 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleScopeLineThickness = normalizeNodeGraphModuleScopeLineThickness(normalized.view.moduleScopeLineThickness);
   nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     normalized.view.moduleScopeDiscontinuitySkipSamples,
-  );
-  nodeGraphMvp.moduleScopeOverdrawPoints = normalizeNodeGraphModuleScopeOverdrawPoints(
-    normalized.view.moduleScopeOverdrawPoints,
-  );
-  nodeGraphMvp.moduleScopeOverdrawFade = normalizeNodeGraphModuleScopeOverdrawFade(
-    normalized.view.moduleScopeOverdrawFade,
   );
   nodeGraphMvp.sliderLayout = normalizeNodeGraphSliderLayout(normalized.view.sliderLayout);
   nodeGraphMvp.sliderAmountVisible = Boolean(normalized.view.sliderAmountVisible);

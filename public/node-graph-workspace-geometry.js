@@ -34,6 +34,9 @@ function applyNodeGraphWorkspaceView() {
   }
   workspace.dataset.widthGu = String(view.widthGu);
   workspace.dataset.heightGu = String(view.heightGu);
+  if (typeof syncNodeGraphWorkspaceResizeHandlePosition === "function") {
+    syncNodeGraphWorkspaceResizeHandlePosition();
+  }
 }
 
 function nodeGraphZoom() {

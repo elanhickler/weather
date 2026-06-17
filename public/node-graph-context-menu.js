@@ -419,6 +419,7 @@ function configureNodeSceneContextMenu(mode) {
   const graphHeightIncrease = document.getElementById("nodeSceneGraphHeightIncrease");
   const graphHeightValue = document.getElementById("nodeSceneGraphHeightValue");
   const toggleButtonsButton = document.getElementById("nodeSceneToggleButtons");
+  const toggleOscilloscopeButton = document.getElementById("nodeSceneToggleOscilloscope");
   const toggleTitleButton = document.getElementById("nodeSceneToggleTitle");
   const imageControls = document.getElementById("nodeSceneImageControls");
   const imageLoad = document.getElementById("nodeSceneImageLoad");
@@ -467,6 +468,7 @@ function configureNodeSceneContextMenu(mode) {
   const heightGu = targetNode ? nodeGraphPatchNodeGridHeightUnits(targetNode) : 0;
   const targetNodeUi = normalizeNodeGraphPatchNodeUi(targetNode?.ui);
   const buttonsHidden = targetNodeUi.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false;
+  const oscilloscopeHidden = targetNodeUi.oscilloscopeHidden;
   const titleHidden = targetNodeUi.titleHidden;
   const textBoxLayout = normalizeNodeGraphTextBoxLayout(targetNode?.layout);
   const textBoxMode = textBoxLayout.textMode;
@@ -497,6 +499,7 @@ function configureNodeSceneContextMenu(mode) {
   codeblockControls.hidden = !(moduleMode && targetNode?.type === "codeblock");
   graphControls.hidden = !(moduleMode && targetIsGraphType);
   toggleButtonsButton.hidden = !moduleMode;
+  toggleOscilloscopeButton.hidden = !(moduleMode && nodeGraphPatchNodeHasHideableOscilloscope(targetNode));
   toggleTitleButton.hidden = !moduleMode;
   imageControls.hidden = !(moduleMode && targetNode?.type === "image");
   canvasControls.hidden = !(moduleMode && targetNode?.type === "canvas");
@@ -572,6 +575,12 @@ function configureNodeSceneContextMenu(mode) {
     toggleButtonsButton.querySelector("span").textContent = buttonsHidden ? "Show buttons" : "Hide buttons";
     toggleButtonsButton.setAttribute("aria-pressed", buttonsHidden ? "true" : "false");
     toggleButtonsButton.title = nodeGraphTooltipText(buttonsHidden ? "actions.showModuleButtons" : "actions.hideModuleButtons");
+    toggleOscilloscopeButton.disabled = !targetNode || !nodeGraphPatchNodeHasHideableOscilloscope(targetNode);
+    toggleOscilloscopeButton.querySelector("span").textContent = oscilloscopeHidden ? "Show oscilloscope" : "Hide oscilloscope";
+    toggleOscilloscopeButton.setAttribute("aria-pressed", oscilloscopeHidden ? "true" : "false");
+    toggleOscilloscopeButton.title = oscilloscopeHidden
+      ? "Show this module's built-in oscilloscope strip."
+      : "Hide this module's built-in oscilloscope strip.";
     toggleTitleButton.disabled = !targetNode;
     toggleTitleButton.querySelector("span").textContent = titleHidden ? "Show title" : "Hide title";
     toggleTitleButton.setAttribute("aria-pressed", titleHidden ? "true" : "false");
@@ -719,6 +728,7 @@ function configureNodeSceneContextMenu(mode) {
     textBoxVerticalAlignValue.textContent = "";
     textBoxVerticalAlign.disabled = true;
     toggleButtonsButton.disabled = true;
+    toggleOscilloscopeButton.disabled = true;
     toggleTitleButton.disabled = true;
     imageLoad.disabled = true;
     imageSave.disabled = true;
@@ -775,6 +785,7 @@ function configureNodeSceneContextMenu(mode) {
     textBoxVerticalAlignValue.textContent = "";
     textBoxVerticalAlign.disabled = true;
     toggleButtonsButton.disabled = true;
+    toggleOscilloscopeButton.disabled = true;
     toggleTitleButton.disabled = true;
     imageLoad.disabled = true;
     imageSave.disabled = true;

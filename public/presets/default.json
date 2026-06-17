@@ -50,7 +50,15 @@
     "name": "Patch name",
     "tags": "tags"
   },
-  "modulations": [],
+  "modulations": [
+    {
+      "destinationNode": "lorenzAttractor-1",
+      "destinationParam": "beta",
+      "sourceNode": "macroKnob-1",
+      "sourcePort": "value",
+      "tracePoints": []
+    }
+  ],
   "monitors": [],
   "nodes": [
     {
@@ -141,7 +149,7 @@
         }
       },
       "params": {
-        "volume": 0.1
+        "volume": 1
       },
       "type": "output",
       "alias": "Vibration",
@@ -155,7 +163,7 @@
         "length": 1,
         "mode": "1d_full",
         "padding": 0.04,
-        "source": "video.input     = ~;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\nscope.cycles    = 2.0;\nscope.zoom      = 1.0;\nscope.length    = 1.0;\nscope.padding   = 0.04;\nscope.syncSpeed = 1.0;\ndot1.color      = dot1.global.color;\ndot1.size       = 1.0 * dot1.global.size;\ndot1.blur       = 1.0 * dot1.global.blur;\ndot1.brightness = 1.0 * dot1.global.brightness;\ndot2.color      = dot2.global.color;\ndot2.size       = 1.0 * dot2.global.size;\ndot2.blur       = 1.0 * dot2.global.blur;\ndot2.brightness = 1.0 * dot2.global.brightness;\nblend.mode      = laser;",
+        "source": "video.input     = ~;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\nscope.cycles    = 2.0;\nscope.zoom      = 1.0;\nscope.length    = 1.0;\nscope.padding   = 0.04;\nscope.syncSpeed = 1.0;\ndot1.color      = dot1.global.color;\ndot1.size       = 1.0 * dot1.global.size;\ndot1.blur       = 1.0 * dot1.global.blur;\ndot1.brightness = 1.0 * dot1.global.brightness;\ndot2.color      = dot2.global.color;\ndot2.size       = 1.0 * dot2.global.size;\ndot2.blur       = 1.0 * dot2.global.blur;\ndot2.brightness = 5.6 * dot2.global.brightness;\nblend.mode      = laser;",
         "sync": "inherit",
         "syncSpeed": 1,
         "videoInput": "~",
@@ -163,7 +171,7 @@
       }
     },
     {
-      "gx": 15,
+      "gx": 21,
       "gy": 1,
       "id": "lorenzAttractor-1",
       "paramMeta": {
@@ -174,7 +182,7 @@
           "divideChoicesVisibly": false,
           "kind": "decimal",
           "linearSmoothing": true,
-          "max": 8,
+          "max": 1000,
           "maxDigits": 3,
           "mid": 1,
           "min": 0,
@@ -305,16 +313,44 @@
         }
       },
       "params": {
-        "speed": 4.75,
-        "sigma": 10,
-        "rho": 28,
-        "beta": 2.6667,
-        "scale": 0.77,
-        "rotate": 0,
-        "zDepth": 0.4,
+        "speed": 186.35,
+        "sigma": 12.1,
+        "rho": 29.55,
+        "beta": 0,
+        "scale": 0.8,
+        "rotate": 0.42999999999999994,
+        "zDepth": 0.34,
         "level": 1
       },
       "type": "lorenzAttractor"
+    },
+    {
+      "gx": 15,
+      "gy": 6,
+      "id": "macroKnob-1",
+      "paramMeta": {
+        "value": {
+          "choices": [],
+          "def": 0,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": true,
+          "max": 1,
+          "maxDigits": 3,
+          "mid": 0.5,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unit": "",
+          "wraparound": false
+        }
+      },
+      "params": {
+        "value": 0.551946367536273
+      },
+      "type": "macroKnob"
     }
   ],
   "timing": {

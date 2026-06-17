@@ -466,6 +466,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       }
     } else if (
       type !== "audioInput" &&
+      type !== "audioPlayer" &&
       type !== "bloomGlow" &&
       type !== "canvas" &&
       type !== "chromaColor" &&
@@ -483,12 +484,14 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
       type !== "led" &&
       type !== "linearEnvelope" &&
       type !== "lorenzAttractor" &&
+      type !== "macroKnob" &&
       type !== "macroControls" &&
       type !== "midiNotePitch" &&
       type !== "midiOut" &&
       type !== "moduleGroup" &&
       type !== "noiseGenerator" &&
       type !== "pitchModWheel" &&
+      type !== "bipolarKnob" &&
       type !== "additiveOsc" &&
       type !== "gpuAdditiveOsc" &&
       type !== "osc" &&
@@ -517,15 +520,18 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   const sourceNodes = order.filter((nodeId) => {
     const type = graph.nodeMap.get(nodeId)?.type;
     return type === "audioInput" ||
+      type === "audioPlayer" ||
       type === "clock" ||
       type === "fbPolyBlepOsc" ||
       type === "fractalBrownianNoise" ||
       type === "keyboardController" ||
       type === "lorenzAttractor" ||
+      type === "macroKnob" ||
       type === "macroControls" ||
       type === "midiOut" ||
       type === "noiseGenerator" ||
       type === "pitchModWheel" ||
+      type === "bipolarKnob" ||
       type === "additiveOsc" ||
       type === "gpuAdditiveOsc" ||
       type === "osc" ||

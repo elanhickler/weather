@@ -162,6 +162,73 @@ function createNodeGraphSliderWidgetBody(node, type) {
   return body;
 }
 
+function nodeGraphKnobWidgetValueAngle(value, parameter) {
+  const min = Number(parameter?.min);
+  const max = Number(parameter?.max);
+  const range = max - min;
+  const normalized = Number.isFinite(range) && range > 0
+    ? clampNodeSliderValue((Number(value) - min) / range, 0, 1)
+    : 0;
+  return -132 + normalized * 264;
+}
+
+function createNodeGraphKnobWidgetBody(node, type) {
+  const definition = nodeGraphModuleDefinitions[type];
+  const parameter = definition?.parameters?.[0];
+  const patchNode = nodeGraphPatchNode(node);
+  const value = patchNode?.params?.[parameter?.key] ?? parameter?.defaultValue ?? "0";
+  const body = document.createElement("div");
+  body.className = "node-knob-widget-body";
+  body.dataset.node = node;
+
+  const control = document.createElement("button");
+  control.className = "node-knob-widget-control";
+  control.type = "button";
+  control.dataset.knobWidgetControl = "true";
+  control.dataset.param = parameter?.key || "value";
+  control.setAttribute("role", "slider");
+  control.setAttribute("aria-label", `${nodeGraphNodeLabels[type]} ${parameter?.label || "Value"}`);
+  control.setAttribute("aria-valuemin", parameter?.min ?? "0");
+  control.setAttribute("aria-valuemax", parameter?.max ?? "1");
+  control.setAttribute("aria-valuenow", String(value));
+  control.style.setProperty("--knob-widget-angle", `${nodeGraphKnobWidgetValueAngle(value, parameter)}deg`);
+
+  const face = document.createElement("span");
+  face.className = "node-knob-widget-face";
+  const label = document.createElement("strong");
+  label.textContent = type === "bipolarKnob" ? "Bi" : "Knob";
+  const readout = document.createElement("span");
+  readout.className = "node-knob-widget-value";
+  readout.dataset.knobWidgetValue = "true";
+  readout.textContent = formatNodeSliderNumber(value);
+  control.append(face, label, readout);
+
+  const input = document.createElement("input");
+  input.className = "node-knob-widget-input";
+  input.type = "range";
+  input.dataset.param = parameter?.key || "value";
+  input.dataset.step = parameter?.step ?? "any";
+  input.dataset.mid = parameter?.mid ?? "0";
+  input.dataset.default = parameter?.defaultValue ?? "0";
+  input.dataset.kind = parameter?.kind ?? "";
+  input.dataset.unit = parameter?.unit ?? "";
+  input.dataset.linearSmoothing = parameter?.linearSmoothing === false ? "false" : "true";
+  input.dataset.nonlinearSlider = parameter?.nonlinearSlider ? "true" : "false";
+  input.min = parameter?.min ?? "0";
+  input.max = parameter?.max ?? "1";
+  input.step = parameter?.step === "any" ? "any" : (parameter?.step ?? "0.01");
+  input.value = String(value);
+
+  const outputKey = parameter?.key || "value";
+  const output = createNodeGraphPort(node, type, outputKey, "output");
+  output.classList.add("node-knob-widget-output");
+  output.dataset.param = outputKey;
+  output.dataset.alias = `${nodeGraphNodeDisplayName(node)} knob value`;
+
+  body.append(control, input, output);
+  return body;
+}
+
 function createNodeGraphModuleShopBody(node) {
   const body = document.createElement("div");
   body.className = "node-module-shop-body";

@@ -709,12 +709,11 @@ function setNodeGraphScopeNumberInputValue(input, value) {
     setNodeGraphModuleScopeDotCore2Brightness(input.value);
   } else if (input.dataset.globalScopeInput === "discontinuitySkipSamples") {
     setNodeGraphModuleScopeDiscontinuitySkipSamples(input.value);
-  } else if (input.dataset.globalScopeInput === "overdrawPoints") {
-    setNodeGraphModuleScopeOverdrawPoints(input.value);
-  } else if (input.dataset.globalScopeInput === "overdrawFade") {
-    setNodeGraphModuleScopeOverdrawFade(input.value);
   } else {
     handleNodeGraphSceneScopeNumericInput({ currentTarget: input });
+  }
+  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
+    scheduleNodeGraphModuleScopeDraw();
   }
 }
 
@@ -2128,10 +2127,7 @@ function nodeGraphModuleScopeOfflineStereoNoiseXyBuffer(slot) {
   const seedValue = nodeGraphModuleScopeNodeParam(node, "seed", 1);
   const sampleRate = Number(nodeGraphModuleScopeState.sampleRate) || nodeGraphMvp.sampleRate || 44100;
   const startSample = Math.max(0, Math.floor(nodeGraphModuleScopeModelFrameTime(slot) * sampleRate));
-  const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
-    ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
-    : 1;
-  const frames = nodeGraphModuleScopeXyTraceFrameCount(16384, overdrawPoints);
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(16384);
   const stride = 8;
   const historySamples = frames * stride;
   const historyStartSample = Math.max(0, startSample - historySamples);
@@ -2489,15 +2485,9 @@ function nodeGraphModuleScopeOfflineGainAnalyzerBuffer(slot) {
   return buffer;
 }
 
-function nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints) {
+function nodeGraphModuleScopeXyTraceFrameCount(length) {
   const safeLength = Math.max(2, Math.floor(Number(length) || 0));
-  return Math.min(safeLength, nodeGraphModuleScopeOverdrawPointCount(safeLength, overdrawPoints));
-}
-
-function nodeGraphModuleScopeOverdrawPointCount(baseCount, overdrawPoints) {
-  const safeBaseCount = Math.max(1, Math.floor(Number(baseCount) || 1));
-  const safeOverdraw = Math.max(1, Math.floor(Number(overdrawPoints) || 1));
-  return safeBaseCount * safeOverdraw;
+  return safeLength;
 }
 
 function nodeGraphModuleScopeOutputInputConnections(nodeId) {
@@ -2829,9 +2819,6 @@ function nodeGraphModuleScopeScanHistoryBuffer(slot, buffer) {
   if (!nodeId || !buffer?.length) {
     return buffer;
   }
-  const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
-    ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
-    : 1;
   const fps = typeof normalizeNodeGraphModuleScopeFramesPerSecond === "function"
     ? normalizeNodeGraphModuleScopeFramesPerSecond(nodeGraphMvp?.moduleScopeFramesPerSecond ?? 60)
     : 60;
@@ -2844,10 +2831,7 @@ function nodeGraphModuleScopeScanHistoryBuffer(slot, buffer) {
   if (state.lastTick !== tick) {
     state.lastTick = tick;
     state.samples.push(nodeGraphModuleScopeCurrentBufferSample(buffer));
-    const scanTrailLimit = nodeGraphModuleScopeOverdrawPointCount(
-      slot?.type === "visualOscilloscope" ? 128 : 1,
-      overdrawPoints,
-    );
+    const scanTrailLimit = slot?.type === "visualOscilloscope" ? 128 : 1;
     const limit = Math.max(1, Math.min(2048, scanTrailLimit));
     if (state.samples.length > limit) {
       state.samples.splice(0, state.samples.length - limit);
@@ -2978,10 +2962,7 @@ function nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, xPort = "X", yPort
   if (length <= 1) {
     return null;
   }
-  const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
-    ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
-    : 1;
-  const frames = nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints);
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(length);
   const start = Math.max(0, length - frames);
   const x = new Float32Array(frames);
   const y = new Float32Array(frames);
@@ -3023,10 +3004,7 @@ function nodeGraphModuleScopeCapturedVisualOscilloscopeXyBuffer(slot, capturedBu
   if (length <= 1) {
     return null;
   }
-  const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
-    ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
-    : 1;
-  const frames = nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints);
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(length);
   const start = Math.max(0, length - frames);
   const x = new Float32Array(frames);
   const y = new Float32Array(frames);
@@ -3058,10 +3036,7 @@ function nodeGraphModuleScopeCapturedStereoNoiseXyBuffer(slot, capturedBuffer = 
   if (length <= 1) {
     return null;
   }
-  const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
-    ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
-    : 1;
-  const frames = nodeGraphModuleScopeXyTraceFrameCount(length, overdrawPoints);
+  const frames = nodeGraphModuleScopeXyTraceFrameCount(length);
   const start = Math.max(0, length - frames);
   const x = new Float32Array(frames);
   const y = new Float32Array(frames);
@@ -3582,7 +3557,6 @@ function createNodeGraphModuleScopeWebGlRenderer(canvas) {
     precision highp float;
     uniform vec3 uColor;
     uniform float uIntensity;
-    uniform float uOverdrawFade;
     uniform float uSize;
     varying vec2 vStart;
     varying vec2 vEnd;
@@ -3602,8 +3576,7 @@ function createNodeGraphModuleScopeWebGlRenderer(canvas) {
       float halo = exp(-distanceSquared * 0.52);
       float gaussian = exp(-distanceSquared * 3.1);
       float core = exp(-distanceSquared * 18.0);
-      float afterglow = mix(clamp(uOverdrawFade, 0.0, 1.0), 1.0, smoothstep(0.0, 1.0, vPointAge));
-      float alpha = clamp((halo * 0.12 + gaussian * 0.62 + core * 0.26) * afterglow * uIntensity, 0.0, 1.0);
+      float alpha = clamp((halo * 0.12 + gaussian * 0.62 + core * 0.26) * uIntensity, 0.0, 1.0);
       gl_FragColor = vec4(uColor * alpha, alpha);
     }
   `);
@@ -3627,7 +3600,6 @@ function createNodeGraphModuleScopeWebGlRenderer(canvas) {
     beamCornerLocation: gl.getAttribLocation(beamProgram, "aCorner"),
     beamEndLocation: gl.getAttribLocation(beamProgram, "aEnd"),
     beamIntensityLocation: gl.getUniformLocation(beamProgram, "uIntensity"),
-    beamOverdrawFadeLocation: gl.getUniformLocation(beamProgram, "uOverdrawFade"),
     beamPointAgeLocation: gl.getAttribLocation(beamProgram, "aPointAge"),
     beamProgram,
     beamSizeLocation: gl.getUniformLocation(beamProgram, "uSize"),
@@ -4413,12 +4385,9 @@ function nodeGraphModuleScopeBufferSegmentPoints(
   const liveTracePointLimit = slot?.type === "visualOscilloscope" && fullTraceMode
     ? Math.min(visualPointLimit, 2048)
     : visualPointLimit;
-  const overdrawPoints = typeof normalizeNodeGraphModuleScopeOverdrawPoints === "function"
-    ? normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp?.moduleScopeOverdrawPoints ?? 1)
-    : 1;
   const scanTrailPointLimit = scanTrailMode
-    ? nodeGraphModuleScopeOverdrawPointCount(slot?.type === "visualOscilloscope" ? 128 : 1, overdrawPoints)
-    : overdrawPoints;
+    ? slot?.type === "visualOscilloscope" ? 128 : 1
+    : 1;
   const fullTraceOversample = fullTraceMode ? 4 : 1;
   const pointCount = spectrumMode
     ? Math.max(2, Math.min(visualPointLimit, Math.ceil(visibleSamples)))
@@ -4428,7 +4397,7 @@ function nodeGraphModuleScopeBufferSegmentPoints(
         : 1
       : Math.max(2, Math.min(
       liveTracePointLimit,
-      Math.ceil((visibleSampleWidth * overdrawPoints * fullTraceOversample) / minPointSpacingPx),
+      Math.ceil((visibleSampleWidth * fullTraceOversample) / minPointSpacingPx),
     ));
   const rawValues = [];
   const skippedPoints = [];
@@ -5182,11 +5151,7 @@ function drawNodeGraphModuleScopeBufferWebGl(renderer, rect, buffer, pixelRatio,
   gl.uniform2f(renderer.beamCanvasSizeLocation, canvas.width, canvas.height);
   gl.uniform1f(renderer.beamSizeLocation, safeDotThicknessPx);
   const intensity = Number(options.intensity);
-  const overdrawFade = typeof normalizeNodeGraphModuleScopeOverdrawFade === "function"
-    ? normalizeNodeGraphModuleScopeOverdrawFade(nodeGraphMvp?.moduleScopeOverdrawFade ?? 0.5)
-    : 0.5;
   gl.uniform1f(renderer.beamIntensityLocation, Number.isFinite(intensity) ? Math.max(0, intensity) : 0.1);
-  gl.uniform1f(renderer.beamOverdrawFadeLocation, overdrawFade);
   const color = Array.isArray(options.color) ? options.color : [0.7, 1, 0.9];
   gl.uniform3f(renderer.beamColorLocation, color[0], color[1], color[2]);
   gl.bindBuffer(gl.ARRAY_BUFFER, renderer.beamBuffer);

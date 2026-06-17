@@ -124,6 +124,9 @@ function setNodeSliderValue(slider, value) {
   syncNodeGraphGhostSliders();
   markNodeGraphRenderPending();
   scheduleNodeGraphLiveParameterSync();
+  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
+    scheduleNodeGraphModuleScopeDraw();
+  }
 }
 
 function nodeSliderSegmentValueFromPointer(slider, surface, clientX) {

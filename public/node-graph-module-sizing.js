@@ -32,6 +32,38 @@ function nodeGraphPatchNodeLayout(node) {
   return fallback;
 }
 
+function nodeGraphModuleTypeHasHideableOscilloscope(type) {
+  const layout = nodeGraphModuleDefinitions[type]?.layout;
+  return Boolean(nodeGraphModuleDefinitions[type]) && ![
+    "canvas",
+    "clapPlugin",
+    "filterCurve",
+    "graph",
+    "image",
+    "keyboardController",
+    "knobWidget",
+    "led",
+    "macroControls",
+    "moduleHome",
+    "moduleShop",
+    "pitchModWheel",
+    "screenSpaceShader",
+    "sliderWidget",
+    "speakerProtection",
+    "textBox",
+    "visualScope",
+  ].includes(layout);
+}
+
+function nodeGraphPatchNodeHasHideableOscilloscope(node) {
+  const patchNode = typeof node === "string" ? nodeGraphPatchNode(node) : node;
+  const layout = nodeGraphPatchNodeLayout(patchNode);
+  if (layout && layout !== nodeGraphModuleDefinitions[patchNode?.type]?.layout) {
+    return false;
+  }
+  return nodeGraphModuleTypeHasHideableOscilloscope(patchNode?.type);
+}
+
 function nodeGraphPatchNodeCanvasScriptGridUnits(node) {
   const patchNode = typeof node === "string" ? nodeGraphPatchNode(node) : node;
   if (patchNode?.type !== "canvas" || typeof normalizeNodeGraphCanvasScript !== "function") {
@@ -47,6 +79,9 @@ function nodeGraphPatchNodeCanvasScriptGridUnits(node) {
 function nodeGraphDefaultModuleGridWidthUnits(type) {
   if (nodeGraphModuleDefinitions[type]?.layout === "led") {
     return 1;
+  }
+  if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
+    return 4;
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "sliderWidget") {
     return 6;
@@ -150,6 +185,9 @@ function nodeGraphModuleRequiredHeightUnitsForUi(type, ui = {}) {
   if (nodeGraphModuleDefinitions[type]?.layout === "led") {
     return 1;
   }
+  if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
+    return 4;
+  }
   if (nodeGraphModuleDefinitions[type]?.layout === "textBox") {
     return nodeGraphModuleHeaderHeightUnits(ui) + nodeGraphModuleLayout.textBoxBodyMinGu;
   }
@@ -216,9 +254,12 @@ function nodeGraphModuleRequiredHeightUnitsForUi(type, ui = {}) {
       nodeGraphModuleLayout.moduleGridInsetGu * 2
     );
   }
+  const moduleScopeHeightGu = normalizeNodeGraphPatchNodeUi(ui).oscilloscopeHidden && nodeGraphModuleTypeHasHideableOscilloscope(type)
+    ? 0
+    : nodeGraphModuleLayout.moduleScopeHeightGu;
   return (
     nodeGraphModuleHeaderHeightUnits(ui) +
-    nodeGraphModuleLayout.moduleScopeHeightGu +
+    moduleScopeHeightGu +
     nodeGraphModuleIoSectionHeightGu(type) +
     nodeGraphModuleSliderBodyHeightGu(type) +
     nodeGraphModuleLayout.fitCushionGu +
@@ -233,6 +274,9 @@ function nodeGraphModuleGridHeightUnits(type) {
 function nodeGraphModuleGridHeightUnitsForUi(type, ui = {}) {
   if (nodeGraphModuleDefinitions[type]?.layout === "led") {
     return 1;
+  }
+  if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
+    return 4;
   }
   if (nodeGraphModuleDefinitions[type]?.layout === "textBox") {
     return Math.ceil(nodeGraphModuleRequiredHeightUnitsForUi(type, ui));

@@ -73,14 +73,18 @@ async function decodeNodeGraphSampleDataUrl(dataUrl, fallbackName = "Sample") {
   await context.close?.();
   const frames = audioBuffer.length;
   const channels = audioBuffer.numberOfChannels;
+  const channelData = Array.from({ length: channels }, (_, channel) =>
+    new Float32Array(audioBuffer.getChannelData(channel)),
+  );
   const mono = new Float32Array(frames);
   for (let channel = 0; channel < channels; channel += 1) {
-    const data = audioBuffer.getChannelData(channel);
+    const data = channelData[channel];
     for (let frame = 0; frame < frames; frame += 1) {
       mono[frame] += data[frame] / Math.max(1, channels);
     }
   }
   return {
+    channelData,
     channels,
     frames,
     name: fallbackName,
@@ -114,10 +118,21 @@ async function loadNodeGraphSampleForNode(nodeId, file) {
     node.params = { ...(node.params || {}), sample: samples.length };
   }
   commitNodeGraphPatch(patch, { status: `${sample.name} loaded` });
+  nodeGraphMvp.sampleBuffers?.set?.(id, {
+    channelData: decoded.channelData,
+    channels: decoded.channels,
+    frames: decoded.frames,
+    id,
+    name: sample.name,
+    sampleRate: decoded.sampleRate,
+    samples: decoded.samples,
+  });
   scheduleNodeGraphLivePlanSync("plan");
 }
 
 function createNodeGraphSampleModuleBody(nodeId) {
+  const patchNode = nodeGraphPatchNode(nodeId);
+  const isMusicPlayer = patchNode?.type === "audioPlayer";
   const body = document.createElement("div");
   body.className = "node-sample-module-body";
   const name = document.createElement("div");
@@ -127,7 +142,7 @@ function createNodeGraphSampleModuleBody(nodeId) {
   const button = document.createElement("button");
   button.className = "node-sample-load-button";
   button.type = "button";
-  button.textContent = "Load Sample";
+  button.textContent = isMusicPlayer ? "Load Music" : "Load Sample";
   button.addEventListener("click", () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -152,6 +167,7 @@ async function nodeGraphDecodedSampleForReference(reference) {
   }
   const decoded = await decodeNodeGraphSampleDataUrl(reference.dataUrl, reference.name);
   return {
+    channelData: decoded.channelData,
     channels: decoded.channels,
     frames: decoded.frames,
     id: reference.id,
@@ -164,7 +180,7 @@ async function nodeGraphDecodedSampleForReference(reference) {
 async function nodeGraphRuntimeSamplesForPlan(plan, patch = nodeGraphMvp.patch) {
   const needed = new Set(
     (plan?.nodes || [])
-      .filter((node) => node.type === "samplePlayer" || node.type === "sampleLooper")
+      .filter((node) => node.type === "samplePlayer" || node.type === "sampleLooper" || node.type === "audioPlayer")
       .map((node) => normalizeNodeGraphSampleId(node.sample?.id))
       .filter(Boolean),
   );
@@ -182,4 +198,34 @@ async function nodeGraphRuntimeSamplesForPlan(plan, patch = nodeGraphMvp.patch) 
     }
   }
   return samples;
+}
+
+function nodeGraphLiveSampleForReference(reference) {
+  const id = normalizeNodeGraphSampleId(reference?.id);
+  const cached = id ? nodeGraphMvp.sampleBuffers?.get?.(id) : null;
+  if (cached?.samples?.length || cached?.channelData?.length) {
+    return {
+      channelData: (cached.channelData || []).map((channel) => channel instanceof Float32Array ? channel : new Float32Array(channel || [])),
+      channels: cached.channels || cached.channelData?.length || 1,
+      frames: cached.frames || cached.samples?.length || cached.channelData?.[0]?.length || 0,
+      id,
+      name: cached.name || reference.name || id,
+      sampleRate: cached.sampleRate || reference.sampleRate || 44100,
+      samples: cached.samples instanceof Float32Array ? cached.samples : new Float32Array(cached.samples || []),
+    };
+  }
+  return null;
+}
+
+function nodeGraphLiveSamplesForPlan(plan, patch = nodeGraphMvp.patch) {
+  const needed = new Set(
+    (plan?.nodes || [])
+      .filter((node) => node.type === "samplePlayer" || node.type === "sampleLooper" || node.type === "audioPlayer")
+      .map((node) => normalizeNodeGraphSampleId(node.sample?.id))
+      .filter(Boolean),
+  );
+  return normalizeNodeGraphPatchSamples(patch.samples)
+    .filter((reference) => needed.has(reference.id))
+    .map((reference) => nodeGraphLiveSampleForReference(reference))
+    .filter((sample) => sample?.id && (sample.samples?.length || sample.channelData?.length));
 }

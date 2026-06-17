@@ -14,6 +14,7 @@ function normalizeNodeGraphPatchNodeUi(ui = {}) {
   const source = ui && typeof ui === "object" ? ui : {};
   return {
     buttonsHidden: Boolean(source.buttonsHidden),
+    oscilloscopeHidden: Boolean(source.oscilloscopeHidden),
     titleHidden: Boolean(source.titleHidden),
   };
 }
@@ -199,12 +200,12 @@ function cloneNodeGraphPatch(patch) {
         ...(node.type === "clapPlugin"
           ? { clap: normalizeNodeGraphClapPluginBinding(node.clap) }
           : {}),
-        ...((node.type === "samplePlayer" || node.type === "sampleLooper") && normalizeNodeGraphSampleId(node.sample?.id)
+        ...((node.type === "samplePlayer" || node.type === "sampleLooper" || node.type === "audioPlayer") && normalizeNodeGraphSampleId(node.sample?.id)
           ? { sample: { id: normalizeNodeGraphSampleId(node.sample?.id) } }
           : {}),
         paramMeta: cloneNodeGraphParamMeta(node.paramMeta),
         params: { ...(node.params || {}) },
-        ...(ui.buttonsHidden || ui.titleHidden ? { ui } : {}),
+        ...(ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden ? { ui } : {}),
       };
     }),
     samples: typeof normalizeNodeGraphPatchSamples === "function"

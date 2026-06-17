@@ -168,7 +168,7 @@ function validateNodeGraphPatch(patch) {
     const ui = nodeGraphModuleDefinitions[type].layout === "textBox" && !Object.hasOwn(node, "ui")
       ? { buttonsHidden: true }
       : normalizeNodeGraphPatchNodeUi(node.ui);
-    if (ui.buttonsHidden || ui.titleHidden) {
+    if (ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden) {
       normalizedNode.ui = ui;
     }
     return normalizedNode;
@@ -466,6 +466,7 @@ function applyNodeGraphPatchToDom() {
     }
     const patchNodeUi = normalizeNodeGraphPatchNodeUi(patchNode.ui);
     element.classList.toggle("buttons-hidden", patchNodeUi.buttonsHidden);
+    element.classList.toggle("oscilloscope-hidden", patchNodeUi.oscilloscopeHidden);
     element.classList.toggle("title-hidden", patchNodeUi.titleHidden);
     const bypassed = nodeGraphNodeDisplaysBypassed(patchNode.id);
     element.classList.toggle("bypassed", bypassed);

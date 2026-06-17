@@ -135,16 +135,6 @@ function normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(value) {
   return Number.isFinite(number) ? clampNodeSliderValue(Math.round(number), 0, 2) : 1;
 }
 
-function normalizeNodeGraphModuleScopeOverdrawPoints(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? clampNodeSliderValue(Math.round(number), 1, 2048) : 1;
-}
-
-function normalizeNodeGraphModuleScopeOverdrawFade(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? clampNodeSliderValue(number, 0, 1) : 0.5;
-}
-
 function normalizeNodeGraphModuleScopeFramesPerSecond(value) {
   const number = Number(value);
   return Number.isFinite(number) ? clampNodeSliderValue(Math.round(number), 1, 240) : 60;
@@ -237,8 +227,6 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const discontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
   );
-  const overdrawPoints = normalizeNodeGraphModuleScopeOverdrawPoints(nodeGraphMvp.moduleScopeOverdrawPoints ?? 1);
-  const overdrawFade = normalizeNodeGraphModuleScopeOverdrawFade(nodeGraphMvp.moduleScopeOverdrawFade ?? 0.5);
   nodeGraphMvp.moduleScopeBurn = burn;
   nodeGraphMvp.moduleScopeDecay = decay;
   nodeGraphMvp.moduleScopeBackgroundColor = backgroundColor;
@@ -253,8 +241,6 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   nodeGraphMvp.moduleScopeFramesPerSecond = framesPerSecond;
   nodeGraphMvp.moduleScopeLineThickness = lineThickness;
   nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = discontinuitySkipSamples;
-  nodeGraphMvp.moduleScopeOverdrawPoints = overdrawPoints;
-  nodeGraphMvp.moduleScopeOverdrawFade = overdrawFade;
   const burnInput = document.getElementById("nodeMasterScopeBurn");
   const decayInput = document.getElementById("nodeMasterScopeDecay");
   const backgroundInput = document.getElementById("nodeMasterScopeBackgroundColor");
@@ -269,8 +255,6 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   const fpsInput = document.getElementById("nodeMasterScopeFps");
   const lineInput = document.getElementById("nodeMasterScopeLineThickness");
   const skipSamplesInput = document.getElementById("nodeMasterScopeDiscontinuitySkipSamples");
-  const overdrawInput = document.getElementById("nodeMasterScopeOverdrawPoints");
-  const overdrawFadeInput = document.getElementById("nodeMasterScopeOverdrawFade");
   if (burnInput && document.activeElement !== burnInput) {
     burnInput.value = burn.toFixed(2);
   }
@@ -345,12 +329,6 @@ function renderNodeGraphModuleScopeBrightnessControl() {
   }
   if (skipSamplesInput && document.activeElement !== skipSamplesInput) {
     skipSamplesInput.value = String(discontinuitySkipSamples);
-  }
-  if (overdrawInput && document.activeElement !== overdrawInput) {
-    overdrawInput.value = String(overdrawPoints);
-  }
-  if (overdrawFadeInput && document.activeElement !== overdrawFadeInput) {
-    overdrawFadeInput.value = overdrawFade.toFixed(2);
   }
   const globalScopeMenu = document.getElementById("nodeGlobalScopeMenu");
   document.getElementById("nodeGlobalScopeMenuButton")
@@ -514,30 +492,6 @@ function setNodeGraphModuleScopeDiscontinuitySkipSamples(value) {
 
 function handleNodeGraphModuleScopeDiscontinuitySkipSamplesInput(event) {
   setNodeGraphModuleScopeDiscontinuitySkipSamples(event.currentTarget.value);
-}
-
-function setNodeGraphModuleScopeOverdrawPoints(value) {
-  nodeGraphMvp.moduleScopeOverdrawPoints = normalizeNodeGraphModuleScopeOverdrawPoints(value);
-  renderNodeGraphModuleScopeBrightnessControl();
-  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
-    scheduleNodeGraphModuleScopeDraw();
-  }
-}
-
-function setNodeGraphModuleScopeOverdrawFade(value) {
-  nodeGraphMvp.moduleScopeOverdrawFade = normalizeNodeGraphModuleScopeOverdrawFade(value);
-  renderNodeGraphModuleScopeBrightnessControl();
-  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
-    scheduleNodeGraphModuleScopeDraw();
-  }
-}
-
-function handleNodeGraphModuleScopeOverdrawPointsInput(event) {
-  setNodeGraphModuleScopeOverdrawPoints(event.currentTarget.value);
-}
-
-function handleNodeGraphModuleScopeOverdrawFadeInput(event) {
-  setNodeGraphModuleScopeOverdrawFade(event.currentTarget.value);
 }
 
 const nodeGraphSliderLayouts = Object.freeze([

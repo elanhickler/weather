@@ -27,6 +27,117 @@ function handleNodeGraphIoRowWirePointerDown(event) {
   nodeGraphWireInteractions.beginWireDrag(event);
 }
 
+function nodeGraphKnobWidgetInputForControl(control) {
+  const node = control?.closest?.(".dsp-node");
+  const key = control?.dataset?.param || "value";
+  return node?.querySelector?.(`.node-knob-widget-input[data-param="${CSS.escape(key)}"]`) || null;
+}
+
+function syncNodeGraphKnobWidgetControl(control) {
+  const input = nodeGraphKnobWidgetInputForControl(control);
+  const node = control?.closest?.(".dsp-node");
+  const parameter = nodeGraphPatchNodeParameterDefinitions(nodeGraphPatchNode(node?.dataset?.node))
+    .find((candidate) => candidate.key === (control?.dataset?.param || "value"));
+  if (!input || !parameter) {
+    return;
+  }
+  const value = normalizeNodeSliderValue(input, Number(input.value));
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const range = max - min;
+  const normalized = Number.isFinite(range) && range > 0
+    ? clampNodeSliderValue((value - min) / range, 0, 1)
+    : 0;
+  control.style.setProperty("--knob-widget-value", String(normalized));
+  control.style.setProperty("--knob-widget-angle", `${-132 + normalized * 264}deg`);
+  control.setAttribute("aria-valuenow", String(value));
+  const readout = control.querySelector("[data-knob-widget-value]");
+  if (readout) {
+    readout.textContent = formatNodeSliderNumber(value, {
+      kind: input.dataset.kind,
+      maxDigits: input.dataset.maxDigits,
+      reserveSignSpace: true,
+      showSign: nodeSliderShouldShowSign(input),
+    });
+  }
+}
+
+function setNodeGraphKnobWidgetValue(control, value, options = {}) {
+  const input = nodeGraphKnobWidgetInputForControl(control);
+  if (!input) {
+    return;
+  }
+  input.value = String(normalizeNodeSliderValue(input, value));
+  syncNodeGraphKnobWidgetControl(control);
+  syncNodeGraphPatchParameterFromSlider(input, {
+    deferUi: !options.record,
+    record: options.record,
+    status: options.status || "knob changed",
+  });
+  markNodeGraphRenderPending();
+  scheduleNodeGraphLiveParameterSync();
+  if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
+    scheduleNodeGraphModuleScopeDraw();
+  }
+}
+
+function beginNodeGraphKnobWidgetDrag(event) {
+  const control = event.currentTarget;
+  const input = nodeGraphKnobWidgetInputForControl(control);
+  if (!input) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  control.setPointerCapture?.(event.pointerId);
+  control.dataset.knobDragStartX = String(event.clientX);
+  control.dataset.knobDragStartY = String(event.clientY);
+  control.dataset.knobDragStartValue = String(Number(input.value) || 0);
+  control.classList.add("value-dragging");
+}
+
+function dragNodeGraphKnobWidget(event) {
+  const control = event.currentTarget;
+  if (!control.classList.contains("value-dragging")) {
+    return;
+  }
+  const input = nodeGraphKnobWidgetInputForControl(control);
+  if (!input) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  const min = Number(input.min);
+  const max = Number(input.max);
+  const range = Number.isFinite(max - min) && max > min ? max - min : 1;
+  const startX = Number(control.dataset.knobDragStartX) || event.clientX;
+  const startY = Number(control.dataset.knobDragStartY) || event.clientY;
+  const startValue = Number(control.dataset.knobDragStartValue) || 0;
+  const speed = event.shiftKey ? 420 : 140;
+  const delta = ((startY - event.clientY) + (event.clientX - startX)) / speed;
+  setNodeGraphKnobWidgetValue(control, startValue + delta * range);
+}
+
+function endNodeGraphKnobWidgetDrag(event) {
+  const control = event.currentTarget;
+  if (!control.classList.contains("value-dragging")) {
+    return;
+  }
+  control.classList.remove("value-dragging");
+  control.releasePointerCapture?.(event.pointerId);
+  delete control.dataset.knobDragStartX;
+  delete control.dataset.knobDragStartY;
+  delete control.dataset.knobDragStartValue;
+  const input = nodeGraphKnobWidgetInputForControl(control);
+  if (input) {
+    syncNodeGraphPatchParameterFromSlider(input, {
+      record: true,
+      status: "knob changed",
+    });
+    scheduleNodeGraphLiveParameterSync();
+  }
+}
+
 function attachNodeGraphNodeEvents(node) {
   ensureNodeGraphDragHandle(node);
   node.querySelector(".node-drag-handle")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
@@ -63,6 +174,14 @@ function attachNodeGraphNodeEvents(node) {
       }
       scheduleNodeGraphLiveParameterSync();
     });
+  }
+  for (const control of node.querySelectorAll("[data-knob-widget-control]")) {
+    syncNodeGraphKnobWidgetControl(control);
+    control.addEventListener("pointerdown", beginNodeGraphKnobWidgetDrag);
+    control.addEventListener("pointermove", dragNodeGraphKnobWidget);
+    control.addEventListener("pointerup", endNodeGraphKnobWidgetDrag);
+    control.addEventListener("pointercancel", endNodeGraphKnobWidgetDrag);
+    control.addEventListener("lostpointercapture", endNodeGraphKnobWidgetDrag);
   }
   node.querySelector(".node-module-shop-open-button")?.addEventListener("click", (event) => {
     event.preventDefault();
@@ -174,6 +293,7 @@ function nodeGraphModuleLayoutClassNames(definition, layout) {
     graph: "graph-node-layout",
     image: "image-node-layout",
     keyboardController: "keyboard-controller-layout",
+    knobWidget: "knob-widget-layout",
     led: "led-layout",
     macroControls: "macro-controls-layout",
     moduleHome: "module-home-layout",
@@ -225,6 +345,8 @@ function createNodeGraphModuleElement(type, node) {
   }
   if (layout === "led") {
     // Compact LED body is the whole module face.
+  } else if (layout === "knobWidget") {
+    article.append(createNodeGraphKnobWidgetBody(node, type));
   } else if (layout === "textBox") {
     article.append(createNodeGraphTextBoxBody(node));
   } else if (layout === "image") {
@@ -347,12 +469,18 @@ function createNodeGraphModuleElement(type, node) {
     ioSection.append(outputColumn || document.createElement("div"));
     article.append(ioSection);
   } else {
-    const scopeSection = createNodeGraphModuleScopeSection(node, type);
-    article.append(scopeSection);
-    if ((type === "samplePlayer" || type === "sampleLooper") && typeof createNodeGraphSampleModuleBody === "function") {
+    const oscilloscopeHidden = normalizeNodeGraphPatchNodeUi(patchNode.ui).oscilloscopeHidden;
+    let scopeSection = null;
+    if (!oscilloscopeHidden) {
+      scopeSection = createNodeGraphModuleScopeSection(node, type);
+      article.append(scopeSection);
+    }
+    if ((type === "samplePlayer" || type === "sampleLooper" || type === "audioPlayer") && typeof createNodeGraphSampleModuleBody === "function") {
       article.append(createNodeGraphSampleModuleBody(node));
     }
-    registerNodeGraphModuleScopeSlot(article, { nodeId: node, type, scopeElement: scopeSection });
+    if (scopeSection) {
+      registerNodeGraphModuleScopeSlot(article, { nodeId: node, type, scopeElement: scopeSection });
+    }
 
     const ioSection = document.createElement("div");
     ioSection.className = "dsp-node-io-section";
@@ -379,7 +507,7 @@ function createNodeGraphModuleElement(type, node) {
     article.append(stateBadge);
   }
 
-  if (definition.parameters?.length && definition.layout !== "sliderWidget" && definition.layout !== "led") {
+  if (definition.parameters?.length && definition.layout !== "sliderWidget" && layout !== "knobWidget" && definition.layout !== "led") {
     const body = document.createElement("div");
     body.className = "dsp-node-body";
     const graphInputSection = createNodeGraphInputSection(node, type);

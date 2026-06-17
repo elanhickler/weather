@@ -287,6 +287,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.randomClockStates = new Map();
     this.randomWalkStates = new Map();
     this.sampleHoldStates = new Map();
+    this.samplePlaybackStates = new Map();
+    this.samples = new Map();
     this.slewLimiterStates = new Map();
     this.scopeBuffers = new Map();
     this.scopeCounter = 0;
@@ -432,8 +434,18 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       moduleGroupPlan: node.moduleGroupPlan || null,
       paramMeta: node.paramMeta || {},
       params: node.params || {},
+      sample: node.sample || null,
       type: node.type,
     }]));
+    this.samples = new Map((Array.isArray(plan?.samples) ? plan.samples : []).map((sample) => [
+      String(sample?.id || ""),
+      {
+        ...sample,
+        channelData: (Array.isArray(sample?.channelData) ? sample.channelData : []).map((channel) =>
+          channel instanceof Float32Array ? channel : new Float32Array(channel || [])),
+        samples: sample?.samples instanceof Float32Array ? sample.samples : new Float32Array(sample?.samples || []),
+      },
+    ]).filter(([id]) => id));
     this.order = Array.isArray(plan?.order) ? [...plan.order] : [...ids];
     this.outputNode = plan?.outputNode || "output";
     this.visualSinks = (Array.isArray(plan?.visualSinks) ? plan.visualSinks : []).map((sink) => ({
@@ -513,6 +525,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       }
       if (node?.type === "sampleHold" && !this.sampleHoldStates.has(id)) {
         this.sampleHoldStates.set(id, this.createSampleHoldState());
+      }
+      if ((node?.type === "samplePlayer" || node?.type === "sampleLooper" || node?.type === "audioPlayer") && !this.samplePlaybackStates.has(id)) {
+        this.samplePlaybackStates.set(id, this.createSamplePlaybackState());
       }
       if (node?.type === "slewLimiter" && !this.slewLimiterStates.has(id)) {
         this.slewLimiterStates.set(id, this.createSlewLimiterState());
@@ -687,6 +702,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     for (const id of [...this.sampleHoldStates.keys()]) {
       if (!ids.has(id)) {
         this.sampleHoldStates.delete(id);
+      }
+    }
+    for (const id of [...this.samplePlaybackStates.keys()]) {
+      if (!ids.has(id)) {
+        this.samplePlaybackStates.delete(id);
       }
     }
     for (const id of [...this.slewLimiterStates.keys()]) {
@@ -2094,6 +2114,17 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     };
   }
 
+  createSamplePlaybackState() {
+    return {
+      lastPlay: 0,
+      lastReset: 0,
+      phase: 0,
+      playing: false,
+      rangeKey: "",
+      sampleId: "",
+    };
+  }
+
   createStepSequencerState() {
     return {
       gate: 0,
@@ -2496,6 +2527,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.planSerial = 0;
     runtime.randomClockStates = new Map();
     runtime.sampleHoldStates = new Map();
+    runtime.samplePlaybackStates = new Map();
+    runtime.samples = this.samples;
     runtime.randomWalkStates = new Map();
     runtime.sessionId = this.sessionId;
     runtime.scopeBuffers = new Map();
@@ -2524,6 +2557,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       moduleGroupPlan: node.moduleGroupPlan || null,
       paramMeta: node.paramMeta || {},
       params: node.params || {},
+      sample: node.sample || null,
       type: node.type,
     }]));
     this.order = Array.isArray(plan?.order) ? [...plan.order] : [...ids];
@@ -2560,6 +2594,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "delayEffect") this.delayEffectStates.set(id, this.createDelayEffectState());
       if (node?.type === "randomClock") this.randomClockStates.set(id, this.createRandomClockState());
       if (node?.type === "sampleHold") this.sampleHoldStates.set(id, this.createSampleHoldState());
+      if (node?.type === "samplePlayer" || node?.type === "sampleLooper" || node?.type === "audioPlayer") {
+        this.samplePlaybackStates.set(id, this.createSamplePlaybackState());
+      }
       if (node?.type === "slewLimiter") this.slewLimiterStates.set(id, this.createSlewLimiterState());
       if (node?.type === "expAdsr") this.expAdsrStates.set(id, this.createExpAdsrState());
       if (node?.type === "linearEnvelope") this.linearEnvelopeStates.set(id, this.createLinearEnvelopeState());
@@ -2734,6 +2771,103 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       x: this.clampValue(this.visualControls.x, -1, 1),
       y: this.clampValue(this.visualControls.y, -1, 1),
     });
+  }
+
+  sampleChannelAt(sample, channelIndex, frameIndex) {
+    const channel = sample?.channelData?.[channelIndex] || sample?.samples;
+    if (!channel?.length) {
+      return 0;
+    }
+    const maxIndex = channel.length - 1;
+    const index = this.clampValue(Number(frameIndex) || 0, 0, maxIndex);
+    const low = Math.floor(index);
+    const high = Math.min(maxIndex, low + 1);
+    const frac = index - low;
+    return (Number(channel[low]) || 0) + ((Number(channel[high]) || 0) - (Number(channel[low]) || 0)) * frac;
+  }
+
+  sampleStereoAt(sample, frameIndex) {
+    const left = this.sampleChannelAt(sample, 0, frameIndex);
+    const right = sample?.channelData?.length > 1
+      ? this.sampleChannelAt(sample, 1, frameIndex)
+      : left;
+    return {
+      Left: left,
+      Mono: (left + right) * 0.5,
+      Out: (left + right) * 0.5,
+      Right: right,
+    };
+  }
+
+  audioPlayerSample(node, nodeId, readInput, readParam, rate = sampleRate) {
+    const state = this.samplePlaybackStates.get(nodeId) || this.createSamplePlaybackState();
+    this.samplePlaybackStates.set(nodeId, state);
+    const sampleId = String(node?.sample?.id || "");
+    const sample = this.samples.get(sampleId);
+    const frames = Math.max(0, Number(sample?.frames) || sample?.samples?.length || sample?.channelData?.[0]?.length || 0);
+    if (!sample || frames <= 1) {
+      return { Left: 0, Mono: 0, Out: 0, Phase: 0, Right: 0 };
+    }
+    const start = this.clampValue(readParam("start", 0), 0, 1);
+    const end = this.clampValue(readParam("end", 1), 0, 1);
+    const startPhase = Math.min(start, end);
+    const endPhase = Math.max(start, end);
+    const span = Math.max(0.000001, endPhase - startPhase);
+    const rangeKey = `${startPhase}:${endPhase}`;
+    if (state.sampleId !== sampleId || state.rangeKey !== rangeKey) {
+      state.phase = startPhase;
+      state.sampleId = sampleId;
+      state.rangeKey = rangeKey;
+    }
+    const playConnected = this.inputConnections?.has?.(this.inputKey(nodeId, "Play"));
+    const play = playConnected ? readInput("Play") : 1;
+    const reset = readInput("Reset");
+    const resetEdge = state.lastReset <= 0 && reset > 0;
+    if (resetEdge) {
+      state.phase = startPhase;
+      state.playing = false;
+    }
+    if (play > 0) {
+      state.playing = true;
+    } else if (state.lastPlay > 0 && play <= 0) {
+      state.playing = false;
+    }
+    state.lastPlay = play;
+    state.lastReset = reset;
+
+    const phaseConnected = this.inputConnections?.has?.(this.inputKey(nodeId, "Phase"));
+    const speed = readParam("speed", 1) + readInput("Speed");
+    const sampleRateRatio = (Number(sample.sampleRate) || rate || 44100) / Math.max(1, rate || 44100);
+    const increment = (speed * sampleRateRatio) / frames;
+    const phase = phaseConnected
+      ? startPhase + this.clampValue(readInput("Phase"), 0, 1) * span
+      : state.phase;
+    const loop = readParam("loop", 1) >= 0.5;
+    const boundedPhase = loop
+      ? startPhase + this.wrapValue((phase - startPhase) / span, 0, 1) * span
+      : this.clampValue(phase, startPhase, endPhase);
+    const stereo = this.sampleStereoAt(sample, boundedPhase * (frames - 1));
+    const level = readParam("level", 1);
+    if (!phaseConnected && state.playing) {
+      const nextPhase = boundedPhase + increment;
+      if (loop) {
+        state.phase = startPhase + this.wrapValue((nextPhase - startPhase) / span, 0, 1) * span;
+      } else {
+        state.phase = this.clampValue(nextPhase, startPhase, endPhase);
+        if (state.phase >= endPhase || state.phase <= startPhase) {
+          state.playing = false;
+        }
+      }
+    } else {
+      state.phase = boundedPhase;
+    }
+    return {
+      Left: stereo.Left * level,
+      Mono: stereo.Mono * level,
+      Out: stereo.Mono * level,
+      Phase: this.clampValue((boundedPhase - startPhase) / span, 0, 1),
+      Right: stereo.Right * level,
+    };
   }
 
   monitorBadValueSample(value, nodeId) {
@@ -4124,6 +4258,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           Out: ((left + right) * 0.5) * level,
           Right: right * level,
         };
+      } else if (node?.type === "audioPlayer") {
+        const readParam = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        value = this.audioPlayerSample(
+          node,
+          nodeId,
+          (port) => mixInput(nodeId, port),
+          readParam,
+          safeRate,
+        );
       } else if (node?.type === "osc" || node?.type === "fbPolyBlepOsc") {
         const resetState = this.oscResetStates.get(nodeId) || this.createOscResetState();
         this.oscResetStates.set(nodeId, resetState);
@@ -4658,6 +4801,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       } else if (node?.type === "valueSlider") {
         const offset = this.readEffectiveParameter(node, "offset", 0, frame, frames, frameValues);
         value = { Bias: offset, Out: offset, offset };
+      } else if (node?.type === "macroKnob" || node?.type === "bipolarKnob") {
+        const knobValue = this.readEffectiveParameter(node, "value", 0, frame, frames, frameValues);
+        value = { Out: knobValue, value: knobValue };
       } else if (node?.type === "highpass") {
         const state = this.highpassStates.get(nodeId) || this.createHighpassState();
         this.highpassStates.set(nodeId, state);

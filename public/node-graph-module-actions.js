@@ -1391,7 +1391,7 @@ function toggleNodeGraphModuleButtonsFromContext() {
   } else {
     ui.buttonsHidden = !ui.buttonsHidden;
   }
-  if (ui.buttonsHidden || ui.titleHidden) {
+  if (ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden) {
     targetNode.ui = ui;
   } else {
     delete targetNode.ui;
@@ -1415,13 +1415,37 @@ function toggleNodeGraphModuleTitleFromContext() {
   }
   const ui = normalizeNodeGraphPatchNodeUi(targetNode.ui);
   ui.titleHidden = !ui.titleHidden;
-  if (ui.buttonsHidden || ui.titleHidden) {
+  if (ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden) {
     targetNode.ui = ui;
   } else {
     delete targetNode.ui;
   }
   commitNodeGraphPatch(patch, {
     status: ui.titleHidden ? "module title hidden" : "module title shown",
+  });
+  configureNodeSceneContextMenu("module");
+}
+
+function toggleNodeGraphModuleOscilloscopeFromContext() {
+  const sourceNode = nodeGraphPatchNode(nodeGraphModuleActionTargetNodeId());
+  if (!sourceNode || !nodeGraphPatchNodeHasHideableOscilloscope(sourceNode)) {
+    return;
+  }
+
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const targetNode = patch.nodes.find((node) => node.id === sourceNode.id);
+  if (!targetNode || !nodeGraphPatchNodeHasHideableOscilloscope(targetNode)) {
+    return;
+  }
+  const ui = normalizeNodeGraphPatchNodeUi(targetNode.ui);
+  ui.oscilloscopeHidden = !ui.oscilloscopeHidden;
+  if (ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden) {
+    targetNode.ui = ui;
+  } else {
+    delete targetNode.ui;
+  }
+  commitNodeGraphPatch(patch, {
+    status: ui.oscilloscopeHidden ? "module oscilloscope hidden" : "module oscilloscope shown",
   });
   configureNodeSceneContextMenu("module");
 }

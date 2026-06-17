@@ -91,6 +91,17 @@ function createNodeGraphSampleHoldState() {
   };
 }
 
+function createNodeGraphSamplePlaybackState() {
+  return {
+    lastPlay: 0,
+    lastReset: 0,
+    phase: 0,
+    playing: false,
+    rangeKey: "",
+    sampleId: "",
+  };
+}
+
 function createNodeGraphStepSequencerState() {
   return {
     gate: 0,
@@ -1615,6 +1626,104 @@ function nodeGraphFlowerChildEnvelopeFollowerSample(state, input, params, sample
   return state.out;
 }
 
+function nodeGraphSampleChannelAt(sample, channelIndex, frameIndex) {
+  const channel = sample?.channelData?.[channelIndex] || sample?.samples;
+  if (!channel?.length) {
+    return 0;
+  }
+  const maxIndex = channel.length - 1;
+  const index = clampNodeSliderValue(Number(frameIndex) || 0, 0, maxIndex);
+  const low = Math.floor(index);
+  const high = Math.min(maxIndex, low + 1);
+  const frac = index - low;
+  return (Number(channel[low]) || 0) + ((Number(channel[high]) || 0) - (Number(channel[low]) || 0)) * frac;
+}
+
+function nodeGraphSampleStereoAt(sample, frameIndex) {
+  const left = nodeGraphSampleChannelAt(sample, 0, frameIndex);
+  const right = sample?.channelData?.length > 1
+    ? nodeGraphSampleChannelAt(sample, 1, frameIndex)
+    : left;
+  return {
+    Left: left,
+    Mono: (left + right) * 0.5,
+    Out: (left + right) * 0.5,
+    Right: right,
+  };
+}
+
+function nodeGraphAudioPlayerSample(runtime, node, nodeId, readInput, readParam, sampleRate) {
+  const state = runtime.samplePlaybackStates.get(nodeId) || createNodeGraphSamplePlaybackState();
+  runtime.samplePlaybackStates.set(nodeId, state);
+  const sampleId = normalizeNodeGraphSampleId(node.sample?.id);
+  const sample = runtime.samples?.get?.(sampleId);
+  const frames = Math.max(0, Number(sample?.frames) || sample?.samples?.length || sample?.channelData?.[0]?.length || 0);
+  if (!sample || frames <= 1) {
+    return { Left: 0, Mono: 0, Out: 0, Phase: 0, Right: 0 };
+  }
+  const start = clampNodeSliderValue(readParam("start", 0), 0, 1);
+  const end = clampNodeSliderValue(readParam("end", 1), 0, 1);
+  const startPhase = Math.min(start, end);
+  const endPhase = Math.max(start, end);
+  const span = Math.max(0.000001, endPhase - startPhase);
+  const rangeKey = `${startPhase}:${endPhase}`;
+  if (state.sampleId !== sampleId || state.rangeKey !== rangeKey) {
+    state.phase = startPhase;
+    state.sampleId = sampleId;
+    state.rangeKey = rangeKey;
+  }
+  const playConnected = runtime.inputConnections?.has?.(nodeGraphInputKey(nodeId, "Play"));
+  const play = playConnected ? readInput("Play") : 1;
+  const reset = readInput("Reset");
+  const resetEdge = state.lastReset <= 0 && reset > 0;
+  if (resetEdge) {
+    state.phase = startPhase;
+    state.playing = false;
+  }
+  if (play > 0) {
+    state.playing = true;
+  } else if (state.lastPlay > 0 && play <= 0) {
+    state.playing = false;
+  }
+  state.lastPlay = play;
+  state.lastReset = reset;
+
+  const phaseConnected = runtime.inputConnections?.has?.(nodeGraphInputKey(nodeId, "Phase"));
+  const speedInput = readInput("Speed");
+  const speed = readParam("speed", 1) + speedInput;
+  const sampleRateRatio = (Number(sample.sampleRate) || sampleRate || 44100) / Math.max(1, sampleRate || 44100);
+  const increment = (speed * sampleRateRatio) / frames;
+  const phase = phaseConnected
+    ? startPhase + clampNodeSliderValue(readInput("Phase"), 0, 1) * span
+    : state.phase;
+  const boundedPhase = readParam("loop", 1) >= 0.5
+    ? startPhase + wrapNodeSliderValue((phase - startPhase) / span, 0, 1) * span
+    : clampNodeSliderValue(phase, startPhase, endPhase);
+  const frameIndex = boundedPhase * (frames - 1);
+  const stereo = nodeGraphSampleStereoAt(sample, frameIndex);
+  const level = readParam("level", 1);
+  if (!phaseConnected && state.playing) {
+    const nextPhase = boundedPhase + increment;
+    if (readParam("loop", 1) >= 0.5) {
+      state.phase = startPhase + wrapNodeSliderValue((nextPhase - startPhase) / span, 0, 1) * span;
+    } else {
+      state.phase = clampNodeSliderValue(nextPhase, startPhase, endPhase);
+      if (state.phase >= endPhase || state.phase <= startPhase) {
+        state.playing = false;
+      }
+    }
+  } else {
+    state.phase = boundedPhase;
+  }
+  return {
+    Left: stereo.Left * level,
+    Mono: stereo.Mono * level,
+    Out: stereo.Mono * level,
+    Phase: clampNodeSliderValue((boundedPhase - startPhase) / span, 0, 1),
+    Right: stereo.Right * level,
+  };
+}
+
 function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
   const frameValues = new Map();
   const mixInput = (nodeId, port = "In") => (runtime.inputConnections.get(`${nodeId}.${port}`) || []).reduce(
@@ -1700,6 +1809,24 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         Out: ((left + right) * 0.5) * level,
         Right: right * level,
       };
+    } else if (node?.type === "audioPlayer") {
+      const readParam = (key, fallback) => readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        key,
+        fallback,
+        frame,
+        frames,
+        frameValues,
+      );
+      value = nodeGraphAudioPlayerSample(
+        runtime,
+        node,
+        nodeId,
+        (port) => mixInput(nodeId, port),
+        readParam,
+        sampleRate,
+      );
     } else if (node?.type === "osc" || node?.type === "fbPolyBlepOsc") {
       const resetState = runtime.oscResetStates.get(nodeId) || createNodeGraphOscResetState();
       runtime.oscResetStates.set(nodeId, resetState);
@@ -2382,6 +2509,17 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frameValues,
       );
       value = { Bias: offset, Out: offset, offset };
+    } else if (node?.type === "macroKnob" || node?.type === "bipolarKnob") {
+      const knobValue = readNodeGraphLiveEffectiveParam(
+        runtime,
+        node,
+        "value",
+        0,
+        frame,
+        frames,
+        frameValues,
+      );
+      value = { Out: knobValue, value: knobValue };
     } else if (node?.type === "highpass") {
       const state = runtime.highpassStates.get(nodeId) || createNodeGraphHighpassState();
       runtime.highpassStates.set(nodeId, state);

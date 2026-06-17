@@ -63,6 +63,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "portalGenericOutput",
   "groupInput",
   "groupOutput",
+  "audioPlayer",
   "samplePlayer",
   "sampleLooper",
   "highpass",
@@ -481,15 +482,15 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   macroKnob: {
     category: "Knobs",
-    description: "Placeholder for a named macro knob that can steer several patch parameters at once.",
-    label: "MacroKnob",
-    notes: ["placeholder", "manual control", "multi-target"],
+    description: "Compact 4x4 external knob module. Drag it by hand and patch its value output into another module's parameter modulation input.",
+    label: "Macro Knob",
+    notes: ["4x4 knob", "manual control", "parameter link"],
   },
   bipolarKnob: {
     category: "Knobs",
-    description: "Placeholder for a center-zero knob for offsets, modulation depth, and expressive push/pull controls.",
-    label: "BipolarKnob",
-    notes: ["placeholder", "center zero", "performance control"],
+    description: "Compact 4x4 center-zero knob module for offsets, modulation depth, and expressive push/pull control links.",
+    label: "Bipolar Knob",
+    notes: ["4x4 knob", "center zero", "performance control"],
   },
   valueSlider: {
     category: "Sliders",
@@ -614,6 +615,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "Patch-local one-shot sample playback. Trigger starts from Start and plays to End with simple click ramps.",
     label: "Sample Player",
     notes: ["sample playback", "one shot", "audio source"],
+  },
+  audioPlayer: {
+    category: "Samples",
+    description: "Patch-local music file player with stereo outputs and a phasor-driven scrub input for sample-accurate playback head control.",
+    label: "Music Player",
+    notes: ["music playback", "scrubbable", "phasor", "audio source"],
   },
   sampleLooper: {
     category: "Samples",

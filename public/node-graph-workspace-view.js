@@ -15,6 +15,42 @@ function applyNodeGraphPan() {
   if (typeof scheduleNodeGraphModuleScopeDraw === "function") {
     scheduleNodeGraphModuleScopeDraw();
   }
+  syncNodeGraphWorkspaceResizeHandlePosition();
+}
+
+function syncNodeGraphWorkspaceResizeHandlePosition() {
+  const workspace = document.getElementById("nodeGraphWorkspace");
+  const handle = document.getElementById("nodeGraphResizeHandle");
+  if (!workspace || !handle) {
+    return;
+  }
+  const rect = workspace.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || rect.right;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || rect.bottom;
+  const visibleLeft = Math.max(0, rect.left);
+  const visibleTop = Math.max(0, rect.top);
+  const visibleRight = Math.min(viewportWidth, rect.right);
+  const visibleBottom = Math.min(viewportHeight, rect.bottom);
+  if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) {
+    handle.style.visibility = "hidden";
+    return;
+  }
+  const margin = 8;
+  const size = Math.max(1, handle.offsetWidth || 28);
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const left = clamp(
+    visibleRight - size - margin,
+    visibleLeft + margin,
+    Math.max(visibleLeft + margin, viewportWidth - size - margin),
+  );
+  const top = clamp(
+    visibleBottom - size - margin,
+    visibleTop + margin,
+    Math.max(visibleTop + margin, viewportHeight - size - margin),
+  );
+  handle.style.setProperty("--node-graph-resize-handle-left", `${left}px`);
+  handle.style.setProperty("--node-graph-resize-handle-top", `${top}px`);
+  handle.style.visibility = "";
 }
 
 function syncNodeGraphOriginMarker() {
@@ -449,6 +485,7 @@ function setNodeGraphWorkspacePreviewSize(widthGu, heightGu) {
   workspace.dataset.widthGu = String(widthGu);
   workspace.dataset.heightGu = String(heightGu);
   drawNodeGraphWires();
+  syncNodeGraphWorkspaceResizeHandlePosition();
 }
 
 function beginNodeGraphWorkspaceResize(event) {
@@ -527,6 +564,7 @@ function endNodeGraphWorkspaceResize(event) {
 
 function handleNodeGraphWindowResize() {
   applyNodeGraphWorkspaceView();
+  syncNodeGraphWorkspaceResizeHandlePosition();
   if (typeof syncNodeGraphSliderReadouts === "function") {
     syncNodeGraphSliderReadouts();
   }

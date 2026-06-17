@@ -129,18 +129,6 @@ function bindNodeGraphHeaderControlEvents() {
     .getElementById("nodeMasterScopeDiscontinuitySkipSamples")
     .addEventListener("change", handleNodeGraphModuleScopeDiscontinuitySkipSamplesInput);
   document
-    .getElementById("nodeMasterScopeOverdrawPoints")
-    .addEventListener("input", handleNodeGraphModuleScopeOverdrawPointsInput);
-  document
-    .getElementById("nodeMasterScopeOverdrawPoints")
-    .addEventListener("change", handleNodeGraphModuleScopeOverdrawPointsInput);
-  document
-    .getElementById("nodeMasterScopeOverdrawFade")
-    .addEventListener("input", handleNodeGraphModuleScopeOverdrawFadeInput);
-  document
-    .getElementById("nodeMasterScopeOverdrawFade")
-    .addEventListener("change", handleNodeGraphModuleScopeOverdrawFadeInput);
-  document
     .getElementById("nodeMasterScopeDotCore1Enabled")
     .addEventListener("click", handleNodeGraphModuleScopeDotCoreToggle);
   document
