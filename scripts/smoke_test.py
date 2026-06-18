@@ -11258,6 +11258,13 @@ def require_node_graph_mvp_contract() -> None:
     ]:
         require(snippet not in removed_module_source, f"removed goods/services module artifact still present: {snippet}")
 
+    removed_visual_export_source = "\n".join([
+        index_source,
+        node_graph_source,
+        style_source,
+        tooltip_source,
+        server_source,
+    ])
     for snippet in [
         "nodeRenderWavButton",
         "nodeRenderMp4Button",
@@ -11269,7 +11276,10 @@ def require_node_graph_mvp_contract() -> None:
         "nodeSaveVisualOutputButton",
         "nodeCopyVisualOutputButton",
     ]:
-        require(snippet not in index_source, f"removed visual output debug button still present in HTML: {snippet}")
+        require(
+            snippet not in removed_visual_export_source,
+            f"removed visual output debug button still present: {snippet}",
+        )
 
     require(
         "vertices.push(..." not in script_sources["./public/node-graph-module-scopes.js"],
@@ -12456,8 +12466,8 @@ def require_node_graph_mvp_contract() -> None:
         "height: max(",
         "calc(var(--node-slider-readout-height) + (var(--node-slider-row-padding-block) * 2))",
         "height: var(--node-slider-readout-height)",
-        "/* TODO: temporary hardcoded value */",
-        "transform: translateY(2px)",
+        "--node-slider-readout-center-offset: 2px",
+        "transform: translateY(var(--node-slider-readout-center-offset))",
         "align-self: stretch",
         "align-items: center",
         "padding: var(--node-slider-row-padding-block) 0",

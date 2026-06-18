@@ -2863,6 +2863,7 @@ audio {
   --node-slider-padding-inline: calc(var(--node-grid-size) * 0.25);
   --node-slider-row-padding-block: calc(var(--node-grid-size) * 0.0357143);
   --node-slider-readout-height: calc(var(--node-body-row-height) - (var(--node-slider-row-padding-block) * 2));
+  --node-slider-readout-center-offset: 2px;
   --node-slider-width-ratio: 1;
   --node-slider-unit-width: 2.5em;
   --node-slider-label-color: #cfdde5;
@@ -8877,8 +8878,7 @@ audio {
   min-width: 0;
   height: var(--node-slider-readout-height);
   min-height: var(--node-slider-readout-height);
-  /* TODO: temporary hardcoded value */
-  transform: translateY(2px);
+  transform: translateY(var(--node-slider-readout-center-offset));
 }
 
 .dsp-node p {
