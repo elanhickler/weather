@@ -129,7 +129,8 @@ tools/webui-clap-host/README.md
 Boundaries:
 
 ```text
-The server is read-only.
+The server only writes through explicit save/settings/audio helper routes.
+Open Path is restricted to Downloads.
 The browser patch graph is demo-scoped state.
 The browser compiler is not the production soemdsp scheduler.
 The WebUI does not instantiate real C++ DSP objects yet.
