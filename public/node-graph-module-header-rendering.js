@@ -221,11 +221,19 @@ function createNodeGraphHeaderTimingWidgets() {
   const group = document.createElement("div");
   group.className = "node-header-timing-widgets";
   group.setAttribute("aria-label", "Patch timing");
-  group.append(
+
+  const transport = document.createElement("div");
+  transport.className = "node-header-timing-row node-header-transport-row";
+  transport.append(
     createNodeGraphTapTempoButton(),
     createNodeGraphHeaderTimingInput("tempoBpm", "BPM", { max: 320 }),
     createNodeGraphHeaderTimingInput("timeSignatureNumerator", "Beats"),
     createNodeGraphHeaderTimingInput("timeSignatureDenominator", "Unit"),
+  );
+
+  const scope = document.createElement("div");
+  scope.className = "node-header-timing-row node-header-scope-row";
+  scope.append(
     createNodeGraphHeaderScopeInput(
       "nodeMasterScopeBurn",
       "Burn",
@@ -268,6 +276,7 @@ function createNodeGraphHeaderTimingWidgets() {
     ),
     createNodeGraphHeaderSpeedPlaceholder(),
   );
+  group.append(transport, scope);
   return group;
 }
 

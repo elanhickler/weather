@@ -2044,8 +2044,8 @@ audio {
 }
 
 #nodePatchTimingControls {
-  flex: 4.85 1 0;
-  min-inline-size: min-content;
+  flex: 6.5 1 0;
+  min-inline-size: clamp(340px, 44vw, 680px);
 }
 
 .node-scope-master-brightness-control {
@@ -8490,12 +8490,27 @@ audio {
 .node-header-timing-widgets {
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: minmax(0, 40%) minmax(0, 60%);
   min-width: 0;
   width: 100%;
   height: 100%;
   border-inline: 1px solid rgba(127, 199, 217, 0.08);
+}
+
+.node-header-timing-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+  min-height: 0;
+}
+
+.node-header-transport-row {
+  grid-row: 1;
+}
+
+.node-header-scope-row {
+  grid-row: 2;
+  border-top: 1px solid rgba(127, 199, 217, 0.08);
 }
 
 .node-patch-timing-controls {
@@ -8533,7 +8548,7 @@ audio {
 }
 
 .node-header-timing-field[data-timing-row="lower"] {
-  grid-row: 2;
+  grid-row: auto;
 }
 
 .node-header-timing-field[data-header-number-drag="true"] {
@@ -8552,6 +8567,10 @@ audio {
   border-inline-end: 0;
 }
 
+.node-header-timing-row > :last-child {
+  border-inline-end: 0;
+}
+
 .node-header-timing-field span {
   min-width: 0;
   overflow: hidden;
@@ -8562,8 +8581,6 @@ audio {
 }
 
 .node-header-tap-tempo-button {
-  grid-column: 1;
-  grid-row: 1;
   align-self: stretch;
   min-width: 0;
   min-height: 0;
