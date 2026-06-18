@@ -4066,7 +4066,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=nonlinear-one-pole-smoothing-1'],
+            ['node-live-audio-worklet.js?v=beta-polish-1'],
         ),
     ]:
         for snippet in snippets:
@@ -6677,7 +6677,7 @@ def require_node_graph_mvp_contract() -> None:
                 "audioPlayer: counts.audioPlayer || 0",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=nonlinear-one-pole-smoothing-1',
+                'node-live-audio-worklet.js?v=beta-polish-1',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
