@@ -64,8 +64,11 @@ function nodeGraphModuleActionTargetNodeId() {
 }
 
 function syncNodeGraphModuleActionTargetFromSelection() {
-  const menu = document.getElementById("nodeSceneContextMenu");
-  if (!menu || menu.hidden || menu.dataset.mode === "add") {
+  const commandMenu = document.getElementById("nodeSceneContextMenu");
+  const actionWindow = document.getElementById("nodeModuleActionsWindow");
+  const commandMenuOpen = commandMenu && !commandMenu.hidden && commandMenu.dataset.mode !== "add";
+  const actionWindowOpen = actionWindow && !actionWindow.hidden;
+  if (!commandMenuOpen && !actionWindowOpen) {
     return;
   }
   const selectedWire = nodeGraphWireFromSelection();
@@ -85,9 +88,11 @@ function syncNodeGraphModuleActionTargetFromSelection() {
     configureNodeSceneContextMenu("module");
   } else {
     const selectedNodeIds = nodeGraphSelectedNodeIds();
+    nodeGraphMvp.sceneContextTargetNode = null;
+    nodeGraphMvp.sceneContextTargetWire = null;
     if (selectedNodeIds.size > 1) {
-      nodeGraphMvp.sceneContextTargetNode = null;
-      nodeGraphMvp.sceneContextTargetWire = null;
+      configureNodeSceneContextMenu("module");
+    } else if (actionWindowOpen) {
       configureNodeSceneContextMenu("module");
     }
   }

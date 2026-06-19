@@ -34,7 +34,7 @@ function nodeGraphDefaultButtonHtml(button) {
   return button?.dataset.defaultButtonHtml || button?.innerHTML || nodeGraphDefaultButtonLabel(button);
 }
 
-function confirmNodeGraphDefaultButtonClick(button, statusCallback) {
+function confirmNodeGraphDefaultButtonClick(button, statusCallback, options = {}) {
   if (!button) {
     return false;
   }
@@ -47,12 +47,15 @@ function confirmNodeGraphDefaultButtonClick(button, statusCallback) {
   clearNodeGraphConfirmDefaultButton();
   button.dataset.confirmDefaultText = nodeGraphDefaultButtonLabel(button);
   button.dataset.confirmDefaultHtml = nodeGraphDefaultButtonHtml(button);
-  button.textContent = "Confirm Default";
+  button.textContent = options.confirmText || "Confirm Default";
+  button.title = options.confirmText || "Confirm Default";
+  button.setAttribute("aria-label", options.confirmText || "Confirm Default");
   button.classList.add("confirming-default");
   button.setAttribute("aria-pressed", "true");
   nodeGraphMvp.confirmDefaultButton = button;
   nodeGraphMvp.confirmDefaultButtonTimer = window.setTimeout(() => {
     clearNodeGraphConfirmDefaultButton(button);
+    button.title = button.dataset.defaultButtonLabel || "";
   }, 4500);
   statusCallback?.();
   return false;

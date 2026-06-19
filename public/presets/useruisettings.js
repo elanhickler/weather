@@ -8,6 +8,7 @@
   },
   "controls": {
     "mouseLightEnabled": true,
+    "showOriginMarker": false,
     "modularShaderEnabled": false,
     "scopeBloomEnabled": false,
     "settingsHeaderTextSize": 100,
@@ -55,6 +56,7 @@
   },
   "exposedControls": {
     "mouseLightEnabled": true,
+    "showOriginMarker": false,
     "modularShaderEnabled": true,
     "scopeBloomEnabled": true,
     "settingsHeaderTextSize": false,
@@ -103,7 +105,7 @@
   "view": {
     "gridVisible": true,
     "moduleButtonsVisible": false,
-    "moduleOscilloscopesVisible": true,
+    "moduleOscilloscopesVisible": false,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
     "moduleScopeBurn": 0,

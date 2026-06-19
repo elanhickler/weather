@@ -15,6 +15,9 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "clock",
   "clockDivider",
   "delayedTrigger",
+  "buttonEvents",
+  "nextPatch",
+  "previousPatch",
   "randomClock",
   "triggerCounter",
   "triggerDivider",
@@ -520,6 +523,24 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     label: "MIDIController",
     notes: ["placeholder", "MIDI input", "external control"],
   },
+  buttonEvents: {
+    category: "Controllers",
+    description: "External page button event source. Emits short pulses for explicit click, hover, down, up, enter, and leave events sent into sandbox.",
+    label: "Button Events",
+    notes: ["external UI", "button triggers", "music page bridge"],
+  },
+  nextPatch: {
+    category: "Controllers",
+    description: "Patch command receiver. A trigger edge loads the next saved patch through the main UI patch explorer path.",
+    label: "Next Patch",
+    notes: ["patch navigation", "trigger input", "music player"],
+  },
+  previousPatch: {
+    category: "Controllers",
+    description: "Patch command receiver. A trigger edge loads the previous saved patch through the main UI patch explorer path.",
+    label: "Previous Patch",
+    notes: ["patch navigation", "trigger input", "music player"],
+  },
   keyboardController: {
     category: "Controllers",
     description: "Mouse-playable keyboard source. Emits sustained gate, one-sample gate, key index, quantized key, MIDI pitch, normalized double, phase increment, frequency, numeric pitch, and X/Y gesture values.",
@@ -529,8 +550,8 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   moduleShop: {
     category: "Controllers",
     description: "Patch-local button that opens the module browser.",
-    label: "Shop",
-    notes: ["module browser", "patch control", "shop"],
+    label: "Module Browser",
+    notes: ["module browser", "patch control"],
   },
   macroControls: {
     category: "Controllers",
@@ -804,8 +825,8 @@ function defaultNodeGraphModuleCatalogVisibility() {
     nodeGraphModuleStoreTypes.map((type) => [
       type,
       {
+        developer: true,
         home: false,
-        shop: true,
       },
     ]),
   );
@@ -820,16 +841,16 @@ function normalizeNodeGraphModuleCatalogVisibility(value = {}) {
         return [
           type,
           {
+            developer: entry.developer !== false && entry.shop !== false,
             home: entry.home === true,
-            shop: entry.shop !== false,
           },
         ];
       }
       return [
         type,
         {
+          developer: entry !== false,
           home: false,
-          shop: entry !== false,
         },
       ];
     }),
@@ -842,7 +863,13 @@ function nodeGraphModuleCatalogVisibility() {
 
 function nodeGraphModuleIsStoreVisible(type, shelf = "shop") {
   const visibility = nodeGraphModuleCatalogVisibility()[type];
-  return Boolean(visibility?.[shelf === "home" ? "home" : "shop"]);
+  if (shelf === "developer") {
+    return visibility?.developer !== false;
+  }
+  if (shelf === "home") {
+    return visibility?.home === true;
+  }
+  return visibility?.developer !== false;
 }
 
 function applyNodeGraphModuleCatalogVisibility(value = {}) {
@@ -887,11 +914,12 @@ function nodeGraphModuleStoreEntries() {
       type,
       demoPatch: nodeGraphModuleStoreDemoPatchAvailable(type),
       demoListen: nodeGraphModuleStoreDemoListenAvailable(type),
-      homeVisible: nodeGraphModuleIsStoreVisible(type, "home"),
+      developerVisible: nodeGraphModuleIsStoreVisible(type, "developer"),
+      homeVisible: nodeGraphModuleIsStoreVisible(type, "home") && Object.hasOwn(nodeGraphModuleDefinitions, type),
       implemented: Object.hasOwn(nodeGraphModuleDefinitions, type),
       label: nodeGraphModuleStoreCatalog[type]?.label || nodeGraphNodeLabels[type] || type,
-      shopVisible: nodeGraphModuleIsStoreVisible(type, "shop"),
-      visible: nodeGraphModuleIsStoreVisible(type, "shop"),
+      shopVisible: nodeGraphModuleIsStoreVisible(type, "shop") && Object.hasOwn(nodeGraphModuleDefinitions, type),
+      visible: nodeGraphModuleIsStoreVisible(type, "shop") && Object.hasOwn(nodeGraphModuleDefinitions, type),
     }));
 }
 
@@ -899,12 +927,12 @@ function setNodeGraphModuleCatalogVisibility(type, visible, shelf = "shop") {
   if (!nodeGraphModuleStoreTypes.includes(type)) {
     return;
   }
-  const key = shelf === "home" ? "home" : "shop";
+  const key = shelf === "home" ? "home" : "developer";
   const current = nodeGraphModuleCatalogVisibility();
   nodeGraphMvp.moduleCatalogVisibility = {
     ...current,
     [type]: {
-      ...(current[type] || { home: false, shop: true }),
+      ...(current[type] || { developer: true, home: false }),
       [key]: Boolean(visible),
     },
   };
@@ -913,7 +941,7 @@ function setNodeGraphModuleCatalogVisibility(type, visible, shelf = "shop") {
 }
 
 function setNodeGraphModuleStoreDepartment(department = "") {
-  nodeGraphMvp.moduleStoreDepartment = nodeGraphModuleStoreDepartments.includes(department) ? department : "";
+  nodeGraphMvp.moduleStoreDepartment = "";
   renderNodeGraphModuleStoreCatalog();
 }
 
@@ -921,28 +949,83 @@ function nodeGraphNormalizeModuleDepartmentSearch(value = "") {
   return String(value || "").trim().toLowerCase();
 }
 
-function nodeGraphModuleDepartmentMatchesSearch(department, entries, query) {
+function normalizeNodeGraphModuleStoreGridColumns(value) {
+  const number = Math.round(Number(value));
+  return Number.isFinite(number) ? Math.max(1, Math.min(16, number)) : 4;
+}
+
+function nodeGraphModuleStoreEntryMatchesSearch(entry, query) {
   const needle = nodeGraphNormalizeModuleDepartmentSearch(query);
   if (!needle) {
     return true;
   }
-  const ad = nodeGraphModuleStoreDepartmentAds[department] || {};
   const haystack = [
-    department,
-    ad.title,
-    ad.pitch,
-    ...entries.flatMap((entry) => [
-      entry.label,
-      entry.type,
-      entry.category,
-      entry.description,
-      ...(entry.notes || []),
-    ]),
+    entry.label,
+    entry.type,
+    entry.category,
+    entry.description,
+    ...(entry.notes || []),
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
   return haystack.includes(needle);
+}
+
+function syncNodeGraphModuleShopGridColumns() {
+  const columns = normalizeNodeGraphModuleStoreGridColumns(nodeGraphMvp.moduleStoreGridColumns);
+  nodeGraphMvp.moduleStoreGridColumns = columns;
+  const input = document.getElementById("nodeModuleShopFitInput");
+  if (input && input.value !== String(columns)) {
+    input.value = String(columns);
+  }
+  const labelSizeRem = Math.max(0.54, Math.min(1.02, 1.02 - ((columns - 1) * 0.07)));
+  const panel = document.getElementById("nodeModuleShopView");
+  panel?.style.setProperty("--node-module-shop-columns", String(columns));
+  panel?.style.setProperty("--node-module-shop-label-size", `${labelSizeRem.toFixed(3)}rem`);
+}
+
+function normalizeNodeGraphModuleShopWindowSize(size = {}) {
+  const source = size && typeof size === "object" ? size : {};
+  return {
+    width: Math.max(260, Math.min(980, Math.round(Number(source.width) || 520))),
+    height: Math.max(260, Math.round(Number(source.height) || 620)),
+  };
+}
+
+function applyNodeGraphModuleShopWindowSize(size = {}) {
+  const panel = document.getElementById("nodeModuleShopView");
+  const normalized = normalizeNodeGraphModuleShopWindowSize(size);
+  if (panel) {
+    panel.style.setProperty("--node-module-shop-width", `${normalized.width}px`);
+    panel.style.setProperty("--node-module-shop-height", `${normalized.height}px`);
+  }
+  return normalized;
+}
+
+function nodeGraphModuleShopWindowSizeFromElement(panel = document.getElementById("nodeModuleShopView")) {
+  const rect = panel?.getBoundingClientRect?.();
+  return normalizeNodeGraphModuleShopWindowSize({
+    width: rect?.width,
+    height: rect?.height,
+  });
+}
+
+function saveNodeGraphModuleShopWindowSizeToUserSettings() {
+  const panel = document.getElementById("nodeModuleShopView");
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "moduleBrowser",
+      panel,
+      { open: !panel?.hidden, size: nodeGraphModuleShopWindowSizeFromElement(panel) },
+      { status: false },
+    );
+  }
+}
+
+function handleNodeGraphModuleShopFitInput(event) {
+  nodeGraphMvp.moduleStoreGridColumns = normalizeNodeGraphModuleStoreGridColumns(event?.currentTarget?.value);
+  syncNodeGraphModuleShopGridColumns();
 }
 
 function handleNodeGraphModuleDepartmentSearchInput(event) {
@@ -959,47 +1042,6 @@ function handleNodeGraphModuleDepartmentSearchKeydown(event) {
   nodeGraphMvp.moduleStoreDepartmentSearch = "";
   event.currentTarget.value = "";
   renderNodeGraphModuleStoreCatalog();
-}
-
-function createNodeGraphModuleStorePreview(entry) {
-  const preview = document.createElement("span");
-  preview.className = "scene-context-store-preview";
-  preview.setAttribute("role", "img");
-  preview.setAttribute("aria-label", `${entry.label} module preview`);
-  preview.dataset.moduleCategory = entry.category || "module";
-
-  const shell = document.createElement("span");
-  shell.className = "scene-context-store-preview-shell";
-  const header = document.createElement("span");
-  header.className = "scene-context-store-preview-header";
-  header.textContent = entry.label;
-  const body = document.createElement("span");
-  body.className = "scene-context-store-preview-body";
-
-  const inputPorts = Math.max(1, (nodeGraphModuleDefinitions[entry.type]?.inputs || []).length);
-  const outputPorts = Math.max(1, (nodeGraphModuleDefinitions[entry.type]?.outputs || []).length);
-  const leftRail = document.createElement("span");
-  leftRail.className = "scene-context-store-preview-ports";
-  leftRail.dataset.side = "in";
-  for (let index = 0; index < inputPorts; index += 1) {
-    leftRail.append(document.createElement("span"));
-  }
-
-  const center = document.createElement("span");
-  center.className = "scene-context-store-preview-core";
-  center.textContent = entry.category === "Chaos" ? "CH" : entry.label.slice(0, 2).toUpperCase();
-
-  const rightRail = document.createElement("span");
-  rightRail.className = "scene-context-store-preview-ports";
-  rightRail.dataset.side = "out";
-  for (let index = 0; index < outputPorts; index += 1) {
-    rightRail.append(document.createElement("span"));
-  }
-
-  body.append(leftRail, center, rightRail);
-  shell.append(header, body);
-  preview.append(shell);
-  return preview;
 }
 
 function nodeGraphModuleStoreDemoPatchAvailable(type) {
@@ -1125,93 +1167,46 @@ function editNodeGraphModuleStoreDemo(entry) {
   });
 }
 
-function appendNodeGraphModuleStoreNotes(target, entry) {
-  for (const note of entry.notes || []) {
-    const item = document.createElement("span");
-    item.className = "scene-context-store-manual-note";
-    item.textContent = note;
-    target.append(item);
-  }
-}
-
 function createNodeGraphModuleStoreButton(entry) {
   const card = document.createElement("div");
   card.className = "scene-context-store-card";
   card.dataset.moduleEnabled = String(entry.visible);
   card.dataset.homeEnabled = String(entry.homeVisible);
-  card.dataset.shopEnabled = String(entry.shopVisible);
+  card.dataset.developerEnabled = String(entry.developerVisible);
   card.title = `${entry.label}: ${entry.description || "Module reference entry."}`;
+  card.setAttribute("aria-label", entry.visible && entry.implemented
+    ? `Add ${entry.label} module`
+    : `${entry.label} module unavailable`);
 
-  const meta = document.createElement("span");
-  meta.className = "scene-context-store-card-meta";
-  meta.textContent = entry.category || "module";
   const label = document.createElement("strong");
   label.textContent = entry.label;
-  const preview = createNodeGraphModuleStorePreview(entry);
-  const description = document.createElement("span");
-  description.className = "scene-context-store-card-description";
-  description.textContent = entry.description || "Module reference entry.";
-  const actions = document.createElement("span");
-  actions.className = "scene-context-store-card-actions";
-  if (entry.visible && entry.demoPatch) {
-    if (entry.demoListen) {
-      const listen = document.createElement("button");
-      listen.type = "button";
-      listen.textContent = "Listen";
-      listen.addEventListener("click", (event) => {
-        event.stopPropagation();
-        listenToNodeGraphModuleStoreDemo(entry);
-      });
-      actions.append(listen);
-    }
-    const watch = document.createElement("button");
-    watch.type = "button";
-    watch.textContent = "Watch";
-    watch.addEventListener("click", (event) => {
-      event.stopPropagation();
-      watchNodeGraphModuleStoreDemo(entry);
-    });
-    const edit = document.createElement("button");
-    edit.type = "button";
-    edit.textContent = "Edit";
-    edit.addEventListener("click", (event) => {
-      event.stopPropagation();
-      editNodeGraphModuleStoreDemo(entry);
-    });
-    actions.append(watch, edit);
-  }
-  if (entry.visible && entry.implemented) {
-    const add = document.createElement("button");
-    add.type = "button";
-    add.dataset.contextModule = entry.type;
-    add.textContent = "Add Module";
-    add.addEventListener("click", (event) => {
-      event.stopPropagation();
-      addNodeGraphModuleFromShop(add);
-    });
-    actions.append(add);
-  } else if (entry.visible) {
-    const planned = document.createElement("button");
-    planned.type = "button";
-    planned.disabled = true;
-    planned.textContent = "Planned";
-    actions.append(planned);
-  }
-  const toggle = document.createElement("button");
-  toggle.type = "button";
-  toggle.dataset.storeToggleModule = entry.type;
-  toggle.dataset.storeToggleShelf = "shop";
-  toggle.dataset.visible = String(!entry.shopVisible);
-  toggle.textContent = entry.shopVisible ? "Remove From Shop" : "Show In Shop";
-  toggle.addEventListener("click", (event) => {
-    event.stopPropagation();
-    setNodeGraphModuleCatalogVisibility(entry.type, !entry.shopVisible, "shop");
-  });
-  actions.append(toggle);
 
-  card.append(meta, label, preview, description);
-  appendNodeGraphModuleStoreNotes(card, entry);
-  card.append(actions);
+  const actions = document.createElement("div");
+  actions.className = "node-module-store-card-actions";
+
+  const homeButton = document.createElement("button");
+  homeButton.className = "node-module-store-card-action";
+  homeButton.type = "button";
+  homeButton.dataset.storeToggleModule = entry.type;
+  homeButton.dataset.storeToggleShelf = "home";
+  homeButton.dataset.visible = String(!entry.homeVisible);
+  homeButton.title = entry.homeVisible ? "Remove from Home" : "Add to Home";
+  homeButton.setAttribute("aria-label", homeButton.title);
+  homeButton.textContent = entry.homeVisible ? "🏠-" : "🏠+";
+  actions.append(homeButton);
+
+  if (entry.visible && entry.implemented) {
+    const addButton = document.createElement("button");
+    addButton.className = "node-module-store-card-action node-module-store-card-add";
+    addButton.type = "button";
+    addButton.dataset.contextModule = entry.type;
+    addButton.title = `Add ${entry.label}`;
+    addButton.setAttribute("aria-label", `Add ${entry.label}`);
+    addButton.textContent = "+";
+    actions.append(addButton);
+  }
+
+  card.append(label, actions);
   return card;
 }
 
@@ -1249,15 +1244,6 @@ function createNodeGraphModuleDepartmentButton(department, entries) {
   return button;
 }
 
-function createNodeGraphModuleStoreDepartmentHeading(department) {
-  const heading = document.createElement("div");
-  heading.className = "scene-context-store-department-heading";
-  const label = document.createElement("strong");
-  label.textContent = department;
-  heading.append(label);
-  return heading;
-}
-
 function loadNodeGraphModuleGroupsLocal() {
   if (!nodeGraphLocalDefaultPresetAllowed()) {
     return {};
@@ -1289,28 +1275,10 @@ function createNodeGraphModuleGroupButton(name, group) {
   const card = document.createElement("div");
   card.className = "scene-context-store-card";
   card.dataset.moduleGroup = name;
-  const meta = document.createElement("span");
-  meta.className = "scene-context-store-card-meta";
-  meta.textContent = group?.kind === "moduleGroup" ? "module group" : "circuit preset";
+  card.dataset.contextGroup = name;
   const label = document.createElement("strong");
   label.textContent = name;
-  const description = document.createElement("span");
-  description.className = "scene-context-store-card-description";
-  description.textContent = group?.kind === "moduleGroup"
-    ? `${group?.sourcePatch?.nodes?.length || group?.nodes?.length || 0} modules wrapped as one module.`
-    : `${group?.nodes?.length || 0} modules saved from the modular view.`;
-  const actions = document.createElement("span");
-  actions.className = "scene-context-store-card-actions";
-  const add = document.createElement("button");
-  add.type = "button";
-  add.dataset.contextGroup = name;
-  add.textContent = group?.kind === "moduleGroup" ? "Add Module" : "Add group";
-  add.addEventListener("click", (event) => {
-    event.stopPropagation();
-    addNodeGraphModuleGroupFromBrowser(name);
-  });
-  actions.append(add);
-  card.append(meta, label, description, actions);
+  card.append(label);
   return card;
 }
 
@@ -1329,93 +1297,133 @@ function renderNodeGraphModuleGroupCatalog() {
   shell.hidden = names.length === 0;
 }
 
-function closeNodeGraphModuleCollectionsMenu() {
-  const menu = document.getElementById("nodeModuleCollectionsMenu");
-  if (menu) {
-    menu.hidden = true;
-  }
-  if (nodeGraphMvp.moduleCollectionsDragging?.handle) {
-    nodeGraphMvp.moduleCollectionsDragging.handle.classList.remove("dragging");
-  }
-  nodeGraphMvp.moduleCollectionsDragging = null;
-}
-
-function openNodeGraphModuleCollectionsMenu(event) {
-  if (event.target?.matches?.("#nodeModuleDepartmentSearch")) {
-    return false;
-  }
-  const target = event.target.closest?.("#nodeModuleDepartmentSearchShell");
-  if (!target || document.getElementById("nodeModuleShopView")?.hidden) {
-    return false;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  closeNodeSceneContextMenu();
-  closeNodeScopeContextMenu();
-  positionNodeSceneContextMenu(
-    document.getElementById("nodeModuleCollectionsMenu"),
-    event.clientX,
-    event.clientY,
-    false,
-  );
-  return true;
-}
-
-function handleNodeGraphModuleCollectionsPointerDown(event) {
-  const menu = document.getElementById("nodeModuleCollectionsMenu");
-  if (
-    !menu ||
-    menu.hidden ||
-    event.target.closest?.("#nodeModuleCollectionsMenu, #nodeModuleDepartmentSearchShell")
-  ) {
+function renderNodeGraphModuleStoreCatalog() {
+  const available = document.getElementById("nodeModuleDepartmentList");
+  const homeShell = document.getElementById("nodeModuleHomeShelfShell");
+  const homeShelf = document.getElementById("nodeModuleHomeShelf");
+  const developerShell = document.getElementById("nodeModuleDeveloperListShell");
+  const developerList = document.getElementById("nodeModuleDeveloperList");
+  const shopView = document.getElementById("nodeModuleShopView");
+  if (!available || !homeShell || !homeShelf || !developerShell || !developerList || !shopView) {
     return;
   }
-  closeNodeGraphModuleCollectionsMenu();
+
+  available.innerHTML = "";
+  homeShelf.innerHTML = "";
+  developerList.innerHTML = "";
+  syncNodeGraphModuleShopGridColumns();
+
+  const entries = nodeGraphModuleStoreEntries();
+  const departmentSearch = nodeGraphMvp.moduleStoreDepartmentSearch || "";
+  const departmentSearchField = document.getElementById("nodeModuleDepartmentSearch");
+  if (departmentSearchField && departmentSearchField.value !== departmentSearch) {
+    departmentSearchField.value = departmentSearch;
+  }
+
+  const matchingEntries = entries.filter((item) => nodeGraphModuleStoreEntryMatchesSearch(item, departmentSearch));
+  const publicEntries = matchingEntries.filter((entry) => entry.implemented && entry.visible);
+  const homeEntries = entries.filter((entry) => entry.implemented && entry.homeVisible);
+  const developerEntries = matchingEntries.filter((entry) => !entry.implemented);
+
+  for (const entry of homeEntries) {
+    homeShelf.append(createNodeGraphModuleStoreButton(entry));
+  }
+  homeShell.hidden = homeEntries.length === 0;
+
+  for (const entry of publicEntries) {
+    available.append(createNodeGraphModuleStoreButton(entry));
+  }
+  if (!available.children.length) {
+    const empty = document.createElement("div");
+    empty.className = "scene-context-store-empty";
+    empty.textContent = departmentSearch
+      ? "No modules match this search."
+      : "No modules are available.";
+    available.append(empty);
+  }
+
+  for (const entry of developerEntries) {
+    developerList.append(createNodeGraphModuleStoreButton(entry));
+  }
+  developerShell.hidden = developerEntries.length === 0;
+  renderNodeGraphModuleGroupCatalog();
 }
 
-function beginNodeGraphModuleCollectionsMenuDrag(event) {
+function positionNodeGraphModuleShopView(x, y) {
+  const panel = document.getElementById("nodeModuleShopView");
+  if (!panel) {
+    return;
+  }
+  panel.style.position = "fixed";
+  panel.style.margin = "0";
+  const { left, top } = nodeGraphFloatingWindowPosition(panel, x, y);
+  panel.style.left = `${left}px`;
+  panel.style.top = `${top}px`;
+  panel.style.right = "auto";
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "moduleBrowser",
+      panel,
+      { open: !panel.hidden, position: { left, top } },
+      { persist: false },
+    );
+  }
+}
+
+function positionNodeGraphModuleShopViewNearPoint(point = null) {
+  const panel = document.getElementById("nodeModuleShopView");
+  if (!panel) {
+    return;
+  }
+  const x = Number(point?.x);
+  const y = Number(point?.y);
+  panel.hidden = false;
+  const rect = panel.getBoundingClientRect();
+  positionNodeGraphModuleShopView(
+    Number.isFinite(x) ? x : Math.max(12, (window.innerWidth - rect.width) * 0.5),
+    Number.isFinite(y) ? y : 72,
+  );
+}
+
+function beginNodeGraphModuleShopViewDrag(event) {
   if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
     return;
   }
-  const menu = document.getElementById("nodeModuleCollectionsMenu");
-  if (!menu || menu.hidden) {
+  const panel = document.getElementById("nodeModuleShopView");
+  if (!panel || panel.hidden) {
     return;
   }
-  const rect = menu.getBoundingClientRect();
-  nodeGraphMvp.moduleCollectionsDragging = {
+  const rect = panel.getBoundingClientRect();
+  nodeGraphMvp.moduleShopDragging = {
     handle: event.currentTarget,
     offsetX: event.clientX - rect.left,
     offsetY: event.clientY - rect.top,
     pointerId: event.pointerId ?? null,
   };
   event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
+  positionNodeGraphModuleShopView(rect.left, rect.top);
+  event.currentTarget.setPointerCapture?.(event.pointerId);
   event.preventDefault();
   event.stopPropagation();
 }
 
-function dragNodeGraphModuleCollectionsMenu(event) {
-  const drag = nodeGraphMvp.moduleCollectionsDragging;
+function dragNodeGraphModuleShopView(event) {
+  const drag = nodeGraphMvp.moduleShopDragging;
   if (
     !drag ||
     (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
   ) {
     return;
   }
-  positionNodeSceneContextMenu(
-    document.getElementById("nodeModuleCollectionsMenu"),
+  positionNodeGraphModuleShopView(
     event.clientX - drag.offsetX,
     event.clientY - drag.offsetY,
-    false,
   );
   event.preventDefault();
 }
 
-function endNodeGraphModuleCollectionsMenuDrag(event) {
-  const drag = nodeGraphMvp.moduleCollectionsDragging;
+function endNodeGraphModuleShopViewDrag(event) {
+  const drag = nodeGraphMvp.moduleShopDragging;
   if (
     !drag ||
     (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
@@ -1426,83 +1434,71 @@ function endNodeGraphModuleCollectionsMenuDrag(event) {
   if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
     drag.handle.releasePointerCapture(event.pointerId);
   }
-  nodeGraphMvp.moduleCollectionsDragging = null;
+  nodeGraphMvp.moduleShopDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "moduleBrowser",
+      document.getElementById("nodeModuleShopView"),
+      { open: true },
+      { status: false },
+    );
+  }
 }
 
-function renderNodeGraphModuleStoreCatalog() {
-  const available = document.getElementById("nodeModuleShopAvailable");
-  const shopView = document.getElementById("nodeModuleShopView");
-  const departmentList = document.getElementById("nodeModuleDepartmentList");
-  const departmentView = document.getElementById("nodeModuleDepartmentView");
-  const departmentTitle = document.getElementById("nodeModuleDepartmentTitle");
-  const departmentSummary = document.getElementById("nodeModuleDepartmentSummary");
-  const departmentBack = document.getElementById("nodeModuleDepartmentBack");
-  if (!available || !shopView || !departmentList || !departmentView) {
+function beginNodeGraphModuleShopViewResize(event) {
+  if (event.button > 0) {
     return;
   }
-
-  available.innerHTML = "";
-  departmentList.innerHTML = "";
-
-  const entries = nodeGraphModuleStoreEntries();
-  const departmentSearch = nodeGraphMvp.moduleStoreDepartmentSearch || "";
-  const departmentSearchField = document.getElementById("nodeModuleDepartmentSearch");
-  if (departmentSearchField && departmentSearchField.value !== departmentSearch) {
-    departmentSearchField.value = departmentSearch;
-  }
-  const activeDepartment = nodeGraphModuleStoreDepartments.includes(nodeGraphMvp.moduleStoreDepartment)
-    ? nodeGraphMvp.moduleStoreDepartment
-    : "";
-  if (departmentBack) {
-    departmentBack.onclick = (event) => {
-      event.stopPropagation();
-      setNodeGraphModuleStoreDepartment("");
-    };
-  }
-
-  for (const department of nodeGraphModuleStoreDepartments) {
-    const departmentEntries = entries.filter((item) => item.category === department);
-    if (departmentEntries.length && nodeGraphModuleDepartmentMatchesSearch(department, departmentEntries, departmentSearch)) {
-      departmentList.append(createNodeGraphModuleDepartmentButton(department, departmentEntries));
-    }
-  }
-  if (!departmentList.children.length) {
-    const empty = document.createElement("div");
-    empty.className = "scene-context-store-empty";
-    empty.textContent = "No module departments match this search.";
-    departmentList.append(empty);
-  }
-
-  shopView.hidden = Boolean(activeDepartment);
-  departmentView.hidden = !activeDepartment;
-  if (departmentTitle) {
-    departmentTitle.textContent = activeDepartment || "Departments";
-  }
-  if (departmentSummary) {
-    departmentSummary.textContent = activeDepartment
-      ? nodeGraphModuleStoreDepartmentAds[activeDepartment]?.pitch || ""
-      : "";
-  }
-
-  if (!activeDepartment) {
-    renderNodeGraphModuleGroupCatalog();
+  const panel = document.getElementById("nodeModuleShopView");
+  if (!panel || panel.hidden) {
     return;
   }
-
-  for (const department of nodeGraphModuleStoreDepartments) {
-    if (department !== activeDepartment) {
-      continue;
-    }
-    const departmentEntries = entries.filter((item) => item.category === department);
-    if (!departmentEntries.length) {
-      continue;
-    }
-    available.append(createNodeGraphModuleStoreDepartmentHeading(department));
-    for (const entry of departmentEntries) {
-      available.append(createNodeGraphModuleStoreButton(entry));
-    }
+  const rect = panel.getBoundingClientRect();
+  nodeGraphMvp.moduleShopResizing = {
+    handle: event.currentTarget,
+    pointerId: event.pointerId ?? null,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    startWidth: rect.width,
+    startHeight: rect.height,
+  };
+  event.currentTarget.classList.add("dragging");
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
   }
-  renderNodeGraphModuleGroupCatalog();
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphModuleShopViewResize(event) {
+  const drag = nodeGraphMvp.moduleShopResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  applyNodeGraphModuleShopWindowSize({
+    width: drag.startWidth + event.clientX - drag.startClientX,
+    height: drag.startHeight + event.clientY - drag.startClientY,
+  });
+  event.preventDefault();
+}
+
+function endNodeGraphModuleShopViewResize(event) {
+  const drag = nodeGraphMvp.moduleShopResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  drag.handle.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.moduleShopResizing = null;
+  saveNodeGraphModuleShopWindowSizeToUserSettings();
 }
 
 function openNodeGraphModuleShop(point = null) {
@@ -1512,6 +1508,19 @@ function openNodeGraphModuleShop(point = null) {
   nodeGraphMvp.moduleStoreDepartment = "";
   closeNodeSceneContextMenu();
   setNodeGraphViewMode("shop");
+  const panel = document.getElementById("nodeModuleShopView");
+  if (typeof applyNodeGraphModuleShopWindowSize === "function") {
+    applyNodeGraphModuleShopWindowSize(nodeGraphMvp.workspaceWindowStates?.moduleBrowser?.size);
+  }
+  if (
+    typeof positionNodeGraphWorkspaceWindowFromState !== "function" ||
+    !positionNodeGraphWorkspaceWindowFromState("moduleBrowser", panel)
+  ) {
+    positionNodeGraphModuleShopViewNearPoint(point);
+  }
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("moduleBrowser", panel, { open: true }, { status: false });
+  }
 }
 
 function loadNodeGraphModuleStoreStateLocal() {

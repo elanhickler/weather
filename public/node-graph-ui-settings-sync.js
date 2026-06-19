@@ -22,6 +22,7 @@ function syncNodeUiDevNodeColorControls() {
 function syncNodeUiDevSettingsHeaderControls() {
   const settingsView = document.getElementById("nodeSettingsView");
   const mouseLightEnabledInput = document.getElementById("nodeUiDevMouseLightEnabled");
+  const showOriginMarkerInput = document.getElementById("nodeUiDevShowOriginMarker");
   const modularShaderEnabledInput = document.getElementById("nodeUiDevModularShaderEnabled");
   const scopeBloomEnabledInput = document.getElementById("nodeUiDevScopeBloomEnabled");
   const textSizeInput = document.getElementById("nodeUiDevSettingsHeaderTextSize");
@@ -115,6 +116,7 @@ function syncNodeUiDevSettingsHeaderControls() {
   if (
     !settingsView ||
     !mouseLightEnabledInput ||
+    !showOriginMarkerInput ||
     !modularShaderEnabledInput ||
     !scopeBloomEnabledInput ||
     !textSizeInput ||
@@ -210,6 +212,7 @@ function syncNodeUiDevSettingsHeaderControls() {
   }
 
   const mouseLightEnabled = Boolean(mouseLightEnabledInput.checked);
+  const showOriginMarker = Boolean(showOriginMarkerInput.checked);
   const modularShaderEnabled = Boolean(modularShaderEnabledInput.checked);
   const scopeBloomEnabled = Boolean(scopeBloomEnabledInput.checked);
   const textPercent = Math.max(0, Math.min(100, Number(textSizeInput.value) || 0));
@@ -285,6 +288,9 @@ function syncNodeUiDevSettingsHeaderControls() {
   document
     .getElementById("nodeGraphWorkspace")
     ?.style.setProperty("--node-mouse-light-amount", mouseLightEnabled ? "0.79" : "0");
+  document
+    .getElementById("nodeGraphWorkspace")
+    ?.classList.toggle("origin-marker-visible", showOriginMarker);
   if (typeof setNodeGraphShaderScriptEnabled === "function") {
     setNodeGraphShaderScriptEnabled(modularShaderEnabled, { persist: false });
   }

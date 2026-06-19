@@ -7,7 +7,9 @@ const nodeGraphNodeLabels = Object.freeze({
   groupOutput: "Group Output",
   moduleGroup: "Module Group",
   moduleHome: "Home",
-  moduleShop: "Shop",
+  moduleShop: "Module Browser",
+  nextPatch: "Next Patch",
+  previousPatch: "Previous Patch",
   osc: "Osc",
   fbPolyBlepOsc: "F/B PolyBLEP Osc",
   additiveOsc: "Additive Osc",
@@ -16,6 +18,7 @@ const nodeGraphNodeLabels = Object.freeze({
   clock: "Clock",
   clockDivider: "Clock Divider",
   delayedTrigger: "Delayed Trigger",
+  buttonEvents: "Button Events",
   randomClock: "Random Clock",
   triggerCounter: "Trigger Counter",
   triggerDivider: "Trigger Divider",
@@ -754,6 +757,26 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any" },
     ],
   },
+  buttonEvents: {
+    outputs: ["Click", "Hover", "Down", "Up", "Enter", "Leave"],
+    parameters: [],
+  },
+  nextPatch: {
+    layout: "patchCommand",
+    inputs: ["Trigger"],
+    outputs: [],
+    parameters: [
+      { defaultValue: "0", key: "threshold", label: "Threshold", max: "1", mid: "0", min: "-1", nonlinearSlider: false, step: "any" },
+    ],
+  },
+  previousPatch: {
+    layout: "patchCommand",
+    inputs: ["Trigger"],
+    outputs: [],
+    parameters: [
+      { defaultValue: "0", key: "threshold", label: "Threshold", max: "1", mid: "0", min: "-1", nonlinearSlider: false, step: "any" },
+    ],
+  },
   triggerCounter: {
     inputs: ["Trigger", "Reset"],
     outputs: ["Count", "Pulse"],
@@ -1217,10 +1240,10 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   audioPlayer: {
     inputs: ["Reset", "Speed", "Phase"],
-    outputs: ["Mono", "Left", "Right", "Phase"],
+    outputs: ["Mono", "Left", "Right", "Phase", "Trigger"],
     parameters: [
       { defaultValue: "1", key: "level", label: "Level", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any" },
-      { defaultValue: "1", key: "speed", label: "Speed", linearSmoothing: false, max: "4", mid: "1", min: "-4", step: "any", unboundedMax: true, unboundedMin: true, unit: "x" },
+      { defaultValue: "1", key: "speed", label: "Speed", linearSmoothing: false, max: "10000", maxDigits: 5, mid: "1", min: "-10000", step: "any", unboundedMax: true, unboundedMin: true, unit: "x" },
       { defaultValue: "0", key: "start", label: "Start", linearSmoothing: false, max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any" },
       { defaultValue: "1", key: "end", label: "End", linearSmoothing: false, max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any" },
       { choices: ["Off (reset)", "Stop", "Pause", "Play", "Loop"], defaultValue: "4", displayChoices: true, divideChoicesVisibly: true, key: "transport", label: "Play Mode", linearSmoothing: false, max: "4", mid: "2", min: "0", nonlinearSlider: false, step: "1" },

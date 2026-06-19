@@ -110,11 +110,7 @@ function resizeSelectedNodeGraphModulesOnGrid(axis, delta) {
     if (nextHeightGu === currentHeightGu) {
       continue;
     }
-    if (nextHeightGu === nodeGraphModuleGridHeightUnitsForUi(patchNode.type, patchNode.ui)) {
-      delete patchNode.heightGu;
-    } else {
-      patchNode.heightGu = nextHeightGu;
-    }
+    patchNode.heightGu = nextHeightGu;
     changedCount += 1;
   }
 
@@ -135,10 +131,6 @@ function handleNodeGraphKeydown(event) {
   }
   if (event.key === "Escape" && document.getElementById("nodeWiringPanel")?.classList.contains("modular-only-view")) {
     setNodeGraphViewMode("modular");
-    return;
-  }
-  if (event.key === "Escape" && !document.getElementById("nodeSceneContextMenu").hidden) {
-    closeNodeSceneContextMenu();
     return;
   }
   if (nodeGraphEventTargetIsEditable(event.target)) {

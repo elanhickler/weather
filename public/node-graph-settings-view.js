@@ -15,6 +15,9 @@ function syncNodeGraphSettingsView() {
   const info = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch.info);
   setNodeGraphSettingsField("nodePatchNameHeader", info.name);
   setNodeGraphSettingsField("nodePatchTagsHeader", info.tags);
+  if (typeof syncNodeGraphCurrentSavedPatchHeader === "function") {
+    syncNodeGraphCurrentSavedPatchHeader();
+  }
   setNodeGraphSettingsField("patchNameValue", info.name);
   setNodeGraphSettingsField("patchAuthorValue", info.author);
   setNodeGraphSettingsField("patchTagsValue", info.tags);
@@ -86,6 +89,9 @@ function readNodeGraphGridSettingsView() {
 }
 
 function handleNodeGraphSettingsInput(event) {
+  if (event?.currentTarget?.hasAttribute?.("data-patch-info-field") && typeof setNodeGraphCurrentSavedPatch === "function") {
+    setNodeGraphCurrentSavedPatch("");
+  }
   if (event?.currentTarget?.id === "patchTargetSampleRateValue") {
     setNodeGraphSettingsField("patchOversamplingValue", "custom");
   }
@@ -112,6 +118,9 @@ function handleNodeGraphHeaderInfoInput(event) {
   const field = event.currentTarget?.dataset?.patchHeaderInfoField;
   if (!["name", "tags"].includes(field)) {
     return;
+  }
+  if (typeof setNodeGraphCurrentSavedPatch === "function") {
+    setNodeGraphCurrentSavedPatch("");
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   patch.info = normalizeNodeGraphPatchInfo({

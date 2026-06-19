@@ -13,6 +13,12 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
       modulations: patch.modulations || [],
       monitors: normalizeNodeGraphPatchMonitors(patch.monitors, patch),
       nodes: patch.nodes,
+      requiredAssets: typeof nodeGraphRequiredAssetsForPatch === "function"
+        ? nodeGraphRequiredAssetsForPatch(patch)
+        : [],
+      samples: typeof normalizeNodeGraphPatchSamples === "function"
+        ? normalizeNodeGraphPatchSamples(patch.samples)
+        : [],
       timing: normalizeNodeGraphPatchTiming(patch.timing),
       uiItems: normalizeNodeGraphPatchUiItems(patch.uiItems),
       view: normalizeNodeGraphPatchView(patch.view),

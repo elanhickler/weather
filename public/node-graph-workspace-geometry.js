@@ -17,23 +17,23 @@ function applyNodeGraphWorkspaceView() {
   workspace.style.setProperty("--node-grid-size", `${nodeGraphGridSize()}px`);
   workspace.style.setProperty("--node-grid-width", `${nodeGraphGridWidth()}px`);
   const view = normalizeNodeGraphPatchView(nodeGraphMvp.patch.view);
-  if (view.widthGu > 0) {
-    const widthCss = nodeGraphWorkspaceWidthCss(view.widthGu * nodeGraphGridWidth());
-    workspace.style.width = widthCss;
+  const visibleView = view.widthGu > 0 && view.heightGu > 0
+    ? clampNodeGraphWorkspaceGridSizeToViewport(view, workspace)
+    : view;
+  const widthCss = visibleView.widthGu > 0
+    ? nodeGraphWorkspaceWidthCss(visibleView.widthGu * nodeGraphGridWidth())
+    : null;
+  const heightCss = visibleView.heightGu > 0
+    ? nodeGraphWorkspaceHeightCss(visibleView.heightGu * nodeGraphGridHeight())
+    : null;
+  applyNodeGraphWorkspaceSizeCss(workspace, widthCss, heightCss);
+  if (widthCss) {
     workspace.parentElement?.style.setProperty("--node-workspace-view-width", widthCss);
   } else {
-    workspace.style.removeProperty("width");
     workspace.parentElement?.style.removeProperty("--node-workspace-view-width");
   }
-  if (view.heightGu > 0) {
-    workspace.style.height = nodeGraphWorkspaceHeightCss(view.heightGu * nodeGraphGridHeight());
-    workspace.style.removeProperty("aspect-ratio");
-  } else {
-    workspace.style.removeProperty("height");
-    workspace.style.removeProperty("aspect-ratio");
-  }
-  workspace.dataset.widthGu = String(view.widthGu);
-  workspace.dataset.heightGu = String(view.heightGu);
+  workspace.dataset.widthGu = String(visibleView.widthGu);
+  workspace.dataset.heightGu = String(visibleView.heightGu);
   if (typeof syncNodeGraphWorkspaceResizeHandlePosition === "function") {
     syncNodeGraphWorkspaceResizeHandlePosition();
   }

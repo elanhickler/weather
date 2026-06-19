@@ -23,13 +23,7 @@ function positionNodeGraphCanvasScriptDialog(left, top) {
   if (!dialog) {
     return;
   }
-  const margin = 12;
-  const rect = dialog.getBoundingClientRect();
-  const clamp = typeof clampNodeSliderValue === "function"
-    ? clampNodeSliderValue
-    : (value, min, max) => Math.max(min, Math.min(max, value));
-  const nextLeft = clamp(Number(left) || 0, margin, Math.max(margin, window.innerWidth - rect.width - margin));
-  const nextTop = clamp(Number(top) || 0, margin, Math.max(margin, window.innerHeight - rect.height - margin));
+  const { left: nextLeft, top: nextTop } = nodeGraphFloatingWindowPosition(dialog, left, top);
   dialog.style.left = `${nextLeft}px`;
   dialog.style.top = `${nextTop}px`;
   dialog.style.right = "auto";

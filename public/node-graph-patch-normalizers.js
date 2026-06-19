@@ -1,8 +1,13 @@
 function normalizeNodeGraphPatchInfo(info = {}) {
+  const bank = Math.round(Number(info.bank));
+  const program = Math.round(Number(info.program));
   return {
     author: nodeGraphOneLineText(info.author),
+    bank: Number.isFinite(bank) ? Math.max(0, Math.min(127, bank)) : 0,
+    bankName: nodeGraphOneLineText(info.bankName),
     description: String(info.description ?? "").trim(),
     name: nodeGraphOneLineText(info.name),
+    program: Number.isFinite(program) ? Math.max(0, Math.min(127, program)) : 0,
     tags: nodeGraphOneLineText(info.tags),
   };
 }
@@ -733,8 +738,8 @@ function normalizeNodeGraphWindowPosition(position = {}) {
   const left = source.left === null || source.left === undefined ? NaN : Number(source.left);
   const top = source.top === null || source.top === undefined ? NaN : Number(source.top);
   return {
-    left: Number.isFinite(left) ? Math.max(0, left) : null,
-    top: Number.isFinite(top) ? Math.max(0, top) : null,
+    left: Number.isFinite(left) ? left : null,
+    top: Number.isFinite(top) ? top : null,
   };
 }
 
@@ -750,6 +755,17 @@ const nodeGraphWorkspaceViewLimits = Object.freeze({
   minWidthGu: 4,
 });
 
+function normalizeNodeGraphPatchViewZoom(value) {
+  const zoom = Number(value);
+  const limits = typeof nodeGraphZoomLimits === "object"
+    ? nodeGraphZoomLimits
+    : { min: 0.1, max: 50 };
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    return 1;
+  }
+  return Math.max(limits.min, Math.min(limits.max, zoom));
+}
+
 function normalizeNodeGraphPatchView(view = {}) {
   const widthGu = Math.round(Number(view?.widthGu));
   const heightGu = Math.round(Number(view?.heightGu));
@@ -760,6 +776,7 @@ function normalizeNodeGraphPatchView(view = {}) {
     widthGu: Number.isFinite(widthGu)
       ? Math.max(0, widthGu)
       : 0,
+    zoom: normalizeNodeGraphPatchViewZoom(view?.zoom),
   };
 }
 

@@ -7,11 +7,17 @@ function setNodeUiDevHelperVisible(visible) {
   helper.hidden = !visible;
   button.classList.toggle("active", visible);
   button.setAttribute("aria-pressed", String(visible));
+  if (visible && typeof positionNodeGraphWorkspaceWindowFromState === "function") {
+    positionNodeGraphWorkspaceWindowFromState("uiDev", helper);
+  }
   setNodeInteractionHelp(
     visible
       ? "UIDEV helper open. Future UI tuning controls can live in this floating window."
       : "UIDEV helper closed.",
   );
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("uiDev", helper, { open: visible }, { status: false });
+  }
 }
 
 function toggleNodeUiDevHelper() {
@@ -29,7 +35,13 @@ function setNodeUserUiSettingsVisible(visible) {
   button.classList.toggle("active", visible);
   button.setAttribute("aria-pressed", String(visible));
   if (visible) {
+    if (typeof positionNodeGraphWorkspaceWindowFromState === "function") {
+      positionNodeGraphWorkspaceWindowFromState("uiSettings", panel);
+    }
     renderNodeUserUiSettingsControls();
+  }
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("uiSettings", panel, { open: visible }, { status: false });
   }
 }
 
@@ -102,14 +114,18 @@ function positionNodeUserUiSettingsPanel(panel, x, y) {
   if (!panel) {
     return;
   }
-  const margin = 8;
-  panel.hidden = false;
-  const rect = panel.getBoundingClientRect();
-  const left = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, x));
-  const top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, y));
+  const { left, top } = nodeGraphFloatingWindowPosition(panel, x, y);
   panel.style.left = `${left}px`;
   panel.style.top = `${top}px`;
   panel.style.right = "auto";
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "uiSettings",
+      panel,
+      { open: !panel.hidden, position: { left, top } },
+      { persist: false },
+    );
+  }
 }
 
 function beginNodeUserUiSettingsDrag(event) {
@@ -178,6 +194,14 @@ function endNodeUserUiSettingsDrag(event) {
     }
   }
   nodeUserUiSettingsDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "uiSettings",
+      document.getElementById("nodeUserUiSettingsPanel"),
+      { open: true },
+      { status: false },
+    );
+  }
 }
 
 let nodeUiDevHelperDragging = null;
@@ -186,14 +210,18 @@ function positionNodeUiDevHelper(helper, x, y) {
   if (!helper) {
     return;
   }
-  const margin = 12;
-  helper.hidden = false;
-  const rect = helper.getBoundingClientRect();
-  const left = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, x));
-  const top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, y));
+  const { left, top } = nodeGraphFloatingWindowPosition(helper, x, y);
   helper.style.left = `${left}px`;
   helper.style.top = `${top}px`;
   helper.style.right = "auto";
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "uiDev",
+      helper,
+      { open: !helper.hidden, position: { left, top } },
+      { persist: false },
+    );
+  }
 }
 
 function beginNodeUiDevHelperDrag(event) {
@@ -265,4 +293,12 @@ function endNodeUiDevHelperDrag(event) {
     }
   }
   nodeUiDevHelperDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "uiDev",
+      document.getElementById("nodeUiDevHelper"),
+      { open: true },
+      { status: false },
+    );
+  }
 }

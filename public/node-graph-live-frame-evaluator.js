@@ -5,6 +5,38 @@ function createNodeGraphHighpassState() {
   };
 }
 
+function nodeGraphExternalButtonEventPulse(runtime, name) {
+  const events = runtime?.externalButtonEvents;
+  if (!(events instanceof Map)) {
+    return 0;
+  }
+  const remaining = Number(events.get(name)) || 0;
+  if (remaining <= 0) {
+    events.delete(name);
+    return 0;
+  }
+  events.set(name, remaining - 1);
+  return 1;
+}
+
+function createNodeGraphPatchCommandState() {
+  return {
+    lastTrigger: 0,
+  };
+}
+
+function nodeGraphPatchCommandTriggerSample(state, trigger, threshold, command, nodeId) {
+  const safeTrigger = Number.isFinite(Number(trigger)) ? Number(trigger) : 0;
+  const safeThreshold = Number.isFinite(Number(threshold)) ? Number(threshold) : 0;
+  if (state.lastTrigger <= safeThreshold && safeTrigger > safeThreshold) {
+    if (typeof queueNodeGraphLivePatchCommand === "function") {
+      queueNodeGraphLivePatchCommand(command, nodeId);
+    }
+  }
+  state.lastTrigger = safeTrigger;
+  return 0;
+}
+
 function createNodeGraphLowpassState() {
   return {
     outputBuffer: 0,
@@ -364,6 +396,7 @@ function nodeGraphEvaluateModuleGroup(runtime, node, mixInput, sampleRate, frame
       return {};
     }
   }
+  groupRuntime.externalButtonEvents = runtime.externalButtonEvents;
   groupRuntime.externalGroupInputs = new Map(
     group.inputs.map((input) => [input.nodeId, mixInput(node.id, input.name)]),
   );
@@ -1716,18 +1749,23 @@ function nodeGraphAudioPlayerSample(runtime, node, nodeId, readInput, readParam,
   const frameIndex = boundedPhase * (frames - 1);
   const stereo = nodeGraphSampleStereoAt(sample, frameIndex);
   const level = readParam("level", 1);
+  let done = 0;
   if (!phaseConnected && state.playing) {
     const nextPhase = boundedPhase + increment;
     if (transportLooping) {
+      const normalizedNext = (nextPhase - startPhase) / span;
+      done = normalizedNext < 0 || normalizedNext >= 1 ? 1 : 0;
       state.phase = startPhase + wrapNodeSliderValue((nextPhase - startPhase) / span, 0, 1) * span;
     } else if (speed >= 0 && nextPhase >= endPhase) {
       state.phase = endPhase;
       state.completed = true;
       state.playing = false;
+      done = 1;
     } else if (speed < 0 && nextPhase <= startPhase) {
       state.phase = startPhase;
       state.completed = true;
       state.playing = false;
+      done = 1;
     } else {
       state.phase = clampNodeSliderValue(nextPhase, startPhase, endPhase);
     }
@@ -1743,6 +1781,7 @@ function nodeGraphAudioPlayerSample(runtime, node, nodeId, readInput, readParam,
     Out: outputActive ? stereo.Mono * level : 0,
     Phase: boundedPhase,
     Right: outputActive ? stereo.Right * level : 0,
+    Trigger: done,
   };
 }
 
@@ -2468,6 +2507,25 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         X: x,
         Y: velocity,
       };
+    } else if (node?.type === "buttonEvents") {
+      value = {
+        Click: nodeGraphExternalButtonEventPulse(runtime, "click"),
+        Hover: nodeGraphExternalButtonEventPulse(runtime, "hover"),
+        Down: nodeGraphExternalButtonEventPulse(runtime, "down"),
+        Up: nodeGraphExternalButtonEventPulse(runtime, "up"),
+        Enter: nodeGraphExternalButtonEventPulse(runtime, "enter"),
+        Leave: nodeGraphExternalButtonEventPulse(runtime, "leave"),
+      };
+    } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
+      const state = runtime.patchCommandStates.get(nodeId) || createNodeGraphPatchCommandState();
+      runtime.patchCommandStates.set(nodeId, state);
+      value = nodeGraphPatchCommandTriggerSample(
+        state,
+        mixInput(nodeId, "Trigger"),
+        readNodeGraphLiveEffectiveParam(runtime, node, "threshold", 0, frame, frames, frameValues),
+        node?.type === "previousPatch" ? "previousPatch" : "nextPatch",
+        nodeId,
+      );
     } else if (node?.type === "macroControls") {
       const resetActive = hasInput(nodeId, "Reset") && Number(mixInput(nodeId, "Reset")) > 0;
       const macros = Array.isArray(nodeGraphMvp?.macroControls) ? nodeGraphMvp.macroControls : [];

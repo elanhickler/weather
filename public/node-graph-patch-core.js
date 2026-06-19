@@ -140,6 +140,9 @@ function validateNodeGraphPatch(patch) {
       paramMeta,
       params,
       type,
+      ...(Object.keys(normalizeNodeGraphPatchPortMeta(node.portMeta)).length
+        ? { portMeta: normalizeNodeGraphPatchPortMeta(node.portMeta) }
+        : {}),
       ...(normalizeNodeGraphPatchNodeAlias(node.alias)
         ? { alias: normalizeNodeGraphPatchNodeAlias(node.alias) }
         : {}),
@@ -397,6 +400,15 @@ function validateNodeGraphPatch(patch) {
       nodes,
     }),
     nodes,
+    requiredAssets: typeof nodeGraphRequiredAssetsForPatch === "function"
+      ? nodeGraphRequiredAssetsForPatch({
+        ...patch,
+        nodes,
+        samples: typeof normalizeNodeGraphPatchSamples === "function"
+          ? normalizeNodeGraphPatchSamples(patch.samples)
+          : [],
+      })
+      : [],
     samples: typeof normalizeNodeGraphPatchSamples === "function"
       ? normalizeNodeGraphPatchSamples(patch.samples)
       : [],
@@ -521,6 +533,9 @@ function applyNodeGraphPatchToDom() {
       input.value = String(value);
       syncNodeSliderReadout(input);
     }
+    if (typeof syncNodeGraphModulePortLabels === "function") {
+      syncNodeGraphModulePortLabels(element, patchNode);
+    }
     if (nodeGraphModuleDefinitions[patchNode.type]?.layout === "textBox") {
       syncNodeGraphTextBoxElement(element, patchNode);
     } else if (nodeGraphModuleDefinitions[patchNode.type]?.layout === "graph") {
@@ -554,8 +569,14 @@ function applyNodeGraphPatchToDom() {
 
 function commitNodeGraphPatch(patch, options = {}) {
   nodeGraphMvp.patch = cloneNodeGraphPatch(validateNodeGraphPatch(patch));
+  if (typeof syncNodeGraphZoomFromPatchView === "function") {
+    syncNodeGraphZoomFromPatchView(nodeGraphMvp.patch);
+  }
   syncNodeGraphRuntimeFromPatch();
   applyNodeGraphPatchToDom();
+  if (typeof applyNodeGraphZoom === "function") {
+    applyNodeGraphZoom();
+  }
   syncNodeGraphMonitorIndicators();
   pruneNodeGraphSelectionAfterPatch();
   renderNodePalette();
@@ -564,6 +585,9 @@ function commitNodeGraphPatch(patch, options = {}) {
   syncNodeGraphFilterCurveDisplays();
   renderNodeGraphVisualSettings();
   syncNodeGraphSettingsView();
+  if (typeof renderNodeGraphMissingSampleAssetsDialog === "function") {
+    renderNodeGraphMissingSampleAssetsDialog(nodeGraphMvp.patch);
+  }
   if (typeof renderNodeGraphCodeScreen === "function" && !document.getElementById("nodeCodeScreenView")?.hidden) {
     renderNodeGraphCodeScreen();
   }
@@ -582,6 +606,16 @@ function commitNodeGraphPatch(patch, options = {}) {
   }
   if (typeof scheduleNodeGraphWireRedrawAfterLayout === "function") {
     scheduleNodeGraphWireRedrawAfterLayout();
+  }
+  if (options.patchDirtyState) {
+    nodeGraphMvp.patchDirtyState = options.patchDirtyState;
+  } else if (options.autosaveWorkingPatch !== false) {
+    nodeGraphMvp.patchDirtyState = "edited";
+  }
+  if (options.autosaveWorkingPatch !== false && typeof saveNodeGraphWorkingPatchToUserSettings === "function") {
+    saveNodeGraphWorkingPatchToUserSettings();
+  } else if (typeof syncNodeGraphCurrentSavedPatchHeader === "function") {
+    syncNodeGraphCurrentSavedPatchHeader();
   }
   scheduleNodeGraphLivePlanSync();
 }

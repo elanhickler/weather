@@ -124,7 +124,6 @@ function createNodeGraphHeaderSpeedPlaceholder() {
   const field = document.createElement("label");
   field.className = "node-header-timing-field node-header-speed-placeholder node-under-construction-control";
   field.setAttribute("aria-label", "Speed control under construction");
-  field.dataset.timingRow = "lower";
   field.dataset.tooltipKey = "timing.speedUnderConstruction";
 
   const caption = document.createElement("span");
@@ -222,18 +221,11 @@ function createNodeGraphHeaderTimingWidgets() {
   group.className = "node-header-timing-widgets";
   group.setAttribute("aria-label", "Patch timing");
 
-  const transport = document.createElement("div");
-  transport.className = "node-header-timing-row node-header-transport-row";
-  transport.append(
+  group.append(
     createNodeGraphTapTempoButton(),
     createNodeGraphHeaderTimingInput("tempoBpm", "BPM", { max: 320 }),
     createNodeGraphHeaderTimingInput("timeSignatureNumerator", "Beats"),
     createNodeGraphHeaderTimingInput("timeSignatureDenominator", "Unit"),
-  );
-
-  const scope = document.createElement("div");
-  scope.className = "node-header-timing-row node-header-scope-row";
-  scope.append(
     createNodeGraphHeaderScopeInput(
       "nodeMasterScopeBurn",
       "Burn",
@@ -242,7 +234,6 @@ function createNodeGraphHeaderTimingWidgets() {
         ariaLabel: "Oscilloscope screen burn",
         max: 1,
         min: 0,
-        row: "lower",
         scopeInput: "burn",
         step: 0.01,
       },
@@ -255,7 +246,6 @@ function createNodeGraphHeaderTimingWidgets() {
         ariaLabel: "Oscilloscope initial phosphor decay",
         max: 1,
         min: 0,
-        row: "lower",
         scopeInput: "decay",
         step: 0.01,
       },
@@ -269,14 +259,12 @@ function createNodeGraphHeaderTimingWidgets() {
         inputMode: "numeric",
         max: 240,
         min: 1,
-        row: "lower",
         scopeInput: "framesPerSecond",
         step: 1,
       },
     ),
     createNodeGraphHeaderSpeedPlaceholder(),
   );
-  group.append(transport, scope);
   return group;
 }
 

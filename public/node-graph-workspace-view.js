@@ -24,32 +24,11 @@ function syncNodeGraphWorkspaceResizeHandlePosition() {
   if (!workspace || !handle) {
     return;
   }
-  const rect = workspace.getBoundingClientRect();
-  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || rect.right;
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || rect.bottom;
-  const visibleLeft = Math.max(0, rect.left);
-  const visibleTop = Math.max(0, rect.top);
-  const visibleRight = Math.min(viewportWidth, rect.right);
-  const visibleBottom = Math.min(viewportHeight, rect.bottom);
-  if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) {
-    handle.style.visibility = "hidden";
-    return;
+  if (handle.parentElement !== workspace) {
+    workspace.appendChild(handle);
   }
-  const margin = 8;
-  const size = Math.max(1, handle.offsetWidth || 28);
-  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const left = clamp(
-    visibleRight - size - margin,
-    visibleLeft + margin,
-    Math.max(visibleLeft + margin, viewportWidth - size - margin),
-  );
-  const top = clamp(
-    visibleBottom - size - margin,
-    visibleTop + margin,
-    Math.max(visibleTop + margin, viewportHeight - size - margin),
-  );
-  handle.style.setProperty("--node-graph-resize-handle-left", `${left}px`);
-  handle.style.setProperty("--node-graph-resize-handle-top", `${top}px`);
+  handle.style.removeProperty("--node-graph-resize-handle-left");
+  handle.style.removeProperty("--node-graph-resize-handle-top");
   handle.style.visibility = "";
 }
 
@@ -356,14 +335,7 @@ function snapNodeGraphWorkspaceEdgesToGrid(zoom = nodeGraphZoom()) {
   withNodeGraphWorkspaceContentAnchored(workspace, () => {
     const widthCss = nodeGraphWorkspaceWidthCss(snappedContentWidth);
     const heightCss = nodeGraphWorkspaceHeightCss(snappedContentHeight);
-    if (document.getElementById("nodeWiringPanel")?.classList.contains("modular-only-view")) {
-      workspace.style.setProperty("--node-modular-only-view-width", widthCss);
-      workspace.style.setProperty("--node-modular-only-view-height", heightCss);
-    } else {
-      workspace.style.width = widthCss;
-      workspace.style.height = heightCss;
-      workspace.style.removeProperty("aspect-ratio");
-    }
+    applyNodeGraphWorkspaceSizeCss(workspace, widthCss, heightCss);
   });
   drawNodeGraphWires();
 }
@@ -410,6 +382,9 @@ function alignNodeGraphViewToGridWithOptions(options = {}) {
     }
     : null;
   nodeGraphMvp.zoom = nextZoom;
+  if (typeof syncNodeGraphPatchViewZoom === "function") {
+    syncNodeGraphPatchViewZoom(nextZoom);
+  }
   applyNodeGraphZoom();
   if (options.snapWorkspaceEdges) {
     snapNodeGraphWorkspaceEdgesToGrid(nextZoom);
@@ -477,15 +452,19 @@ function nodeGraphWorkspaceCurrentGridSize() {
 
 function setNodeGraphWorkspacePreviewSize(widthGu, heightGu) {
   const workspace = document.getElementById("nodeGraphWorkspace");
+  const visibleSize = clampNodeGraphWorkspaceGridSizeToViewport({ widthGu, heightGu }, workspace);
   withNodeGraphWorkspaceContentAnchored(workspace, () => {
-    workspace.style.width = nodeGraphWorkspaceWidthCss(widthGu * nodeGraphGridWidth());
-    workspace.style.height = nodeGraphWorkspaceHeightCss(heightGu * nodeGraphGridHeight());
-    workspace.style.removeProperty("aspect-ratio");
+    applyNodeGraphWorkspaceSizeCss(
+      workspace,
+      nodeGraphWorkspaceWidthCss(visibleSize.widthGu * nodeGraphGridWidth()),
+      nodeGraphWorkspaceHeightCss(visibleSize.heightGu * nodeGraphGridHeight()),
+    );
   });
-  workspace.dataset.widthGu = String(widthGu);
-  workspace.dataset.heightGu = String(heightGu);
+  workspace.dataset.widthGu = String(visibleSize.widthGu);
+  workspace.dataset.heightGu = String(visibleSize.heightGu);
   drawNodeGraphWires();
   syncNodeGraphWorkspaceResizeHandlePosition();
+  return visibleSize;
 }
 
 function beginNodeGraphWorkspaceResize(event) {
@@ -517,17 +496,20 @@ function dragNodeGraphWorkspaceResize(event) {
   if (!drag || drag.pointerId !== event.pointerId) {
     return;
   }
-  const zoom = nodeGraphZoom();
-  const renderedGridWidth = nodeGraphGridWidth() * zoom;
-  const renderedGridHeight = nodeGraphGridHeight() * zoom;
-  const widthGu = Math.max(
+  const resizeGridWidth = nodeGraphGridWidth();
+  const resizeGridHeight = nodeGraphGridHeight();
+  const requestedWidthGu = Math.max(
     nodeGraphWorkspaceViewLimits.minWidthGu,
-    drag.startWidthGu + Math.round((event.clientX - drag.startClientX) / renderedGridWidth) * 2,
+    drag.startWidthGu + Math.round((event.clientX - drag.startClientX) / resizeGridWidth) * 2,
   );
-  const heightGu = Math.max(
+  const requestedHeightGu = Math.max(
     nodeGraphWorkspaceViewLimits.minHeightGu,
-    drag.startHeightGu + Math.round((event.clientY - drag.startClientY) / renderedGridHeight),
+    drag.startHeightGu + Math.round((event.clientY - drag.startClientY) / resizeGridHeight),
   );
+  const { widthGu, heightGu } = clampNodeGraphWorkspaceGridSizeToViewport({
+    heightGu: requestedHeightGu,
+    widthGu: requestedWidthGu,
+  });
   if (widthGu === drag.widthGu && heightGu === drag.heightGu) {
     return;
   }
@@ -553,8 +535,9 @@ function endNodeGraphWorkspaceResize(event) {
   }
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   patch.view = {
-    heightGu: drag.heightGu,
-    widthGu: drag.widthGu,
+    ...normalizeNodeGraphPatchView(patch.view),
+    heightGu: Math.max(nodeGraphWorkspaceViewLimits.minHeightGu, drag.heightGu),
+    widthGu: Math.max(nodeGraphWorkspaceViewLimits.minWidthGu, drag.widthGu),
   };
   commitNodeGraphPatch(patch, {
     markPending: false,

@@ -55,6 +55,7 @@ function setNodeGraphZoom(nextZoom, anchor = null) {
     return;
   }
   nodeGraphMvp.zoom = zoom;
+  syncNodeGraphPatchViewZoom(zoom);
   const nextPan = workspaceRect && anchorPoint && anchoredContentPoint
     ? {
       x: anchorPoint.x - workspaceRect.left - anchoredContentPoint.x * zoom,
@@ -76,6 +77,19 @@ function clampNodeGraphZoom(value) {
   const minLog = Math.log(nodeGraphZoomLimits.min);
   const maxLog = Math.log(nodeGraphZoomLimits.max);
   return Math.exp(Math.max(minLog, Math.min(maxLog, Math.log(safeZoom))));
+}
+
+function syncNodeGraphPatchViewZoom(zoom = nodeGraphZoom()) {
+  if (!nodeGraphMvp.patch) {
+    return;
+  }
+  const view = normalizeNodeGraphPatchView(nodeGraphMvp.patch.view);
+  nodeGraphMvp.patch.view = { ...view, zoom: clampNodeGraphZoom(zoom) };
+}
+
+function syncNodeGraphZoomFromPatchView(patch = nodeGraphMvp.patch) {
+  const view = normalizeNodeGraphPatchView(patch?.view);
+  nodeGraphMvp.zoom = clampNodeGraphZoom(view.zoom);
 }
 
 function nodeGraphZoomRatioBySteps(steps, baseRatio = nodeGraphZoomLimits.wheelRatio) {
@@ -128,6 +142,7 @@ function zoomNodeGraphAt(delta, clientX, clientY) {
 function resetNodeGraphZoomToOne() {
   const oldPan = nodeGraphMvp.pan || { x: 0, y: 0 };
   nodeGraphMvp.zoom = 1;
+  syncNodeGraphPatchViewZoom(1);
   nodeGraphMvp.pan = {
     x: snapNodeGraphPanValueToGrid(oldPan.x, nodeGraphGridWidth(), 1),
     y: snapNodeGraphPanValueToGrid(oldPan.y, nodeGraphGridHeight(), 1),

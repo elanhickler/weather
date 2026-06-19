@@ -28,6 +28,9 @@ function nodeGraphModuleWidthLimitsForType(type) {
 }
 
 function nodeGraphModuleHeightLimitsForType(type) {
+  if (type === "audioPlayer") {
+    return { ...nodeGraphModuleHeightLimits, maxGu: nodeGraphModuleHeightLimits.maxGu + 1 };
+  }
   if (nodeGraphModuleDefinitions[type]?.layout === "knobWidget") {
     return { ...nodeGraphModuleHeightLimits, minGu: 1 };
   }
@@ -79,6 +82,18 @@ function nodeGraphPatchNodeHasHideableOscilloscope(node) {
     return false;
   }
   return nodeGraphModuleTypeHasHideableOscilloscope(patchNode?.type);
+}
+
+function nodeGraphModuleScopeExtraHeightUnits(type, ui = {}) {
+  const normalizedUi = normalizeNodeGraphPatchNodeUi(ui);
+  if (
+    !nodeGraphModuleTypeHasHideableOscilloscope(type) ||
+    normalizedUi.oscilloscopeHidden ||
+    nodeGraphMvp?.moduleOscilloscopesVisible === false
+  ) {
+    return 0;
+  }
+  return nodeGraphModuleLayout.moduleScopeHeightGu;
 }
 
 function nodeGraphPatchNodeCanvasScriptGridUnits(node) {
@@ -270,12 +285,8 @@ function nodeGraphModuleRequiredHeightUnitsForUi(type, ui = {}) {
       nodeGraphModuleLayout.moduleGridInsetGu * 2
     );
   }
-  const moduleScopeHeightGu = normalizeNodeGraphPatchNodeUi(ui).oscilloscopeHidden && nodeGraphModuleTypeHasHideableOscilloscope(type)
-    ? 0
-    : nodeGraphModuleLayout.moduleScopeHeightGu;
   return (
     nodeGraphModuleHeaderHeightUnits(ui) +
-    moduleScopeHeightGu +
     nodeGraphModuleIoSectionHeightGu(type) +
     nodeGraphModuleSliderBodyHeightGu(type) +
     nodeGraphModuleLayout.fitCushionGu +
@@ -320,7 +331,7 @@ function nodeGraphModuleGridHeightUnitsForUi(type, ui = {}) {
   const requiredGridUnits = nodeGraphModuleRequiredHeightUnitsForUi(type, ui);
   const defaultGridUnits = Math.ceil(Math.max(roughGridUnits, requiredGridUnits));
   return type === "audioPlayer"
-    ? Math.min(nodeGraphModuleHeightLimits.maxGu, defaultGridUnits + 4)
+    ? Math.min(nodeGraphModuleHeightLimitsForType(type).maxGu, defaultGridUnits + 4)
     : defaultGridUnits;
 }
 
@@ -333,8 +344,15 @@ function nodeGraphPatchNodeGridHeightUnits(node) {
     ...node?.ui,
     buttonsHidden: node?.ui?.buttonsHidden || nodeGraphMvp.moduleButtonsVisible === false,
   });
+  const scopeExtraHeightGu = nodeGraphModuleScopeExtraHeightUnits(node?.type, effectiveUi);
   if (Object.hasOwn(node || {}, "heightGu")) {
-    return normalizeNodeGraphModuleHeightUnits(node.type, node.heightGu, effectiveUi);
+    return Math.min(
+      nodeGraphModuleHeightLimitsForType(node.type).maxGu,
+      normalizeNodeGraphModuleHeightUnits(node.type, node.heightGu, effectiveUi) + scopeExtraHeightGu,
+    );
   }
-  return nodeGraphModuleGridHeightUnitsForUi(node?.type, effectiveUi);
+  return Math.min(
+    nodeGraphModuleHeightLimitsForType(node?.type).maxGu,
+    nodeGraphModuleGridHeightUnitsForUi(node?.type, effectiveUi) + scopeExtraHeightGu,
+  );
 }

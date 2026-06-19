@@ -10,6 +10,24 @@ function cloneNodeGraphParamMeta(paramMeta = {}) {
   );
 }
 
+function normalizeNodeGraphPatchPortMeta(portMeta = {}) {
+  const source = portMeta && typeof portMeta === "object" ? portMeta : {};
+  const normalizeGroup = (group = {}) => Object.fromEntries(
+    Object.entries(group || {})
+      .map(([port, metadata]) => [
+        String(port || "").trim(),
+        { alias: normalizeNodeGraphPatchMetadataAlias(metadata?.alias) },
+      ])
+      .filter(([port, metadata]) => port && metadata.alias),
+  );
+  const input = normalizeGroup(source.input);
+  const output = normalizeGroup(source.output);
+  return {
+    ...(Object.keys(input).length ? { input } : {}),
+    ...(Object.keys(output).length ? { output } : {}),
+  };
+}
+
 function normalizeNodeGraphPatchNodeUi(ui = {}) {
   const source = ui && typeof ui === "object" ? ui : {};
   return {
@@ -204,10 +222,16 @@ function cloneNodeGraphPatch(patch) {
           ? { sample: { id: normalizeNodeGraphSampleId(node.sample?.id) } }
           : {}),
         paramMeta: cloneNodeGraphParamMeta(node.paramMeta),
+        ...(Object.keys(normalizeNodeGraphPatchPortMeta(node.portMeta)).length
+          ? { portMeta: normalizeNodeGraphPatchPortMeta(node.portMeta) }
+          : {}),
         params: { ...(node.params || {}) },
         ...(ui.buttonsHidden || ui.titleHidden || ui.oscilloscopeHidden ? { ui } : {}),
       };
     }),
+    requiredAssets: typeof nodeGraphRequiredAssetsForPatch === "function"
+      ? nodeGraphRequiredAssetsForPatch(patch)
+      : [],
     samples: typeof normalizeNodeGraphPatchSamples === "function"
       ? normalizeNodeGraphPatchSamples(patch.samples)
       : [],

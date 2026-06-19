@@ -51,6 +51,48 @@ function nodeGraphWorkspaceHeightCss(heightPx) {
   return `${Math.round(heightPx + nodeGraphWorkspaceChromeSize("y"))}px`;
 }
 
+function nodeGraphWorkspaceViewportInsetPx(workspace = document.getElementById("nodeGraphWorkspace")) {
+  if (!workspace?.closest?.(".node-wiring-panel.modular-only-view")) {
+    return 0;
+  }
+  const panel = workspace.closest(".node-wiring-panel");
+  const value = Number.parseFloat(getComputedStyle(panel).getPropertyValue("--node-modular-only-inset"));
+  return Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+function nodeGraphWorkspaceMaxViewportGridSize(workspace = document.getElementById("nodeGraphWorkspace")) {
+  const inset = nodeGraphWorkspaceViewportInsetPx(workspace);
+  const maxWidthPx = Math.max(0, window.innerWidth - inset * 2 - nodeGraphWorkspaceChromeSize("x"));
+  const maxHeightPx = Math.max(0, window.innerHeight - inset * 2 - nodeGraphWorkspaceChromeSize("y"));
+  return {
+    heightGu: Math.max(1, Math.floor(maxHeightPx / Math.max(1, nodeGraphGridHeight()))),
+    widthGu: Math.max(1, Math.floor(maxWidthPx / Math.max(1, nodeGraphGridWidth()))),
+  };
+}
+
+function clampNodeGraphWorkspaceGridSizeToViewport(size = {}, workspace = document.getElementById("nodeGraphWorkspace")) {
+  const maxSize = nodeGraphWorkspaceMaxViewportGridSize(workspace);
+  return {
+    heightGu: Math.max(1, Math.min(maxSize.heightGu, Math.round(Number(size.heightGu) || 0))),
+    widthGu: Math.max(1, Math.min(maxSize.widthGu, Math.round(Number(size.widthGu) || 0))),
+  };
+}
+
+function applyNodeGraphWorkspaceSizeCss(workspace, widthCss = null, heightCss = null) {
+  const setSize = (property, customProperty, value) => {
+    if (value) {
+      workspace.style[property] = value;
+      workspace.style.setProperty(customProperty, value);
+      return;
+    }
+    workspace.style.removeProperty(property);
+    workspace.style.removeProperty(customProperty);
+  };
+  setSize("width", "--node-modular-only-view-width", widthCss);
+  setSize("height", "--node-modular-only-view-height", heightCss);
+  workspace.style.removeProperty("aspect-ratio");
+}
+
 function defaultNodeGraphModuleGridInsetPx() {
   return 6;
 }

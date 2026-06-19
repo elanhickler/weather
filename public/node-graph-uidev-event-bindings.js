@@ -35,6 +35,9 @@ async function bindNodeGraphUiDevSettingsEvents() {
     .getElementById("nodeUiDevMouseLightEnabled")
     .addEventListener("change", syncNodeUiDevSettingsHeaderControls);
   document
+    .getElementById("nodeUiDevShowOriginMarker")
+    .addEventListener("change", syncNodeUiDevSettingsHeaderControls);
+  document
     .getElementById("nodeUiDevModularShaderEnabled")
     .addEventListener("change", syncNodeUiDevSettingsHeaderControls);
   document

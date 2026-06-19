@@ -1,4 +1,4 @@
-function nodeGraphSelfTraceModuleRect(nodeId) {
+function nodeGraphTraceModuleRect(nodeId) {
   const surface = nodeGraphZoomSurface();
   const node = nodeGraphNodeElement(nodeId);
   if (!surface || !node) {
@@ -18,6 +18,10 @@ function nodeGraphSelfTraceModuleRect(nodeId) {
     titleBottom,
     top: (nodeRect.top - surfaceRect.top) / zoom,
   };
+}
+
+function nodeGraphSelfTraceModuleRect(nodeId) {
+  return nodeGraphTraceModuleRect(nodeId);
 }
 
 function nodeGraphSelfTracePoints(wire, from, to) {
@@ -46,15 +50,41 @@ function nodeGraphSelfTracePoints(wire, from, to) {
   ];
 }
 
+function nodeGraphBackwardTracePoints(wire, from, to) {
+  const sourceNode = wire?.sourceNode;
+  const destinationNode = wire?.destinationNode;
+  if (!sourceNode || !destinationNode || sourceNode === destinationNode || to.x >= from.x) {
+    return [];
+  }
+  const sourceRect = nodeGraphTraceModuleRect(sourceNode);
+  const destinationRect = nodeGraphTraceModuleRect(destinationNode);
+  if (!sourceRect || !destinationRect) {
+    return [];
+  }
+  const distance = Math.max(nodeGraphGridWidth(), nodeGraphGridHeight()) * 0.75;
+  const aboveY = Math.max(0.5, Math.min(sourceRect.top, destinationRect.top) - distance);
+  const sourceSideX = Math.max(from.x + distance, sourceRect.right + distance);
+  const destinationSideX = Math.min(to.x - distance, destinationRect.left - distance);
+  return [
+    { x: sourceSideX, y: from.y },
+    { x: sourceSideX, y: aboveY },
+    { x: destinationSideX, y: aboveY },
+    { x: destinationSideX, y: to.y },
+  ];
+}
+
 function nodeGraphManualTracePathOptions(wire, from, to) {
   const wireType = normalizeNodeGraphWireType(wire?.wireType);
   if (wireType !== nodeGraphWireTypes.trace) {
     return { wireType };
   }
   const manualTracePoints = normalizeNodeGraphTracePoints(wire?.tracePoints);
+  const selfTracePoints = manualTracePoints.length ? [] : nodeGraphSelfTracePoints(wire, from, to);
   const tracePoints = manualTracePoints.length
     ? manualTracePoints
-    : nodeGraphSelfTracePoints(wire, from, to);
+    : selfTracePoints.length
+      ? selfTracePoints
+      : nodeGraphBackwardTracePoints(wire, from, to);
   return {
     pathData: nodeGraphTracePathFromPoints(from, tracePoints, to),
     tracePoints,

@@ -77,6 +77,18 @@ function renderNodeGraphSliderVisibilityToggles() {
   syncNodeUserUiSettingsViewControls();
 }
 
+function syncNodeGraphVisibleModuleGridHeights() {
+  for (const element of document.querySelectorAll(".dsp-node[data-node]")) {
+    const patchNode = nodeGraphPatchNode(element.dataset.node);
+    if (!patchNode) {
+      continue;
+    }
+    const heightGu = nodeGraphPatchNodeGridHeightUnits(patchNode);
+    element.dataset.gridHeightGu = String(heightGu);
+    element.style.setProperty("--node-grid-height-units", String(heightGu));
+  }
+}
+
 function renderNodeGraphModuleVisibilityToggles() {
   const workspace = document.getElementById("nodeGraphWorkspace");
   const buttonsButton = document.getElementById("nodeModuleButtonsToggleButton");
@@ -88,6 +100,7 @@ function renderNodeGraphModuleVisibilityToggles() {
   workspace?.classList.toggle("module-buttons-hidden", !buttonsVisible);
   workspace?.classList.toggle("module-oscilloscopes-hidden", !scopesVisible);
   workspace?.classList.toggle("module-sliders-hidden", !slidersVisible);
+  syncNodeGraphVisibleModuleGridHeights();
   if (buttonsButton) {
     buttonsButton.textContent = buttonsVisible ? "Hide Module Buttons" : "Show Module Buttons";
     buttonsButton.setAttribute("aria-pressed", buttonsVisible ? "true" : "false");
@@ -546,9 +559,34 @@ function nodeGraphDialogDragTargetIsInteractive(event) {
   if (!target || target === event.currentTarget) {
     return false;
   }
+  if (target.closest?.(".node-drag-handle, .scene-context-drag-handle")) {
+    return false;
+  }
   return Boolean(target.closest?.(
     "button, a, input, textarea, select, option, label, [contenteditable='true']",
   ));
+}
+
+function nodeGraphFloatingWindowPosition(element, x, y, options = {}) {
+  if (!element) {
+    return { left: 0, top: 0 };
+  }
+  element.hidden = false;
+  const rect = element.getBoundingClientRect();
+  const width = Math.max(1, Number(options.width) || rect.width || 1);
+  const height = Math.max(1, Number(options.height) || rect.height || 1);
+  const halfWidth = width * 0.5;
+  const visibleWidth = Math.max(1, Math.min(width, Number(options.visibleWidth) || halfWidth));
+  const visibleHeight = Math.max(1, Math.min(height, Number(options.visibleHeight) || 48));
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || width;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || height;
+  const minLeft = visibleWidth - width;
+  const maxLeft = viewportWidth - visibleWidth;
+  const minTop = visibleHeight - height;
+  const maxTop = viewportHeight - visibleHeight;
+  const left = Math.max(minLeft, Math.min(maxLeft, Number(x) || 0));
+  const top = Math.max(minTop, Math.min(maxTop, Number(y) || 0));
+  return { left, top };
 }
 
 function renderNodeGraphTooltipToggle() {
@@ -594,12 +632,8 @@ function positionNodeGraphVisibilityMenu(menu, x, y) {
   if (!menu) {
     return;
   }
-  const margin = 8;
-  menu.hidden = false;
   menu.style.position = "fixed";
-  const rect = menu.getBoundingClientRect();
-  const left = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, x));
-  const top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, y));
+  const { left, top } = nodeGraphFloatingWindowPosition(menu, x, y);
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
   menu.style.right = "auto";
@@ -1654,18 +1688,13 @@ function setNodeGraphViewMode(mode) {
   }
   const settingsMode = mode === "settings";
   const shopMode = mode === "shop";
-  const departmentMode = shopMode && Boolean(nodeGraphMvp.moduleStoreDepartment);
-  const shopLandingMode = shopMode && !departmentMode;
   const scriptMode = mode === "script";
   const codeMode = mode === "code";
   const uiMode = mode === "ui";
   const mappingMode = mode === "mapping";
   const modularOnlyMode = mode === "modular-only";
-  const modularMode = modularOnlyMode || (!settingsMode && !shopMode && !scriptMode && !codeMode && !uiMode && !mappingMode);
+  const modularMode = modularOnlyMode || shopMode || (!settingsMode && !scriptMode && !codeMode && !uiMode && !mappingMode);
   const workspaceMode = modularMode;
-  if (!shopLandingMode) {
-    closeNodeGraphModuleCollectionsMenu();
-  }
   const wiringPanel = document.getElementById("nodeWiringPanel");
   wiringPanel?.classList.toggle("modular-only-view", modularOnlyMode);
   document.getElementById("nodeGraphWorkspace").hidden = !workspaceMode;
@@ -1673,8 +1702,7 @@ function setNodeGraphViewMode(mode) {
   document
     .getElementById("nodeModularOnlyBackButton")
     .setAttribute("aria-label", uiMode ? "Close UI view" : "Return to full modular view");
-  document.getElementById("nodeModuleShopView").hidden = !shopLandingMode;
-  document.getElementById("nodeModuleDepartmentView").hidden = !departmentMode;
+  document.getElementById("nodeModuleShopView").hidden = !shopMode;
   document.getElementById("nodeScriptView").hidden = !scriptMode;
   document.getElementById("nodeCodeScreenView").hidden = !codeMode;
   document.getElementById("nodeUiView").hidden = !uiMode;

@@ -6,6 +6,7 @@ import binascii
 import json
 import mimetypes
 import os
+import re
 import subprocess
 import tempfile
 from datetime import datetime, timezone
@@ -25,6 +26,7 @@ MAX_PRESET_BYTES = 512 * 1024
 MAX_AUDIO_FILE_BYTES = 128 * 1024 * 1024
 MAX_AUDIO_UPLOAD_JSON_BYTES = 192 * 1024 * 1024
 MAX_AUDIO_TRANSCODE_BYTES = 256 * 1024 * 1024
+MAX_AUDIO_SEARCH_VISITS = 120000
 SUPPORTED_AUDIO_FILE_SUFFIXES = {
     ".aac",
     ".flac",
@@ -295,6 +297,9 @@ class SandboxServer(BaseHTTPRequestHandler):
         if parsed.path == "/api/audio-file/data-url":
             self.audio_file_data_url()
             return
+        if parsed.path == "/api/audio-file/find":
+            self.audio_file_find()
+            return
         if parsed.path == "/api/audio-file/transcode-data-url":
             self.audio_file_transcode_data_url()
             return
@@ -446,23 +451,37 @@ class SandboxServer(BaseHTTPRequestHandler):
         )
 
     def serve_demo_patches(self) -> None:
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        requested_bank = self.normalized_patch_bank(params.get("bank", ["0"])[0])
         patches = []
+        legacy_program = 0
         if SAVED_PATCHES.exists():
             for path in sorted(
                 SAVED_PATCHES.glob("*.json"),
                 key=lambda candidate: candidate.stat().st_mtime,
                 reverse=True,
-            )[:10]:
+            ):
                 try:
                     payload = json.loads(path.read_text(encoding="utf-8"))
                     info = payload.get("info") if isinstance(payload, dict) else {}
                     stat = path.stat()
                 except (OSError, json.JSONDecodeError):
                     continue
+                bank = self.patch_bank_for_file(path, info)
+                if bank != requested_bank:
+                    continue
+                program = self.patch_program_for_file(path, info, legacy_program)
+                legacy_program += 1
+                if program < 0 or program > 127:
+                    continue
                 patches.append(
                     {
                         "filename": path.name,
+                        "bank": bank,
+                        "bankName": str(info.get("bankName") or ""),
                         "name": str(info.get("name") or path.stem),
+                        "program": program,
                         "tags": str(info.get("tags") or ""),
                         "bytes": stat.st_size,
                         "modifiedUtc": datetime.fromtimestamp(
@@ -474,7 +493,8 @@ class SandboxServer(BaseHTTPRequestHandler):
                         .replace("+00:00", "Z"),
                     }
                 )
-        self.send_json({"ok": True, "patches": patches, "path": str(SAVED_PATCHES)})
+        patches.sort(key=lambda patch: int(patch["program"]))
+        self.send_json({"ok": True, "bank": requested_bank, "patches": patches[:128], "path": str(SAVED_PATCHES)})
 
     def serve_demo_patch_file(self, query: str) -> None:
         params = parse_qs(query)
@@ -492,6 +512,8 @@ class SandboxServer(BaseHTTPRequestHandler):
         self.serve_file(path)
 
     def save_demo_patch(self) -> None:
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
         payload = self.read_json_preset_payload("patch")
         if payload is None:
             return
@@ -499,13 +521,19 @@ class SandboxServer(BaseHTTPRequestHandler):
             return
 
         info = payload.get("info") if isinstance(payload.get("info"), dict) else {}
+        bank = self.normalized_patch_bank(params.get("bank", [info.get("bank", 0)])[0])
+        program = self.normalized_patch_program(params.get("program", [info.get("program", 0)])[0])
+        info["bank"] = bank
+        info["program"] = program
+        payload["info"] = info
         title = str(info.get("name") or "soemdsp-patch")
         tag = str(info.get("tags") or "").strip()
         safe_title = self.safe_filename_part("-".join(part for part in (title, tag) if part))
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:-3]
-        filename = f"{timestamp}-{safe_title or 'soemdsp-patch'}.json"
+        filename = f"bank{bank:03d}-program{program:03d}-{safe_title or 'soemdsp-patch'}.json"
         try:
             SAVED_PATCHES.mkdir(parents=True, exist_ok=True)
+            for existing in SAVED_PATCHES.glob(f"bank{bank:03d}-program{program:03d}-*.json"):
+                existing.unlink(missing_ok=True)
             path = SAVED_PATCHES / filename
             path.write_text(
                 f"{json.dumps(payload, indent=2, sort_keys=False)}\n",
@@ -518,11 +546,39 @@ class SandboxServer(BaseHTTPRequestHandler):
         self.send_json(
             {
                 "ok": True,
+                "bank": bank,
                 "filename": filename,
                 "path": str(path),
+                "program": program,
                 "bytes": path.stat().st_size,
             },
         )
+
+    def normalized_patch_bank(self, value: object) -> int:
+        try:
+            number = round(float(value))
+        except (TypeError, ValueError):
+            return 0
+        return max(0, min(127, number))
+
+    def normalized_patch_program(self, value: object) -> int:
+        try:
+            number = round(float(value))
+        except (TypeError, ValueError):
+            return 0
+        return max(0, min(127, number))
+
+    def patch_bank_for_file(self, path: Path, info: dict) -> int:
+        if "bank" in info:
+            return self.normalized_patch_bank(info.get("bank"))
+        match = re.match(r"bank(\d{3})-program\d{3}-", path.name)
+        return self.normalized_patch_bank(match.group(1)) if match else 0
+
+    def patch_program_for_file(self, path: Path, info: dict, fallback: int) -> int:
+        if "program" in info:
+            return self.normalized_patch_program(info.get("program"))
+        match = re.match(r"bank\d{3}-program(\d{3})-", path.name)
+        return self.normalized_patch_program(match.group(1)) if match else self.normalized_patch_program(fallback)
 
     def validate_node_patch_payload(self, payload: dict, label: str) -> bool:
         patch_format = payload.get("format")
@@ -807,6 +863,108 @@ class SandboxServer(BaseHTTPRequestHandler):
                 "size": size,
             },
         )
+
+    def audio_file_find(self) -> None:
+        payload = self.read_json_payload(
+            "audio file search",
+            max_bytes=24 * 1024,
+        )
+        if payload is None:
+            return
+
+        root_text = payload.get("root")
+        if not isinstance(root_text, str) or not root_text.strip():
+            self.send_json({"ok": False, "error": "search path is required"}, status=400)
+            return
+
+        names = payload.get("names")
+        if not isinstance(names, list):
+            names = [payload.get("name")]
+        target_names = {
+            str(name).strip().lower()
+            for name in names
+            if isinstance(name, str) and str(name).strip()
+        }
+        if not target_names:
+            self.send_json({"ok": False, "error": "audio file name is required"}, status=400)
+            return
+
+        try:
+            root = Path(root_text).expanduser().resolve()
+        except OSError as exc:
+            self.send_json({"ok": False, "error": f"search path resolve failed: {exc}"}, status=400)
+            return
+
+        home = Path.home().resolve()
+        if not root.is_relative_to(home):
+            self.send_json({"ok": False, "error": "search path must stay inside the user home folder"}, status=403)
+            return
+        if not root.exists():
+            self.send_json({"ok": False, "error": "search path does not exist", "path": str(root)}, status=404)
+            return
+
+        roots = [root] if root.is_dir() else [root.parent]
+        if root.is_file() and self.audio_search_candidate_matches(root, target_names):
+            self.send_json({"ok": True, "path": str(root), "name": root.name, "visited": 1})
+            return
+
+        visited = 0
+        first_suffix_match: Path | None = None
+        for search_root in roots:
+            try:
+                iterator = search_root.rglob("*")
+                for candidate in iterator:
+                    visited += 1
+                    if visited > MAX_AUDIO_SEARCH_VISITS:
+                        self.send_json(
+                            {
+                                "ok": False,
+                                "error": f"audio search stopped after {MAX_AUDIO_SEARCH_VISITS} files; choose a narrower folder",
+                                "path": str(root),
+                            },
+                            status=413,
+                        )
+                        return
+                    if not candidate.is_file() or candidate.suffix.lower() not in SUPPORTED_AUDIO_FILE_SUFFIXES:
+                        continue
+                    if self.audio_search_candidate_matches(candidate, target_names):
+                        self.send_json({"ok": True, "path": str(candidate), "name": candidate.name, "visited": visited})
+                        return
+                    if first_suffix_match is None and candidate.name.lower() in target_names:
+                        first_suffix_match = candidate
+            except OSError as exc:
+                self.send_json({"ok": False, "error": f"audio search failed: {exc}", "path": str(search_root)}, status=500)
+                return
+
+        if first_suffix_match:
+            self.send_json({"ok": True, "path": str(first_suffix_match), "name": first_suffix_match.name, "visited": visited})
+            return
+        self.send_json(
+            {
+                "ok": False,
+                "error": "audio file not found under search path",
+                "path": str(root),
+                "names": sorted(target_names),
+                "visited": visited,
+            },
+            status=404,
+        )
+
+    def audio_search_candidate_matches(self, candidate: Path, target_names: set[str]) -> bool:
+        name = candidate.name.lower()
+        stem = candidate.stem.lower()
+        if name in target_names or stem in target_names:
+            return True
+        for target in target_names:
+            if not target:
+                continue
+            target_path_name = Path(target).name.lower()
+            target_stem = Path(target_path_name).stem.lower()
+            if name == target_path_name or stem == target_stem:
+                return True
+            if name.endswith(target_path_name) or stem.endswith(target_stem):
+                return True
+        return False
 
     def audio_file_transcode_data_url(self) -> None:
         payload = self.read_json_payload(

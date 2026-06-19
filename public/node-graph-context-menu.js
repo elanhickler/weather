@@ -1,13 +1,118 @@
-function closeNodeSceneContextMenu() {
+function closeNodeSceneContextMenu(options = {}) {
+  const explicit =
+    options === true ||
+    options?.explicit === true ||
+    options?.currentTarget?.id === "nodeSceneCloseMenu";
+  if (!explicit) {
+    return false;
+  }
   const menu = document.getElementById("nodeSceneContextMenu");
   menu.hidden = true;
+  if (nodeGraphMvp.sceneContextDragging?.handle) {
+    nodeGraphMvp.sceneContextDragging.handle.classList.remove("dragging");
+  }
+  if (nodeGraphMvp.sceneContextResizing?.handle) {
+    nodeGraphMvp.sceneContextResizing.handle.classList.remove("dragging");
+  }
+  nodeGraphMvp.sceneContextDragging = null;
+  nodeGraphMvp.sceneContextResizing = null;
+  nodeGraphMvp.sceneContextPoint = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("commandCenter", menu, { open: false }, { status: false });
+  }
+  return true;
+}
+
+const nodeSceneContextWindowDefaultSize = Object.freeze({
+  width: 215,
+});
+
+const nodeModuleActionsWindowDefaultSize = Object.freeze({
+  width: 180,
+});
+
+function normalizeNodeGraphFloatingWindowSize(size = {}, defaults = {}) {
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 720;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 760;
+  const minWidth = 160;
+  const maxWidth = Math.max(minWidth, Math.min(720, viewportWidth - 28));
+  const minHeight = 120;
+  const maxHeight = Math.max(minHeight, Math.min(760, viewportHeight - 28));
+  const source = size && typeof size === "object" ? size : {};
+  const width = Math.max(
+    minWidth,
+    Math.min(maxWidth, Number(source.width) || Number(defaults.width) || minWidth),
+  );
+  const height = Number.isFinite(Number(source.height))
+    ? Math.max(minHeight, Math.min(maxHeight, Number(source.height)))
+    : null;
+  return {
+    width: Math.round(width),
+    ...(height ? { height: Math.round(height) } : {}),
+  };
+}
+
+function normalizeNodeSceneContextWindowSize(size = {}) {
+  const normalized = normalizeNodeGraphFloatingWindowSize(size, nodeSceneContextWindowDefaultSize);
+  return { width: normalized.width };
+}
+
+function normalizeNodeModuleActionsWindowSize(size = {}) {
+  return normalizeNodeGraphFloatingWindowSize(size, nodeModuleActionsWindowDefaultSize);
+}
+
+function applyNodeSceneContextWindowSize(size = nodeGraphMvp.sceneContextWindowSize) {
+  const menu = document.getElementById("nodeSceneContextMenu");
+  const normalized = normalizeNodeSceneContextWindowSize(size || nodeSceneContextWindowDefaultSize);
+  nodeGraphMvp.sceneContextWindowSize = normalized;
+  if (!menu) {
+    return normalized;
+  }
+  menu.style.setProperty("--node-scene-context-width", `${normalized.width}px`);
+  menu.style.removeProperty("--node-scene-context-height");
+  return normalized;
+}
+
+function applyNodeModuleActionsWindowSize(size = nodeGraphMvp.moduleActionWindowSize) {
+  const menu = document.getElementById("nodeModuleActionsWindow");
+  const normalized = normalizeNodeModuleActionsWindowSize(size || nodeModuleActionsWindowDefaultSize);
+  nodeGraphMvp.moduleActionWindowSize = normalized;
+  if (!menu) {
+    return normalized;
+  }
+  menu.style.setProperty("--node-module-actions-width", `${normalized.width}px`);
+  if (Number.isFinite(Number(normalized.height))) {
+    menu.style.setProperty("--node-module-actions-height", `${normalized.height}px`);
+  } else {
+    menu.style.removeProperty("--node-module-actions-height");
+  }
+  return normalized;
+}
+
+function saveNodeSceneContextWindowSizeToUserSettings() {
+  if (typeof saveNodeGraphWorkspaceWindowStatesToUserSettings === "function") {
+    saveNodeGraphWorkspaceWindowStatesToUserSettings();
+  }
+}
+
+function closeNodeModuleActionsWindow() {
+  const menu = document.getElementById("nodeModuleActionsWindow");
+  if (menu) {
+    menu.hidden = true;
+  }
   if (nodeGraphMvp.moduleActionDragging?.handle) {
     nodeGraphMvp.moduleActionDragging.handle.classList.remove("dragging");
   }
+  if (nodeGraphMvp.moduleActionResizing?.handle) {
+    nodeGraphMvp.moduleActionResizing.handle.classList.remove("dragging");
+  }
   nodeGraphMvp.moduleActionDragging = null;
-  nodeGraphMvp.sceneContextPoint = null;
+  nodeGraphMvp.moduleActionResizing = null;
   nodeGraphMvp.sceneContextTargetNode = null;
   nodeGraphMvp.sceneContextTargetWire = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("moduleActions", menu, { open: false }, { status: false });
+  }
 }
 
 function closeNodeScopeContextMenu() {
@@ -34,24 +139,80 @@ function closeNodeGlobalScopeMenu() {
   nodeGraphMvp.globalScopeDragging = null;
   closeNodeScopeContextMenu();
   renderNodeGraphModuleScopeBrightnessControl();
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", menu, { open: false }, { status: false });
+  }
 }
 
 function positionNodeSceneContextMenu(menu, x, y, remember = false) {
-  const margin = 12;
-  menu.hidden = false;
-  const rect = menu.getBoundingClientRect();
-  const left = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, x));
-  const top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, y));
+  if (menu?.id === "nodeSceneContextMenu") {
+    applyNodeSceneContextWindowSize();
+  } else if (menu?.id === "nodeModuleActionsWindow") {
+    applyNodeModuleActionsWindowSize();
+  }
+  const { left, top } = nodeGraphFloatingWindowPosition(menu, x, y);
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
+  if (menu?.id === "nodeSceneContextMenu") {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("commandCenter", menu, { open: !menu.hidden, position: { left, top } }, { persist: false });
+    }
+  } else if (menu?.id === "nodeModuleActionsWindow") {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("moduleActions", menu, { open: !menu.hidden, position: { left, top } }, { persist: false });
+    }
+  } else if (menu?.id === "nodeGlobalScopeMenu") {
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", menu, { open: !menu.hidden, position: { left, top } }, { persist: false });
+    }
+  }
   if (remember) {
     nodeGraphMvp.moduleActionWindowPosition = { left, top };
     syncNodeGraphPatchWindowPosition("moduleActions", { left, top });
   }
 }
 
+function positionNodeSceneContextMenuHeaderAtPoint(menu, x, y, remember = false) {
+  if (!menu) {
+    return;
+  }
+  menu.hidden = false;
+  const menuRect = menu.getBoundingClientRect();
+  const headingRect = menu.querySelector(".scene-context-heading")?.getBoundingClientRect();
+  positionNodeSceneContextMenu(
+    menu,
+    (Number(x) || 0) - (menuRect.width * 0.5),
+    (Number(y) || 0) - ((headingRect?.height || 42) * 0.5),
+    remember,
+  );
+}
+
+function positionNodeSceneContextMenuAtCurrentSavedOrInitial(menu, x, y) {
+  if (!menu) {
+    return;
+  }
+  applyNodeSceneContextWindowSize();
+  if (!menu.hidden) {
+    const rect = menu.getBoundingClientRect();
+    positionNodeSceneContextMenu(menu, rect.left, rect.top, false);
+    return;
+  }
+  const workspaceState = nodeGraphMvp.workspaceWindowStates?.commandCenter;
+  const savedPosition = workspaceState?.position || nodeGraphMvp.moduleActionWindowPosition;
+  const hasSavedPosition =
+    Number.isFinite(Number(savedPosition?.left)) &&
+    Number.isFinite(Number(savedPosition?.top));
+  if (hasSavedPosition) {
+    menu.hidden = false;
+    positionNodeSceneContextMenu(menu, savedPosition.left, savedPosition.top, false);
+    return;
+  }
+  positionNodeSceneContextMenuHeaderAtPoint(menu, x, y, true);
+}
+
 function positionNodeSceneContextMenuAtSavedOr(menu, x, y) {
-  const savedPosition = nodeGraphMvp.moduleActionWindowPosition;
+  const workspaceState = nodeGraphMvp.workspaceWindowStates?.commandCenter;
+  const savedPosition = workspaceState?.position || nodeGraphMvp.moduleActionWindowPosition;
   const hasSavedPosition =
     Number.isFinite(Number(savedPosition?.left)) &&
     Number.isFinite(Number(savedPosition?.top));
@@ -60,6 +221,20 @@ function positionNodeSceneContextMenuAtSavedOr(menu, x, y) {
     hasSavedPosition ? savedPosition.left : x,
     hasSavedPosition ? savedPosition.top : y,
     !hasSavedPosition,
+  );
+}
+
+function positionNodeModuleActionsWindowAtSavedOr(menu, x, y) {
+  const workspaceState = nodeGraphMvp.workspaceWindowStates?.moduleActions;
+  const savedPosition = workspaceState?.position || nodeGraphMvp.moduleActionWindowPosition;
+  const hasSavedPosition =
+    Number.isFinite(Number(savedPosition?.left)) &&
+    Number.isFinite(Number(savedPosition?.top));
+  positionNodeSceneContextMenu(
+    menu,
+    hasSavedPosition ? savedPosition.left : x,
+    hasSavedPosition ? savedPosition.top : y,
+    true,
   );
 }
 
@@ -83,7 +258,8 @@ function positionNodeScopeContextMenuAtSavedOr(menu, x, y) {
 }
 
 function positionNodeGlobalScopeMenuAtSavedOr(menu, x, y) {
-  const savedPosition = nodeGraphMvp.globalScopeWindowPosition;
+  const workspaceState = nodeGraphMvp.workspaceWindowStates?.oscilloscopeSettings;
+  const savedPosition = workspaceState?.position || nodeGraphMvp.globalScopeWindowPosition;
   const hasSavedPosition =
     Number.isFinite(Number(savedPosition?.left)) &&
     Number.isFinite(Number(savedPosition?.top));
@@ -103,15 +279,21 @@ function positionNodeGlobalScopeMenuAtSavedOr(menu, x, y) {
 
 function openNodeGlobalScopeMenu() {
   const menu = document.getElementById("nodeGlobalScopeMenu");
-  const button = document.getElementById("nodeGlobalScopeMenuButton");
-  if (!menu || !button) {
+  if (!menu) {
     return;
   }
   nodeGraphMvp.scopeContextTargetNode = null;
-  const rect = button.getBoundingClientRect();
+  const anchor = document.getElementById("nodeSceneOpenOscilloscopeSettings");
+  const rect = anchor?.getBoundingClientRect?.() || {
+    left: nodeGraphMvp.sceneContextPoint?.x ?? window.innerWidth * 0.5,
+    bottom: nodeGraphMvp.sceneContextPoint?.y ?? window.innerHeight * 0.25,
+  };
   positionNodeGlobalScopeMenuAtSavedOr(menu, rect.left, rect.bottom + 8);
   renderNodeGraphSceneScopeControls();
   renderNodeGraphModuleScopeBrightnessControl();
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", menu, { open: true }, { status: false });
+  }
 }
 
 function toggleNodeGlobalScopeMenu() {
@@ -134,7 +316,7 @@ function beginNodeSceneContextMenuDrag(event) {
   }
 
   const rect = menu.getBoundingClientRect();
-  nodeGraphMvp.moduleActionDragging = {
+  nodeGraphMvp.sceneContextDragging = {
     handle: event.currentTarget,
     offsetX: event.clientX - rect.left,
     offsetY: event.clientY - rect.top,
@@ -148,7 +330,7 @@ function beginNodeSceneContextMenuDrag(event) {
 }
 
 function dragNodeSceneContextMenu(event) {
-  const drag = nodeGraphMvp.moduleActionDragging;
+  const drag = nodeGraphMvp.sceneContextDragging;
   if (
     !drag ||
     (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
@@ -160,12 +342,126 @@ function dragNodeSceneContextMenu(event) {
     document.getElementById("nodeSceneContextMenu"),
     event.clientX - drag.offsetX,
     event.clientY - drag.offsetY,
-    true,
+    false,
   );
   event.preventDefault();
 }
 
 function endNodeSceneContextMenuDrag(event) {
+  const drag = nodeGraphMvp.sceneContextDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+
+  drag.handle.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.sceneContextDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("commandCenter", document.getElementById("nodeSceneContextMenu"), { open: true }, { status: false });
+  }
+}
+
+function beginNodeSceneContextMenuResize(event) {
+  if (event.button > 0) {
+    return;
+  }
+  const menu = document.getElementById("nodeSceneContextMenu");
+  if (!menu || menu.hidden) {
+    return;
+  }
+  const rect = menu.getBoundingClientRect();
+  nodeGraphMvp.sceneContextResizing = {
+    handle: event.currentTarget,
+    pointerId: event.pointerId ?? null,
+    startClientX: event.clientX,
+    startWidth: rect.width,
+  };
+  event.currentTarget.classList.add("dragging");
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeSceneContextMenuResize(event) {
+  const drag = nodeGraphMvp.sceneContextResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  applyNodeSceneContextWindowSize({
+    width: drag.startWidth + event.clientX - drag.startClientX,
+  });
+  event.preventDefault();
+}
+
+function endNodeSceneContextMenuResize(event) {
+  const drag = nodeGraphMvp.sceneContextResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  drag.handle.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.sceneContextResizing = null;
+  saveNodeSceneContextWindowSizeToUserSettings();
+}
+
+function beginNodeModuleActionsWindowDrag(event) {
+  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
+    return;
+  }
+
+  const menu = document.getElementById("nodeModuleActionsWindow");
+  if (!menu || menu.hidden) {
+    return;
+  }
+
+  const rect = menu.getBoundingClientRect();
+  nodeGraphMvp.moduleActionDragging = {
+    handle: event.currentTarget,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top,
+    pointerId: event.pointerId ?? null,
+  };
+  event.currentTarget.classList.add("dragging");
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+}
+
+function dragNodeModuleActionsWindow(event) {
+  const drag = nodeGraphMvp.moduleActionDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+
+  positionNodeSceneContextMenu(
+    document.getElementById("nodeModuleActionsWindow"),
+    event.clientX - drag.offsetX,
+    event.clientY - drag.offsetY,
+    true,
+  );
+  event.preventDefault();
+}
+
+function endNodeModuleActionsWindowDrag(event) {
   const drag = nodeGraphMvp.moduleActionDragging;
   if (
     !drag ||
@@ -179,72 +475,65 @@ function endNodeSceneContextMenuDrag(event) {
     drag.handle.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.moduleActionDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("moduleActions", document.getElementById("nodeModuleActionsWindow"), { open: true }, { status: false });
+  }
 }
 
-function nodeGraphHomeContextModuleEntries() {
-  const storeEntries = typeof nodeGraphModuleStoreEntries === "function"
-    ? nodeGraphModuleStoreEntries().filter((entry) => entry.homeVisible && entry.implemented)
-    : [];
-  if (storeEntries.length) {
-    return storeEntries
-      .slice()
-      .sort((a, b) => `${a.category || ""}${a.label || ""}`.localeCompare(`${b.category || ""}${b.label || ""}`));
+function beginNodeModuleActionsWindowResize(event) {
+  if (event.button > 0) {
+    return;
   }
-
-  const seen = new Set();
-  return (nodeGraphMvp.patch?.nodes || [])
-    .filter((node) => {
-      if (!node?.type || seen.has(node.type) || !Object.hasOwn(nodeGraphModuleDefinitions, node.type)) {
-        return false;
-      }
-      if (["moduleHome", "moduleShop", "output"].includes(node.type)) {
-        return false;
-      }
-      seen.add(node.type);
-      return true;
-    })
-    .map((node) => {
-      const catalog = typeof nodeGraphModuleStoreCatalog === "object" ? nodeGraphModuleStoreCatalog[node.type] || {} : {};
-      return {
-        category: catalog.category || "Patch",
-        description: catalog.description || "Module already living in this patch.",
-        implemented: true,
-        label: catalog.label || nodeGraphNodeLabels[node.type] || node.type,
-        type: node.type,
-      };
-    })
-    .sort((a, b) => `${a.category || ""}${a.label || ""}`.localeCompare(`${b.category || ""}${b.label || ""}`));
+  const menu = document.getElementById("nodeModuleActionsWindow");
+  if (!menu || menu.hidden) {
+    return;
+  }
+  const rect = menu.getBoundingClientRect();
+  nodeGraphMvp.moduleActionResizing = {
+    handle: event.currentTarget,
+    pointerId: event.pointerId ?? null,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    startWidth: rect.width,
+    startHeight: rect.height,
+  };
+  event.currentTarget.classList.add("dragging");
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  event.stopPropagation();
 }
 
-function renderNodeSceneHomeModuleList(container) {
-  if (!container) {
+function dragNodeModuleActionsWindowResize(event) {
+  const drag = nodeGraphMvp.moduleActionResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
     return;
   }
-  const entries = nodeGraphHomeContextModuleEntries();
-  container.replaceChildren();
-  if (!entries.length) {
-    const empty = document.createElement("div");
-    empty.className = "scene-context-home-empty";
-    empty.textContent = "No modules in Home yet.";
-    container.append(empty);
+  applyNodeModuleActionsWindowSize({
+    width: drag.startWidth + event.clientX - drag.startClientX,
+    height: drag.startHeight + event.clientY - drag.startClientY,
+  });
+  event.preventDefault();
+}
+
+function endNodeModuleActionsWindowResize(event) {
+  const drag = nodeGraphMvp.moduleActionResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
     return;
   }
-
-  for (const entry of entries) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "scene-context-home-module-button";
-    button.dataset.contextModule = entry.type;
-    button.title = entry.description || `Add ${entry.label}.`;
-    button.addEventListener("click", addNodeGraphModuleFromContext);
-
-    const label = document.createElement("strong");
-    label.textContent = entry.label;
-    const meta = document.createElement("span");
-    meta.textContent = entry.category || "Module";
-    button.append(label, meta);
-    container.append(button);
+  drag.handle.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
   }
+  nodeGraphMvp.moduleActionResizing = null;
+  saveNodeSceneContextWindowSizeToUserSettings();
 }
 
 function beginNodeScopeContextMenuDrag(event) {
@@ -330,6 +619,9 @@ function endNodeGlobalScopeMenuDrag(event) {
     drag.handle.releasePointerCapture(event.pointerId);
   }
   nodeGraphMvp.globalScopeDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", document.getElementById("nodeGlobalScopeMenu"), { open: true }, { status: false });
+  }
 }
 
 function dragNodeScopeContextMenu(event) {
@@ -371,14 +663,146 @@ function endNodeScopeContextMenuDrag(event) {
   nodeGraphMvp.scopeContextDragging = null;
 }
 
+function nodeGraphContextTargetModuleElement(nodeId = nodeGraphModuleActionTargetNodeId()) {
+  if (!nodeId) {
+    return null;
+  }
+  return document.querySelector(`.dsp-node[data-node="${CSS.escape(nodeId)}"]`);
+}
+
+function nodeGraphContextTargetSliderReadout(nodeId = nodeGraphModuleActionTargetNodeId()) {
+  return nodeGraphContextTargetModuleElement(nodeId)?.querySelector(".node-slider-readout") || null;
+}
+
+const nodeGraphModuleActionControlIds = [
+  "nodeSceneCopyModule",
+  "nodeSceneSelectedModule",
+  "nodeSceneAddToGroup",
+  "nodeSceneAddToUi",
+  "nodeSceneWireTypeControl",
+  "nodeSceneAliasControl",
+  "nodeSceneWidthControls",
+  "nodeSceneTextBoxHeightControls",
+  "nodeSceneTextBoxTextSizeControls",
+  "nodeSceneTextBoxTextControls",
+  "nodeSceneCodeblockControls",
+  "nodeSceneGraphControls",
+  "nodeSceneToggleButtons",
+  "nodeSceneToggleTitle",
+  "nodeSceneToggleOscilloscope",
+  "nodeSceneImageControls",
+  "nodeSceneImageFileInput",
+  "nodeSceneCanvasControls",
+  "nodeSceneLedControls",
+  "nodeSceneTextBoxControls",
+  "nodeSceneTextBoxHorizontalAlignControls",
+  "nodeSceneTextBoxVerticalAlignControls",
+  "nodeSceneDeleteModule",
+];
+
+function ensureNodeGraphModuleActionsWindowBody() {
+  const body = document.getElementById("nodeModuleActionsWindowBody");
+  if (!body) {
+    return;
+  }
+  for (const id of nodeGraphModuleActionControlIds) {
+    const element = document.getElementById(id);
+    if (element && element.parentElement !== body) {
+      body.append(element);
+    }
+  }
+}
+
+function openNodeGraphModuleActionsFromContextWindow() {
+  ensureNodeGraphModuleActionsWindowBody();
+  const targetNodeId = nodeGraphModuleActionTargetNodeId();
+  nodeGraphMvp.sceneContextTargetNode = targetNodeId || null;
+  nodeGraphMvp.sceneContextTargetWire = null;
+  configureNodeSceneContextMenu("module");
+  const menu = document.getElementById("nodeModuleActionsWindow");
+  const anchor = document.getElementById("nodeSceneOpenModuleActions");
+  const rect = anchor?.getBoundingClientRect?.() || {
+    right: window.innerWidth * 0.5,
+    top: window.innerHeight * 0.25,
+  };
+  positionNodeModuleActionsWindowAtSavedOr(menu, rect.right + 8, rect.top);
+}
+
+function openNodeGraphMetaparametersFromContextWindow() {
+  const readout = nodeGraphContextTargetSliderReadout();
+  const anchor = document.getElementById("nodeSceneOpenMetaparameters") || readout;
+  const rect = anchor?.getBoundingClientRect?.() || {
+    right: window.innerWidth * 0.5,
+    top: window.innerHeight * 0.25,
+  };
+  if (!readout) {
+    openBlankNodeMetadataPopover({
+      clientX: rect.right + 8,
+      clientY: rect.top,
+      preventDefault() {},
+      stopPropagation() {},
+    });
+    return;
+  }
+  openNodeMetadataPopover({
+    clientX: rect.right + 8,
+    clientY: rect.top,
+    preventDefault() {},
+    stopPropagation() {},
+  }, readout);
+}
+
+function setNodeSceneContextHeader(label, detail = "") {
+  const title = document.querySelector("#nodeSceneContextMenu .scene-context-title");
+  if (!title) {
+    return;
+  }
+  let labelElement = title.querySelector("span");
+  let detailElement = title.querySelector("small");
+  if (!labelElement) {
+    labelElement = document.createElement("span");
+    title.prepend(labelElement);
+  }
+  if (!detailElement) {
+    detailElement = document.createElement("small");
+    title.append(detailElement);
+  }
+  labelElement.textContent = label;
+  detailElement.textContent = detail;
+}
+
+function setNodeModuleActionsWindowHeader(label, detail = "") {
+  const title = document.querySelector("#nodeModuleActionsWindow .scene-context-title");
+  if (!title) {
+    return;
+  }
+  let labelElement = title.querySelector("span");
+  let detailElement = title.querySelector("small");
+  if (!labelElement) {
+    labelElement = document.createElement("span");
+    title.prepend(labelElement);
+  }
+  if (!detailElement) {
+    detailElement = document.createElement("small");
+    title.append(detailElement);
+  }
+  labelElement.textContent = label;
+  detailElement.textContent = detail;
+}
+
 function configureNodeSceneContextMenu(mode) {
-  const menu = document.getElementById("nodeSceneContextMenu");
-  const title = menu.querySelector(".scene-context-title");
+  ensureNodeGraphModuleActionsWindowBody();
+  const actionMode = mode === "module" || mode === "wire";
+  const menu = document.getElementById(actionMode ? "nodeModuleActionsWindow" : "nodeSceneContextMenu");
+  const sceneMenu = document.getElementById("nodeSceneContextMenu");
+  const moduleActionsWindow = document.getElementById("nodeModuleActionsWindow");
   const copyButton = document.getElementById("nodeSceneCopyModule");
+  const moduleActionsWindowButton = document.getElementById("nodeSceneOpenModuleActions");
+  const metaparametersWindowButton = document.getElementById("nodeSceneOpenMetaparameters");
   const addToGroupButton = document.getElementById("nodeSceneAddToGroup");
   const addToUiButton = document.getElementById("nodeSceneAddToUi");
   const deleteButton = document.getElementById("nodeSceneDeleteModule");
-  const closeButton = document.getElementById("nodeSceneCloseMenu");
+  const closeButton = document.getElementById(actionMode ? "nodeModuleActionsClose" : "nodeSceneCloseMenu");
   const selectedModule = document.getElementById("nodeSceneSelectedModule");
   const wireTypeControl = document.getElementById("nodeSceneWireTypeControl");
   const wireTypeButtons = [...wireTypeControl.querySelectorAll("[data-wire-type]")];
@@ -441,6 +865,12 @@ function configureNodeSceneContextMenu(mode) {
   const wireMode = mode === "wire";
   const homeMode = mode === "home";
   menu.dataset.mode = mode;
+  if (sceneMenu && sceneMenu !== menu) {
+    sceneMenu.dataset.mode = "home";
+  }
+  if (moduleActionsWindow && moduleActionsWindow !== menu) {
+    moduleActionsWindow.dataset.mode = "";
+  }
   const targetNodeId = moduleMode ? nodeGraphModuleActionTargetNodeId() : null;
   if (targetNodeId) {
     nodeGraphMvp.sceneContextTargetNode = targetNodeId;
@@ -474,8 +904,29 @@ function configureNodeSceneContextMenu(mode) {
   const titleHidden = targetNodeUi.titleHidden;
   const textBoxLayout = normalizeNodeGraphTextBoxLayout(targetNode?.layout);
   const textBoxMode = textBoxLayout.textMode;
-  title.textContent = wireMode ? "WIRE ACTIONS" : homeMode ? "HOME MODULES" : "ACTIONS";
-  menu.setAttribute("aria-label", wireMode ? "Wire actions" : homeMode ? "Home modules" : "Module actions");
+  if (actionMode) {
+    setNodeModuleActionsWindowHeader(moduleMode ? "MODULE ACTIONS" : "WIRE ACTIONS", targetNode
+      ? nodeGraphNodeDisplayName(targetNode.id)
+      : wireMode
+        ? "selected wire"
+        : "no module selected");
+    menu.setAttribute("aria-label", moduleMode ? "Module actions" : "Wire actions");
+  } else {
+    setNodeSceneContextHeader("Command", "Center");
+    menu.setAttribute("aria-label", "Command Center");
+  }
+  if (moduleActionsWindowButton) {
+    moduleActionsWindowButton.disabled = false;
+    moduleActionsWindowButton.title = targetNode
+      ? "Open module actions for the current target module."
+      : "Open module actions with no module selected.";
+  }
+  if (metaparametersWindowButton) {
+    metaparametersWindowButton.disabled = false;
+    metaparametersWindowButton.title = nodeGraphContextTargetSliderReadout(targetNode?.id)
+      ? "Open the metaparameter editor for the first parameter on this module."
+      : "Open blank metaparameter script settings.";
+  }
   copyButton.hidden = !moduleMode;
   addToGroupButton.hidden = !moduleMode;
   const targetIsGraphType = nodeGraphModuleIsGraphType(targetNode?.type);
@@ -487,7 +938,7 @@ function configureNodeSceneContextMenu(mode) {
   if (homeModules) {
     homeModules.hidden = !homeMode;
     if (homeMode) {
-      renderNodeSceneHomeModuleList(homeModuleList);
+      homeModuleList?.replaceChildren();
     }
   }
   wireTypeControl.hidden = !wireMode;
@@ -793,6 +1244,7 @@ function configureNodeSceneContextMenu(mode) {
 }
 
 function openNodeModuleActionMenu(event) {
+  ensureNodeGraphModuleActionsWindowBody();
   const button = event.currentTarget;
   const node = button.closest(".dsp-node");
   if (!node) {
@@ -805,8 +1257,8 @@ function openNodeModuleActionMenu(event) {
   nodeGraphMvp.sceneContextTargetWire = null;
   configureNodeSceneContextMenu("module");
   const rect = button.getBoundingClientRect();
-  positionNodeSceneContextMenuAtSavedOr(
-    document.getElementById("nodeSceneContextMenu"),
+  positionNodeModuleActionsWindowAtSavedOr(
+    document.getElementById("nodeModuleActionsWindow"),
     rect.right,
     rect.bottom,
   );
@@ -838,10 +1290,30 @@ function openNodeScopeContextMenu(event) {
     event.clientY,
   );
   renderNodeGraphModuleScopeBrightnessControl();
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "oscilloscopeSettings",
+      document.getElementById("nodeGlobalScopeMenu"),
+      { open: true },
+      { status: false },
+    );
+  }
   return true;
 }
 
 function openNodeSceneContextMenu(event) {
+  if (event.target.closest?.(".node-view-toolbar")) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (event.target.closest?.(
+    "input, textarea, select, option, [contenteditable='true'], " +
+    "#nodeSceneContextMenu, #nodeParameterMetadataPopover, #nodeGlobalScopeMenu, " +
+    "#nodeModuleActionsWindow, #nodeShaderScriptDialog, #nodeCanvasScriptDialog, #nodeSavedPatchesWindow",
+  )) {
+    return;
+  }
   if (openNodeScopeContextMenu(event)) {
     return;
   }
@@ -859,11 +1331,19 @@ function openNodeSceneContextMenu(event) {
       nodeGraphMvp.sceneContextTargetNode = null;
       nodeGraphMvp.sceneContextTargetWire = { index, kind };
       configureNodeSceneContextMenu("wire");
-      positionNodeSceneContextMenuAtSavedOr(
-        document.getElementById("nodeSceneContextMenu"),
+      positionNodeSceneContextMenuHeaderAtPoint(
+        document.getElementById("nodeModuleActionsWindow"),
         event.clientX,
         event.clientY,
       );
+      if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+        rememberNodeGraphWorkspaceWindowState(
+          "moduleActions",
+          document.getElementById("nodeModuleActionsWindow"),
+          { open: true },
+          { status: false },
+        );
+      }
     }
     return;
   }
@@ -876,11 +1356,19 @@ function openNodeSceneContextMenu(event) {
     nodeGraphMvp.sceneContextTargetNode = contextNode.dataset.node;
     nodeGraphMvp.sceneContextTargetWire = null;
     configureNodeSceneContextMenu("module");
-    positionNodeSceneContextMenuAtSavedOr(
-      document.getElementById("nodeSceneContextMenu"),
+    positionNodeSceneContextMenuHeaderAtPoint(
+      document.getElementById("nodeModuleActionsWindow"),
       event.clientX,
       event.clientY,
     );
+    if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+      rememberNodeGraphWorkspaceWindowState(
+        "moduleActions",
+        document.getElementById("nodeModuleActionsWindow"),
+        { open: true },
+        { status: false },
+      );
+    }
     return;
   }
   if (event.target.closest(".node-port, .node-param-port, .node-slider-readout")) {
@@ -894,9 +1382,17 @@ function openNodeSceneContextMenu(event) {
   nodeGraphMvp.sceneContextTargetWire = null;
   clearNodeGraphSelection();
   configureNodeSceneContextMenu("home");
-  positionNodeSceneContextMenu(
+  positionNodeSceneContextMenuAtCurrentSavedOrInitial(
     document.getElementById("nodeSceneContextMenu"),
     event.clientX,
     event.clientY,
   );
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "commandCenter",
+      document.getElementById("nodeSceneContextMenu"),
+      { open: true },
+      { status: false },
+    );
+  }
 }

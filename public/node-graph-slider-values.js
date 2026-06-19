@@ -3,7 +3,21 @@ const nodeSliderHandleLeftWallClearancePx = 1;
 const nodeSliderHandleRightWallClearancePx = 3;
 const nodeSliderMinSkewExponent = 0.25;
 const nodeSliderMaxSkewExponent = 4;
-const nodeGraphNonlinearSmoothingFrequencyHz = 90;
+const nodeGraphAutoSmoothingDefaultSeconds = 0.016;
+const nodeGraphAutoSmoothingMinSeconds = 0.004;
+const nodeGraphAutoSmoothingMaxSeconds = 0.12;
+
+function clampNodeGraphAutoSmoothingSeconds(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value)) {
+    return nodeGraphAutoSmoothingDefaultSeconds;
+  }
+  return Math.max(nodeGraphAutoSmoothingMinSeconds, Math.min(nodeGraphAutoSmoothingMaxSeconds, value));
+}
+
+function nodeGraphSmoothingFrequencyFromSeconds(seconds) {
+  return 1 / clampNodeGraphAutoSmoothingSeconds(seconds);
+}
 
 function clampNodeSliderValue(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -113,7 +127,7 @@ function readNodeGraphSmoothedParameter(smoother, frame, frames) {
     const signal = nodeGraphOnePoleParameterLowpassSample(
       smoother,
       smoother.targetSignal,
-      nodeGraphNonlinearSmoothingFrequencyHz,
+      nodeGraphSmoothingFrequencyFromSeconds(nodeGraphMvp?.live?.autoSmoothingSeconds),
       nodeGraphMvp?.sampleRate || 44100,
     );
     const value = denormalizeNodeGraphSmootherSignal(signal, smoother.metadata);
@@ -210,6 +224,23 @@ function nodeSliderValueFromPointerTravel(slider, travel) {
   return min + range * normalizedTravel ** exponent;
 }
 
+function nodeSliderValueFromRelativeTravel(slider, travel) {
+  const min = Number(slider.min);
+  const max = Number(slider.max);
+  const range = max - min;
+  const numericTravel = Number(travel);
+  if (!Number.isFinite(range) || range <= 0 || !Number.isFinite(numericTravel)) {
+    return min;
+  }
+  if (numericTravel < 0 && slider.dataset.unboundedMin === "true") {
+    return min + range * numericTravel;
+  }
+  if (numericTravel > 1 && slider.dataset.unboundedMax === "true") {
+    return max + range * (numericTravel - 1);
+  }
+  return nodeSliderValueFromPointerTravel(slider, numericTravel);
+}
+
 function nodeSliderTravelFromValue(slider, value) {
   const min = Number(slider.min);
   const max = Number(slider.max);
@@ -301,6 +332,13 @@ function nodeSliderTravelFromPointer(slider, surface, clientX) {
 }
 
 function setNodeSliderMetadata(slider, metadata) {
+  const control = slider.closest(".node-parameter-control");
+  const alias = normalizeNodeGraphPatchMetadataAlias(metadata.alias);
+  slider.dataset.alias = alias;
+  if (control) {
+    control.dataset.paramLabel = alias || control.dataset.defaultParamLabel || control.dataset.paramLabel || "";
+    control.setAttribute("aria-label", control.dataset.paramLabel || slider.dataset.param || slider.id);
+  }
   slider.min = String(metadata.min);
   slider.max = String(metadata.max);
   slider.dataset.mid = String(clampNodeSliderValue(metadata.mid, metadata.min, metadata.max));

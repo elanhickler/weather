@@ -6,7 +6,6 @@ function bindNodeGraphHeaderControlEvents() {
   renderNodeGraphPatchTimingControls();
   const closeNodeGraphModuleBrowser = () => {
     nodeGraphMvp.sceneContextPoint = null;
-    closeNodeGraphModuleCollectionsMenu();
     setNodeGraphViewMode("modular");
   };
   document.getElementById("nodeDeleteButton").addEventListener("click", deleteSelectedNodeGraphItem);
@@ -25,7 +24,6 @@ function bindNodeGraphHeaderControlEvents() {
   document.getElementById("nodeMappingViewButton")?.addEventListener("click", () => setNodeGraphViewMode("mapping"));
   document.getElementById("nodeModuleButtonsToggleButton").addEventListener("click", toggleNodeGraphModuleButtonsVisibility);
   document.getElementById("nodeOscilloscopeToggleButton").addEventListener("click", toggleNodeGraphOscilloscopeVisibility);
-  document.getElementById("nodeGlobalScopeMenuButton").addEventListener("click", toggleNodeGlobalScopeMenu);
   document.getElementById("nodeGlobalScopeCloseMenu").addEventListener("click", closeNodeGlobalScopeMenu);
   document.getElementById("nodeGlobalScopeDragHandle").addEventListener("pointerdown", beginNodeGlobalScopeMenuDrag);
   document
@@ -140,9 +138,41 @@ function bindNodeGraphHeaderControlEvents() {
   document.getElementById("nodeModuleSlidersToggleButton").addEventListener("click", toggleNodeGraphModuleSlidersVisibility);
   document.getElementById("nodeTooltipToggleButton").addEventListener("click", toggleNodeGraphTooltipVisibility);
   document.getElementById("nodeUserUiSettingsButton").addEventListener("click", toggleNodeUserUiSettings);
-  document.getElementById("nodeSavedPatchesWindowButton").addEventListener("click", toggleNodeGraphSavedPatchesWindow);
+  document.getElementById("nodeCurrentSavedPatchButton").addEventListener("click", () => setNodeGraphSavedPatchesWindowVisible(true));
+  document.getElementById("nodePreviousSavedPatchButton").addEventListener("click", () => loadAdjacentNodeGraphSavedPatch(-1));
+  document.getElementById("nodeNextSavedPatchButton").addEventListener("click", () => loadAdjacentNodeGraphSavedPatch(1));
+  document.getElementById("nodeSavedPatchesPreviousButton").addEventListener("click", () => loadAdjacentNodeGraphSavedPatch(-1));
+  document.getElementById("nodeSavedPatchesNextButton").addEventListener("click", () => loadAdjacentNodeGraphSavedPatch(1));
+  document.getElementById("nodeSavedPatchesWindowHeading").addEventListener("pointerdown", beginNodeGraphSavedPatchesWindowDrag);
+  document.getElementById("nodeSavedPatchesDragHandle").addEventListener("pointerdown", beginNodeGraphSavedPatchesWindowDrag);
+  document.getElementById("nodeSavedPatchesResizeHandle").addEventListener("pointerdown", beginNodeGraphSavedPatchesWindowResize);
+  document.getElementById("nodeSavedPatchesBankInput").addEventListener("input", handleNodeGraphSavedPatchBankInput);
+  document.getElementById("nodeSavedPatchesBankNameInput").addEventListener("input", handleNodeGraphSavedPatchBankNameInput);
+  document.getElementById("nodeSavedPatchesPatchNameInput").addEventListener("input", handleNodeGraphSavedPatchInfoInput);
+  document.getElementById("nodeSavedPatchesPatchTagsInput").addEventListener("input", handleNodeGraphSavedPatchInfoInput);
+  document.getElementById("nodeSavedPatchesFitInput").addEventListener("input", handleNodeGraphSavedPatchGridColumnsInput);
+  document.getElementById("nodeSavedPatchesTagInput").addEventListener("input", handleNodeGraphSavedPatchTagInput);
+  document.getElementById("nodeSavedPatchesTagInput").addEventListener("keydown", handleNodeGraphSavedPatchTagInput);
+  document.getElementById("nodeSavedPatchesLoadPatch").textContent = "Open";
+  document.getElementById("nodeSavedPatchesSavePatch").textContent = "Save";
+  document.getElementById("nodeSavedPatchesCopyPatch").textContent = "Copy";
+  document.getElementById("nodeSavedPatchesPastePatch").textContent = "Paste";
+  document.getElementById("nodeSavedPatchesInitPatch").addEventListener("click", confirmAndInitNodeGraphPatchFromDefault);
+  document.getElementById("nodeSavedPatchesSavePatch").addEventListener("click", confirmAndSaveNodeGraphScript);
+  document.getElementById("nodeSavedPatchesSetDefault").addEventListener("click", setNodeGraphPatchAsDefaultFromButton);
+  document.getElementById("nodeSavedPatchesLoadPatch").addEventListener("click", loadSelectedNodeGraphSavedPatch);
+  document.getElementById("nodeSavedPatchesCopyPatch").addEventListener("click", copyNodeGraphScriptToClipboard);
+  document.getElementById("nodeSavedPatchesPastePatch").addEventListener("click", pasteNodeGraphScriptFromClipboard);
+  document.getElementById("nodeSavedPatchesSaveBank").addEventListener("click", saveNodeGraphSavedPatchBank);
+  document.getElementById("nodeSavedPatchesLoadBank").addEventListener("click", loadNodeGraphSavedPatchBank);
+  document.getElementById("nodeSavedPatchesBankFileInput").addEventListener("change", handleNodeGraphSavedPatchBankFileLoad);
+  document.addEventListener("pointermove", dragNodeGraphSavedPatchesWindow);
+  document.addEventListener("pointerup", endNodeGraphSavedPatchesWindowDrag);
+  document.addEventListener("pointercancel", endNodeGraphSavedPatchesWindowDrag);
+  document.addEventListener("pointermove", dragNodeGraphSavedPatchesWindowResize);
+  document.addEventListener("pointerup", endNodeGraphSavedPatchesWindowResize);
+  document.addEventListener("pointercancel", endNodeGraphSavedPatchesWindowResize);
   document.getElementById("nodeSavedPatchesCloseButton").addEventListener("click", () => setNodeGraphSavedPatchesWindowVisible(false));
-  document.getElementById("nodeSavedPatchesRefreshButton").addEventListener("click", () => renderNodeGraphDemoPatchList());
   document
     .getElementById("nodeUserUiSettingsSaveDefault")
     .addEventListener("click", handleSaveNodeUserUiSettingsDefaultClick);
@@ -186,19 +216,33 @@ function bindNodeGraphHeaderControlEvents() {
     .getElementById("nodeModuleShopButton")
     ?.addEventListener("click", () => {
       const shopVisible =
-        !document.getElementById("nodeModuleShopView").hidden ||
-        !document.getElementById("nodeModuleDepartmentView").hidden;
+        !document.getElementById("nodeModuleShopView").hidden;
       nodeGraphMvp.sceneContextPoint = null;
-      setNodeGraphViewMode(shopVisible ? "modular" : "shop");
+      if (shopVisible) {
+        closeNodeGraphModuleBrowser();
+      } else {
+        openNodeGraphModuleShop(null);
+      }
     });
   document
     .getElementById("nodeGraphEmptyModuleButton")
     .addEventListener("click", () => openNodeGraphModuleShop(null));
   document.getElementById("nodeModuleShopClose").addEventListener("click", closeNodeGraphModuleBrowser);
-  document.getElementById("nodeModuleDepartmentClose").addEventListener("click", closeNodeGraphModuleBrowser);
   document
-    .getElementById("nodeModuleDepartmentSearchShell")
-    .addEventListener("contextmenu", openNodeGraphModuleCollectionsMenu);
+    .getElementById("nodeModuleShopView")
+    .addEventListener("pointerdown", beginNodeGraphModuleShopViewDrag);
+  document
+    .getElementById("nodeModuleShopHeading")
+    .addEventListener("pointerdown", beginNodeGraphModuleShopViewDrag);
+  document
+    .getElementById("nodeModuleShopResizeHandle")
+    .addEventListener("pointerdown", beginNodeGraphModuleShopViewResize);
+  document.addEventListener("pointermove", dragNodeGraphModuleShopView);
+  document.addEventListener("pointerup", endNodeGraphModuleShopViewDrag);
+  document.addEventListener("pointercancel", endNodeGraphModuleShopViewDrag);
+  document.addEventListener("pointermove", dragNodeGraphModuleShopViewResize);
+  document.addEventListener("pointerup", endNodeGraphModuleShopViewResize);
+  document.addEventListener("pointercancel", endNodeGraphModuleShopViewResize);
   document
     .getElementById("nodeModuleDepartmentSearch")
     .addEventListener("input", handleNodeGraphModuleDepartmentSearchInput);
@@ -206,15 +250,8 @@ function bindNodeGraphHeaderControlEvents() {
     .getElementById("nodeModuleDepartmentSearch")
     .addEventListener("keydown", handleNodeGraphModuleDepartmentSearchKeydown);
   document
-    .getElementById("nodeModuleCollectionsClose")
-    .addEventListener("click", closeNodeGraphModuleCollectionsMenu);
-  document
-    .querySelector("#nodeModuleCollectionsMenu .scene-context-heading")
-    .addEventListener("pointerdown", beginNodeGraphModuleCollectionsMenuDrag);
-  document.addEventListener("pointerdown", handleNodeGraphModuleCollectionsPointerDown);
-  document.addEventListener("pointermove", dragNodeGraphModuleCollectionsMenu);
-  document.addEventListener("pointerup", endNodeGraphModuleCollectionsMenuDrag);
-  document.addEventListener("pointercancel", endNodeGraphModuleCollectionsMenuDrag);
+    .getElementById("nodeModuleShopFitInput")
+    .addEventListener("input", handleNodeGraphModuleShopFitInput);
   document
     .getElementById("nodeModularOnlyViewButton")
     .addEventListener("click", () => setNodeGraphViewMode("modular-only"));

@@ -77,7 +77,7 @@
   "module": {
     "drag": "Mouse: drag to move modules. Click to select. Ctrl/Shift+click adds or removes from selection; Ctrl/Shift+drag adds to selection while moving.",
     "move": "Mouse: drag to move modules. Click to select; Ctrl/Shift+click adds or removes from selection.",
-    "titleMove": "Mouse: drag to move modules. Click to select; Ctrl/Shift+click adds or removes from selection. When module buttons are hidden, Alt+click the title to toggle bypass.",
+    "titleMove": "Mouse: drag to move modules. Click to select; Ctrl/Shift+click adds or removes from selection. Alt+click an empty I/O section to toggle bypass. When module buttons are hidden, Alt+click the title also toggles bypass.",
     "actions": "Mouse: click to open module actions.",
     "actionsTitle": "Module actions",
     "textBoxEdit": "Display-only text. Edit content from this module's actions menu. Text clips to the box height and scales down to fit width. Mouse wheel zooms the modular view.",

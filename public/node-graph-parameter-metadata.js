@@ -24,7 +24,12 @@ function nodeGraphPatchNodeParameterDefinitions(node) {
   if (!definition) {
     return [];
   }
-  const parameters = [...(definition.parameters || [])];
+  const parameters = (definition.parameters || []).map((parameter) => {
+    const alias = normalizeNodeGraphPatchMetadataAlias(patchNode?.paramMeta?.[parameter.key]?.alias);
+    return alias
+      ? { ...parameter, defaultLabel: parameter.label, label: alias }
+      : { ...parameter, defaultLabel: parameter.label };
+  });
   if (patchNode?.type === "clapPlugin") {
     for (const [key, sourceMetadata] of Object.entries(patchNode.paramMeta || {})) {
       if (parameters.some((parameter) => parameter.key === key)) {
@@ -449,6 +454,10 @@ function nodeGraphClapPatchParameterFallbackMetadata(key, metadata = {}) {
   };
 }
 
+function normalizeNodeGraphPatchMetadataAlias(alias) {
+  return String(alias ?? "").trim().slice(0, 64);
+}
+
 function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
   const parameter = nodeGraphModuleDefinitions[type]?.parameters?.find(
     (candidate) => candidate.key === key,
@@ -461,7 +470,7 @@ function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
   if (!fallback) {
     return null;
   }
-  const definitionLocked = type === "audioPlayer" && ["speed", "start", "end", "loop", "transport"].includes(key);
+  const definitionLocked = type === "audioPlayer" && key === "transport";
   const source = !definitionLocked && metadata && typeof metadata === "object" ? metadata : {};
   let min = Number(Object.hasOwn(source, "min") ? source.min : fallback.min);
   let max = Number(Object.hasOwn(source, "max") ? source.max : fallback.max);
@@ -486,6 +495,9 @@ function normalizeNodeGraphPatchParameterMetadata(type, key, metadata = {}) {
     fallback.choices,
   );
   const normalized = {
+    alias: normalizeNodeGraphPatchMetadataAlias(
+      Object.hasOwn(metadata || {}, "alias") ? metadata.alias : fallback.alias,
+    ),
     choices,
     def: clampNodeSliderValue(Number.isFinite(def) ? def : fallback.def, min, max),
     displayChoices: Object.hasOwn(source, "displayChoices")

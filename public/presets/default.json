@@ -1,4 +1,4 @@
-{
+﻿{
   "activeCameraId": "camera-1",
   "audio": {
     "targetSampleRate": 44100
@@ -23,15 +23,15 @@
     {
       "destinationNode": "output",
       "destinationPort": "Left",
-      "sourceNode": "lorenzAttractor-1",
-      "sourcePort": "Y",
+      "sourceNode": "audioPlayer-1",
+      "sourcePort": "Left",
       "tracePoints": []
     },
     {
       "destinationNode": "output",
       "destinationPort": "Right",
-      "sourceNode": "lorenzAttractor-1",
-      "sourcePort": "Z",
+      "sourceNode": "audioPlayer-1",
+      "sourcePort": "Right",
       "tracePoints": []
     }
   ],
@@ -50,29 +50,21 @@
     "name": "Patch name",
     "tags": "tags"
   },
-  "modulations": [
-    {
-      "destinationNode": "lorenzAttractor-1",
-      "destinationParam": "beta",
-      "sourceNode": "macroKnob-1",
-      "sourcePort": "value",
-      "tracePoints": []
-    }
-  ],
+  "modulations": [],
   "monitors": [],
   "nodes": [
     {
-      "gx": -21,
-      "gy": 11,
+      "gx": -34,
+      "gy": 18,
       "id": "shop",
       "paramMeta": {},
       "params": {},
       "type": "moduleShop",
-      "widthGu": 5
+      "widthGu": 4
     },
     {
-      "gx": -21,
-      "gy": 1,
+      "gx": -34,
+      "gy": 8,
       "id": "canvas-origin",
       "paramMeta": {},
       "params": {},
@@ -90,7 +82,7 @@
         "faceFit": "contain",
         "faceScreen": "#000000",
         "gridHeightGu": 5,
-        "gridWidthGu": 5,
+        "gridWidthGu": 4,
         "inputs": [
           "a_buffer",
           "a not buffer"
@@ -113,21 +105,21 @@
         "output": "canvas",
         "ratioHeight": 1,
         "ratioWidth": 1,
-        "source": "canvas.ratio(1, 1);\ncanvas.background = #00000000;\ncanvas.layout = oscilloscope;\ncanvas.grid(5, 5);\ncanvas.face.background = checkerboard;\ncanvas.face.screen = #000000;\nbufferInput(\"a_buffer\");\ninput(\"a not buffer\");\n\nlayer(\"a_buffer\").input   = a_buffer;\nlayer(\"a_buffer\").x       = 0.5;\nlayer(\"a_buffer\").y       = 0.5;\nlayer(\"a_buffer\").scale   = 1.0;\nlayer(\"a_buffer\").opacity = 1.0;\n\noutput = canvas;"
+        "source": "canvas.ratio(1, 1);\ncanvas.background = #00000000;\ncanvas.layout = oscilloscope;\ncanvas.grid(4, 5);\ncanvas.face.background = checkerboard;\ncanvas.face.screen = #000000;\nbufferInput(\"a_buffer\");\ninput(\"a not buffer\");\n\nlayer(\"a_buffer\").input   = a_buffer;\nlayer(\"a_buffer\").x       = 0.5;\nlayer(\"a_buffer\").y       = 0.5;\nlayer(\"a_buffer\").scale   = 1.0;\nlayer(\"a_buffer\").opacity = 1.0;\n\noutput = canvas;"
       }
     },
     {
-      "gx": -21,
-      "gy": 6,
+      "gx": -34,
+      "gy": 13,
       "id": "home",
       "paramMeta": {},
       "params": {},
       "type": "moduleHome",
-      "widthGu": 5
+      "widthGu": 4
     },
     {
-      "gx": 29,
-      "gy": 3,
+      "gx": 11,
+      "gy": 4,
       "id": "output",
       "paramMeta": {
         "volume": {
@@ -144,16 +136,18 @@
           "nonlinearSlider": false,
           "showSign": false,
           "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
           "unit": "",
           "wraparound": false
         }
       },
       "params": {
-        "volume": 1
+        "volume": 0.881539349828075
       },
       "type": "output",
-      "alias": "Vibration",
-      "widthGu": 9,
+      "widthGu": 4,
+      "heightGu": 4,
       "scopeShader": {
         "cycles": 2,
         "blendMode": "laser",
@@ -163,109 +157,29 @@
         "length": 1,
         "mode": "1d_full",
         "padding": 0.04,
-        "source": "video.input     = ~;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\nscope.cycles    = 2.0;\nscope.zoom      = 1.0;\nscope.length    = 1.0;\nscope.padding   = 0.04;\nscope.syncSpeed = 1.0;\ndot1.color      = dot1.global.color;\ndot1.size       = 1.0 * dot1.global.size;\ndot1.blur       = 1.0 * dot1.global.blur;\ndot1.brightness = 1.0 * dot1.global.brightness;\ndot2.color      = dot2.global.color;\ndot2.size       = 1.0 * dot2.global.size;\ndot2.blur       = 1.0 * dot2.global.blur;\ndot2.brightness = 5.6 * dot2.global.brightness;\nblend.mode      = laser;",
+        "source": "video.input     = ~;\nscope.mode      = 1d_full;\nscope.sync      = inherit;\nscope.cycles    = 2.0;\nscope.zoom      = 1.0;\nscope.length    = 1.0;\nscope.padding   = 0.04;\nscope.syncSpeed = 1.0;\ndot1.color      = dot1.global.color;\ndot1.size       = 1.0 * dot1.global.size;\ndot1.blur       = 1.0 * dot1.global.blur;\ndot1.brightness = 1.0 * dot1.global.brightness;\ndot2.color      = dot2.global.color;\ndot2.size       = 1.0 * dot2.global.size;\ndot2.blur       = 1.0 * dot2.global.blur;\ndot2.brightness = 1.0 * dot2.global.brightness;\nblend.mode      = laser;",
         "sync": "inherit",
         "syncSpeed": 1,
         "videoInput": "~",
         "zoom": 1
+      },
+      "ui": {
+        "buttonsHidden": false,
+        "oscilloscopeHidden": true,
+        "titleHidden": true
       }
     },
     {
-      "gx": 21,
-      "gy": 1,
-      "id": "lorenzAttractor-1",
+      "gx": 1,
+      "gy": -3,
+      "id": "audioPlayer-1",
       "paramMeta": {
-        "speed": {
+        "level": {
           "choices": [],
           "def": 1,
           "displayChoices": false,
           "divideChoicesVisibly": false,
           "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 1000,
-          "maxDigits": 3,
-          "mid": 1,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0.01,
-          "unit": "",
-          "wraparound": false
-        },
-        "sigma": {
-          "choices": [],
-          "def": 10,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 30,
-          "maxDigits": 3,
-          "mid": 10,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0.01,
-          "unit": "",
-          "wraparound": false
-        },
-        "rho": {
-          "choices": [],
-          "def": 28,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 60,
-          "maxDigits": 3,
-          "mid": 28,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0.01,
-          "unit": "",
-          "wraparound": false
-        },
-        "beta": {
-          "choices": [],
-          "def": 2.6667,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 10,
-          "maxDigits": 3,
-          "mid": 2.6667,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0.0001,
-          "unit": "",
-          "wraparound": false
-        },
-        "scale": {
-          "choices": [],
-          "def": 1,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 4,
-          "maxDigits": 3,
-          "mid": 1,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0.01,
-          "unit": "",
-          "wraparound": false
-        },
-        "rotate": {
-          "choices": [],
-          "def": 0,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "phase",
           "linearSmoothing": true,
           "max": 1,
           "maxDigits": 3,
@@ -273,27 +187,129 @@
           "min": 0,
           "nonlinearSlider": false,
           "showSign": false,
-          "step": 0.01,
-          "unit": "cycle",
-          "wraparound": true
-        },
-        "zDepth": {
-          "choices": [],
-          "def": 0.4,
-          "displayChoices": false,
-          "divideChoicesVisibly": false,
-          "kind": "decimal",
-          "linearSmoothing": true,
-          "max": 1,
-          "maxDigits": 3,
-          "mid": 0.4,
-          "min": 0,
-          "nonlinearSlider": true,
-          "showSign": false,
-          "step": 0.01,
+          "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
           "unit": "",
           "wraparound": false
         },
+        "speed": {
+          "choices": [],
+          "def": 1,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 10000,
+          "maxDigits": 5,
+          "mid": 1,
+          "min": -10000,
+          "nonlinearSlider": true,
+          "showSign": false,
+          "step": 0,
+          "unboundedMax": true,
+          "unboundedMin": true,
+          "unit": "x",
+          "wraparound": false
+        },
+        "start": {
+          "choices": [],
+          "def": 0,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 1,
+          "maxDigits": 3,
+          "mid": 0.5,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
+          "unit": "",
+          "wraparound": false
+        },
+        "end": {
+          "choices": [],
+          "def": 1,
+          "displayChoices": false,
+          "divideChoicesVisibly": false,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 1,
+          "maxDigits": 3,
+          "mid": 0.5,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 0,
+          "unboundedMax": false,
+          "unboundedMin": false,
+          "unit": "",
+          "wraparound": false
+        },
+        "transport": {
+          "choices": [
+            "Off (reset)",
+            "Stop",
+            "Pause",
+            "Play",
+            "Loop"
+          ],
+          "def": 4,
+          "displayChoices": true,
+          "divideChoicesVisibly": true,
+          "kind": "decimal",
+          "linearSmoothing": false,
+          "max": 4,
+          "maxDigits": 3,
+          "mid": 2,
+          "min": 0,
+          "nonlinearSlider": false,
+          "showSign": false,
+          "step": 1,
+          "unboundedMax": false,
+          "unboundedMin": false,
+          "unit": "",
+          "wraparound": false
+        }
+      },
+      "params": {
+        "level": 1,
+        "speed": 10.0899460189108,
+        "start": 0,
+        "end": 1,
+        "transport": 4
+      },
+      "type": "audioPlayer",
+      "widthGu": 8,
+      "heightGu": 18,
+      "scopeShader": {
+        "cycles": 2,
+        "blendMode": "laser",
+        "enabled": true,
+        "kind": "scopeShader",
+        "language": "scope-js",
+        "length": 1,
+        "mode": "x_y",
+        "padding": 0.04,
+        "source": "video.input     = ~;\nscope.mode      = x_y;\nscope.sync      = inherit;\nscope.cycles    = 2.0;\nscope.zoom      = 1.0;\nscope.length    = 1.0;\nscope.padding   = 0.04;\nscope.syncSpeed = 1.0;\ndot1.color      = dot1.global.color;\ndot1.size       = 1.0 * dot1.global.size;\ndot1.blur       = 1.0 * dot1.global.blur;\ndot1.brightness = 1.0 * dot1.global.brightness;\ndot2.color      = dot2.global.color;\ndot2.size       = 1.0 * dot2.global.size;\ndot2.blur       = 1.0 * dot2.global.blur;\ndot2.brightness = 1.0 * dot2.global.brightness;\nblend.mode      = laser;",
+        "sync": "inherit",
+        "syncSpeed": 1,
+        "videoInput": "~",
+        "zoom": 1
+      },
+      "sample": {
+        "id": "sample-1781768555963-Hydrus---Elan-Hickler---Retrofusion.mp3"
+      }
+    },
+    {
+      "gx": -13,
+      "gy": 8,
+      "id": "audioInput",
+      "paramMeta": {
         "level": {
           "choices": [],
           "def": 1,
@@ -308,49 +324,37 @@
           "nonlinearSlider": false,
           "showSign": false,
           "step": 0.01,
+          "unboundedMax": false,
+          "unboundedMin": false,
           "unit": "",
           "wraparound": false
-        }
-      },
-      "params": {
-        "speed": 186.35,
-        "sigma": 12.1,
-        "rho": 29.55,
-        "beta": 0,
-        "scale": 0.8,
-        "rotate": 0.42999999999999994,
-        "zDepth": 0.34,
-        "level": 1
-      },
-      "type": "lorenzAttractor"
-    },
-    {
-      "gx": 15,
-      "gy": 6,
-      "id": "macroKnob-1",
-      "paramMeta": {
-        "value": {
+        },
+        "seed": {
           "choices": [],
-          "def": 0,
+          "def": 1,
           "displayChoices": false,
           "divideChoicesVisibly": false,
           "kind": "decimal",
           "linearSmoothing": true,
-          "max": 1,
-          "maxDigits": 3,
-          "mid": 0.5,
+          "max": 99999,
+          "maxDigits": 5,
+          "mid": 1,
           "min": 0,
           "nonlinearSlider": false,
           "showSign": false,
-          "step": 0,
+          "step": 1,
+          "unboundedMax": false,
+          "unboundedMin": false,
           "unit": "",
           "wraparound": false
         }
       },
       "params": {
-        "value": 0.551946367536273
+        "level": 1,
+        "seed": 1
       },
-      "type": "macroKnob"
+      "type": "audioInput",
+      "widthGu": 5
     }
   ],
   "timing": {
@@ -360,8 +364,9 @@
   },
   "uiItems": [],
   "view": {
-    "heightGu": 20,
-    "widthGu": 35
+    "heightGu": 15,
+    "widthGu": 17,
+    "zoom": 1
   },
   "visual": {
     "background": {

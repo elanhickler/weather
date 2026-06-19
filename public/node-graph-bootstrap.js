@@ -4,8 +4,14 @@ async function initNodeGraphMvp() {
   await loadNodeGraphTooltips();
   await bindNodeGraphMvpEvents();
   nodeGraphMvp.defaultPatch = await loadNodeGraphDefaultPresetPatch();
-  commitNodeGraphPatch(cloneNodeGraphPatch(nodeGraphMvp.defaultPatch), {
+  const startupPatch = nodeGraphMvp.workingPatch || nodeGraphMvp.defaultPatch;
+  const startupPatchDirtyState = nodeGraphMvp.workingPatch && ["saved", "edited", "untouched"].includes(nodeGraphMvp.patchDirtyState)
+    ? nodeGraphMvp.patchDirtyState
+    : "untouched";
+  commitNodeGraphPatch(cloneNodeGraphPatch(startupPatch), {
+    autosaveWorkingPatch: false,
     markPending: false,
+    patchDirtyState: startupPatchDirtyState,
     record: false,
     status: "script synced",
   });

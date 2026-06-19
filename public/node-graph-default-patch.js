@@ -124,7 +124,7 @@ const nodeGraphDefaultPatch = Object.freeze({
     moduleActions: { left: null, top: null },
   },
   grid: { ...nodeGraphGrid },
-  view: { widthGu: 31, heightGu: 20 },
+  view: { widthGu: 31, heightGu: 20, zoom: 1 },
   nodes: nodeGraphDefaultNodeConfigs.map((node) => ({ ...node })),
   connections: nodeGraphDefaultConnections.map((connection) => ({ ...connection })),
   graphConnections: [],

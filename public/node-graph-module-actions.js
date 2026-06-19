@@ -102,7 +102,8 @@ function showPaletteNode(node) {
 }
 
 function addNodeGraphModuleFromContext(event) {
-  beginNodeGraphModulePlacement(event.currentTarget.dataset.contextModule, nodeGraphMvp.sceneContextPoint);
+  const type = event.currentTarget.dataset.contextModule;
+  beginNodeGraphModulePlacement(type, nodeGraphMvp.sceneContextPoint);
   closeNodeSceneContextMenu();
 }
 
@@ -137,7 +138,7 @@ function positionNodeGraphPendingModuleAtCursor(cursorPoint) {
     return false;
   }
   const point = nodeGraphModulePlacementPixelFromCursor(cursorPoint, element);
-  positionNodeGraphNode(element, point, { clamp: true, snap: false });
+  positionNodeGraphNode(element, point, { clamp: false, snap: false });
   placement.cursorPoint = cursorPoint;
   placement.point = point;
   drawNodeGraphWires();
@@ -213,10 +214,6 @@ function completeNodeGraphModulePlacement(event) {
   if (event.button !== undefined && event.button !== 0) {
     return false;
   }
-  const target = event.target;
-  if (!(target instanceof Element) || !target.closest("#nodeGraphWorkspace")) {
-    return false;
-  }
   positionNodeGraphPendingModuleAtCursor(nodeGraphClientPoint(event));
   finishNodeGraphModulePlacementAtCurrentPosition();
   event.preventDefault();
@@ -225,16 +222,6 @@ function completeNodeGraphModulePlacement(event) {
 }
 
 function handleNodeGraphModuleStoreClick(event) {
-  const backButton = event.target.closest("[data-store-back]");
-  if (backButton) {
-    setNodeGraphModuleStoreDepartment("");
-    return;
-  }
-  const departmentButton = event.target.closest("[data-store-department]");
-  if (departmentButton) {
-    setNodeGraphModuleStoreDepartment(departmentButton.dataset.storeDepartment);
-    return;
-  }
   const addButton = event.target.closest("[data-context-module]");
   if (addButton) {
     addNodeGraphModuleFromShop(addButton);
@@ -250,6 +237,7 @@ function handleNodeGraphModuleStoreClick(event) {
     setNodeGraphModuleCatalogVisibility(
       toggleButton.dataset.storeToggleModule,
       toggleButton.dataset.visible === "true",
+      toggleButton.dataset.storeToggleShelf,
     );
   }
 }
@@ -561,12 +549,7 @@ function adjustNodeGraphModuleHeightFromContext(delta) {
     return;
   }
 
-  const defaultHeightGu = nodeGraphModuleGridHeightUnitsForUi(targetNode.type, targetNode.ui);
-  if (nextHeightGu === defaultHeightGu) {
-    delete targetNode.heightGu;
-  } else {
-    targetNode.heightGu = nextHeightGu;
-  }
+  targetNode.heightGu = nextHeightGu;
   commitNodeGraphPatch(patch, { status: nodeGraphModuleIsGraphType(targetNode.type) ? "graph height changed" : "module height changed" });
   configureNodeSceneContextMenu("module");
 }

@@ -230,7 +230,7 @@ function parseNodeMetadataNumber(value, fallback) {
 }
 
 function formatNodeMetadataStep(value) {
-  return value > 0 ? formatNodeSliderCompactNumber(value) : "any";
+  return Number.isFinite(Number(value)) ? formatNodeSliderCompactNumber(Math.max(0, Number(value))) : "0";
 }
 
 function parseNodeMetadataChoices(value) {
@@ -303,6 +303,7 @@ function nodeSliderMetadata(slider) {
       ? Number(slider.dataset.step)
       : 0;
   return {
+    alias: slider.dataset.alias ?? "",
     choices: parseNodeMetadataChoices(slider.dataset.choices || ""),
     cur,
     def,
@@ -325,13 +326,14 @@ function nodeSliderMetadata(slider) {
 function formatNodeSliderMetadataTooltip(slider) {
   const metadata = nodeSliderMetadata(slider);
   const numberOptions = { kind: metadata.kind, maxDigits: metadata.maxDigits };
-  const stepText = metadata.step > 0 ? formatNodeSliderNumber(metadata.step, numberOptions) : "any";
+  const stepText = formatNodeMetadataStep(metadata.step);
   const rows = [
     `current ${formatNodeSliderNumber(metadata.cur, numberOptions)}`,
     `default ${formatNodeSliderNumber(metadata.def, numberOptions)}`,
     `min ${formatNodeSliderNumber(metadata.min, numberOptions)}`,
     `max ${formatNodeSliderNumber(metadata.max, numberOptions)}`,
     `step ${stepText}`,
+    `alias ${metadata.alias || "none"}`,
     `kind ${metadata.kind}`,
     `max digits ${metadata.maxDigits}`,
     `unit ${metadata.unit}`,

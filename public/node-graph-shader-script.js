@@ -1083,10 +1083,7 @@ function positionNodeGraphShaderScriptDialog(left, top) {
   if (!dialog) {
     return;
   }
-  const margin = 12;
-  const rect = dialog.getBoundingClientRect();
-  const nextLeft = clampNodeSliderValue(Number(left) || 0, margin, Math.max(margin, window.innerWidth - rect.width - margin));
-  const nextTop = clampNodeSliderValue(Number(top) || 0, margin, Math.max(margin, window.innerHeight - rect.height - margin));
+  const { left: nextLeft, top: nextTop } = nodeGraphFloatingWindowPosition(dialog, left, top);
   dialog.style.left = `${nextLeft}px`;
   dialog.style.top = `${nextTop}px`;
   dialog.style.right = "auto";

@@ -6,7 +6,7 @@ function createNodeGraphPort(node, type, port, io) {
   button.dataset.port = port;
   button.dataset.io = io;
   button.dataset.alias = nodeGraphLabel(node, port);
-  const portLabel = nodeGraphPortDisplayLabel(type, port, io);
+  const portLabel = nodeGraphPatchNodePortDisplayLabel(node, type, port, io);
   const label = `${nodeGraphNodeLabels[type]} ${io} port ${portLabel}`;
   button.setAttribute("aria-label", label);
   return button;
@@ -17,6 +17,12 @@ function nodeGraphPortDisplayLabel(type, port, io) {
     ? nodeGraphModuleDefinitions[type]?.outputLabels
     : nodeGraphModuleDefinitions[type]?.inputLabels;
   return labels?.[port] || port;
+}
+
+function nodeGraphPatchNodePortDisplayLabel(node, type, port, io) {
+  const patchNode = typeof node === "string" ? nodeGraphPatchNode(node) : node;
+  const alias = normalizeNodeGraphPatchMetadataAlias(patchNode?.portMeta?.[io]?.[port]?.alias);
+  return alias || nodeGraphPortDisplayLabel(type, port, io);
 }
 
 function createNodeGraphIoColumn(node, type, ports, io) {
@@ -33,13 +39,14 @@ function createNodeGraphIoColumn(node, type, ports, io) {
     row.dataset.port = port;
     row.dataset.io = io;
     row.dataset.alias = nodeGraphLabel(node, port);
-    const portLabel = nodeGraphPortDisplayLabel(type, port, io);
+    const portLabel = nodeGraphPatchNodePortDisplayLabel(node, type, port, io);
     row.setAttribute(
       "aria-label",
       `${nodeGraphNodeLabels[type]} ${io} port ${portLabel} interaction area`,
     );
     const label = document.createElement("span");
     label.className = "node-io-label";
+    label.dataset.portLabel = port;
     label.textContent = portLabel;
     if (io === "input") {
       row.append(createNodeGraphPort(node, type, port, io), label);
@@ -77,6 +84,32 @@ function createNodeParameterOutputPort(node, type, parameter) {
   const label = `${nodeGraphNodeLabels[type]} ${parameter.label} slider output`;
   button.setAttribute("aria-label", label);
   return button;
+}
+
+function syncNodeGraphModulePortLabels(element, patchNode) {
+  if (!element || !patchNode) {
+    return;
+  }
+  for (const row of element.querySelectorAll(".node-io-row")) {
+    const io = row.dataset.io;
+    const port = row.dataset.port;
+    if (io !== "input" && io !== "output") {
+      continue;
+    }
+    const portLabel = nodeGraphPatchNodePortDisplayLabel(patchNode, patchNode.type, port, io);
+    const label = row.querySelector(".node-io-label");
+    if (label) {
+      label.textContent = portLabel;
+    }
+    row.setAttribute(
+      "aria-label",
+      `${nodeGraphNodeLabels[patchNode.type]} ${io} port ${portLabel} interaction area`,
+    );
+    const button = row.querySelector(".node-port");
+    if (button) {
+      button.setAttribute("aria-label", `${nodeGraphNodeLabels[patchNode.type]} ${io} port ${portLabel}`);
+    }
+  }
 }
 
 function createNodeGraphInputPort(node, type, graphInput) {
@@ -159,6 +192,20 @@ function createNodeGraphSliderWidgetBody(node, type) {
     row.classList.add("node-slider-widget-row");
     body.append(row);
   }
+  return body;
+}
+
+function createNodeGraphPatchCommandBody(node) {
+  const body = document.createElement("div");
+  body.className = "node-patch-command-body";
+  body.dataset.node = node;
+  const patchNode = nodeGraphPatchNodeById(node);
+  const previous = patchNode?.type === "previousPatch";
+  const label = document.createElement("strong");
+  label.textContent = previous ? "PREVIOUS PATCH" : "NEXT PATCH";
+  const status = document.createElement("span");
+  status.textContent = "trigger input";
+  body.append(label, status);
   return body;
 }
 
@@ -255,13 +302,13 @@ function createNodeGraphModuleShopBody(node) {
   body.className = "node-module-shop-body";
   const title = document.createElement("div");
   title.className = "node-module-shop-title";
-  title.textContent = "Public Modules: Shown";
+  title.textContent = "Module Browser";
   const button = document.createElement("button");
   button.className = "node-module-shop-open-button";
   button.type = "button";
   button.dataset.node = node;
   button.setAttribute("aria-label", "Open module browser");
-  button.textContent = "Open Shop";
+  button.textContent = "Open Module Browser";
   body.append(title, button);
   return body;
 }
@@ -587,6 +634,7 @@ function createNodeGraphParameter(node, type, parameter) {
   const label = document.createElement("label");
   label.className = "node-parameter-control";
   label.dataset.paramLabel = parameter.label;
+  label.dataset.defaultParamLabel = parameter.defaultLabel || parameter.label;
   label.setAttribute("aria-label", parameter.label);
   const input = document.createElement("input");
   const legacyIds = {

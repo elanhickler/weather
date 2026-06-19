@@ -185,6 +185,8 @@ function attachNodeGraphNodeEvents(node) {
   node.querySelector(".node-header-title-row")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
   node.querySelector(".node-led-face")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
   node.querySelector(".node-knob-widget-body")?.addEventListener("pointerdown", beginNodeGraphNodeDrag);
+  node.querySelectorAll(".dsp-node-io-section")
+    .forEach((section) => section.addEventListener("pointerdown", beginNodeGraphNodeDrag));
   node.querySelector(".node-bypass-button")?.addEventListener("click", toggleNodeGraphModuleBypass);
   node.querySelector(".node-action-button")?.addEventListener("click", openNodeModuleActionMenu);
   node.addEventListener("lostpointercapture", endNodeGraphNodeDrag);
@@ -234,7 +236,16 @@ function attachNodeGraphNodeEvents(node) {
   node.querySelector(".node-module-home-open-button")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    openNodeGraphModuleShop(null);
+    nodeGraphMvp.sceneContextPoint = null;
+    nodeGraphMvp.sceneContextTargetNode = null;
+    nodeGraphMvp.sceneContextTargetWire = null;
+    configureNodeSceneContextMenu("home");
+    const rect = event.currentTarget.getBoundingClientRect();
+    positionNodeSceneContextMenuHeaderAtPoint(
+      document.getElementById("nodeSceneContextMenu"),
+      rect.left + rect.width * 0.5,
+      rect.top + rect.height * 0.5,
+    );
   });
   node.querySelector("[data-screen-space-shader-apply]")?.addEventListener("click", applyNodeGraphScreenSpaceShaderScript);
   const screenSpaceShaderSource = node.querySelector("[data-screen-space-shader-source]");
@@ -325,10 +336,16 @@ function toggleNodeGraphModuleBypassFromNode(node, event) {
   return true;
 }
 
-function nodeGraphModuleLayoutClassNames(definition, layout) {
+function nodeGraphModuleLayoutClassNames(type, definition, layout) {
   const classes = ["dsp-node"];
   if (definition.output) {
     classes.push("output-node");
+  }
+  if (["samplePlayer", "sampleLooper", "audioPlayer"].includes(type)) {
+    classes.push("sample-module-layout");
+  }
+  if (type === "audioPlayer") {
+    classes.push("audio-player-layout");
   }
   const layoutClasses = {
     clapPlugin: "clap-plugin-layout",
@@ -341,6 +358,7 @@ function nodeGraphModuleLayoutClassNames(definition, layout) {
     macroControls: "macro-controls-layout",
     moduleHome: "module-home-layout",
     moduleShop: "module-shop-layout",
+    patchCommand: "patch-command-layout",
     pitchModWheel: "pitch-mod-wheel-layout",
     screenSpaceShader: "screen-space-shader-layout",
     sliderWidget: "slider-widget-layout",
@@ -369,7 +387,7 @@ function createNodeGraphModuleElement(type, node) {
   const widthGu = nodeGraphPatchNodeGridWidthUnits(patchNode);
   const heightGu = nodeGraphPatchNodeGridHeightUnits(patchNode);
   const article = document.createElement("article");
-  article.className = nodeGraphModuleLayoutClassNames(definition, layout);
+  article.className = nodeGraphModuleLayoutClassNames(type, definition, layout);
   article.dataset.node = node;
   article.dataset.nodeType = type;
   article.dataset.portSignature = `${inputPorts.join(",")}=>${outputPorts.join(",")}`;
@@ -487,6 +505,14 @@ function createNodeGraphModuleElement(type, node) {
     article.append(createNodeGraphModuleShopBody(node));
   } else if (definition.layout === "moduleHome") {
     article.append(createNodeGraphModuleHomeBody(node));
+  } else if (definition.layout === "patchCommand") {
+    article.append(createNodeGraphPatchCommandBody(node));
+    const ioSection = document.createElement("div");
+    ioSection.className = "dsp-node-io-section";
+    const inputColumn = createNodeGraphIoColumn(node, type, inputPorts, "input");
+    ioSection.append(inputColumn || document.createElement("div"));
+    ioSection.append(document.createElement("div"));
+    article.append(ioSection);
   } else if (layout === "speakerProtection") {
     article.append(createNodeGraphSpeakerProtectionBody(node));
     const ioSection = document.createElement("div");

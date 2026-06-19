@@ -11,7 +11,434 @@ function nodeGraphPatchFileName() {
   return `${safeName || "soemdsp-patch"}.json`;
 }
 
+function nodeGraphPatchWithLiveHeaderInfo(patch = nodeGraphMvp.patch) {
+  const nextPatch = cloneNodeGraphPatch(patch);
+  const headerName = document.getElementById("nodePatchNameHeader");
+  const headerTags = document.getElementById("nodePatchTagsHeader");
+  const explorerName = document.getElementById("nodeSavedPatchesPatchNameInput");
+  const explorerTags = document.getElementById("nodeSavedPatchesPatchTagsInput");
+  const explorerBankName = document.getElementById("nodeSavedPatchesBankNameInput");
+  const bank = normalizeNodeGraphSavedPatchBankIndex(nodeGraphMvp.savedPatchBankIndex);
+  const program = normalizeNodeGraphSavedPatchProgramIndex(nodeGraphMvp.selectedSavedPatchProgram);
+  nextPatch.info = normalizeNodeGraphPatchInfo({
+    ...nextPatch.info,
+    bank,
+    bankName: explorerBankName ? explorerBankName.value : nodeGraphMvp.savedPatchBankName,
+    name: explorerName ? explorerName.value : headerName ? headerName.value : nextPatch.info?.name,
+    program,
+    tags: explorerTags ? explorerTags.value : headerTags ? headerTags.value : nextPatch.info?.tags,
+  });
+  return nextPatch;
+}
+
 const nodeGraphPatchPresetStorageKey = "soemdsp-sandbox.patchPresets.v1";
+const nodeGraphSavedPatchBankSlotCount = 128;
+const nodeGraphSavedPatchBankMaxProgram = nodeGraphSavedPatchBankSlotCount - 1;
+const nodeGraphSavedPatchesWindowDefaultSize = Object.freeze({
+  width: 420,
+  height: 620,
+});
+
+function nodeGraphSavedPatchDisplayName(filename) {
+  return String(filename || "")
+    .replace(/\.json$/i, "")
+    .replace(/^\d{8}-\d{6}-\d{3}-/, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
+}
+
+function normalizeNodeGraphSavedPatchesWindowSize(size = {}) {
+  if (typeof normalizeNodeGraphFloatingWindowSize === "function") {
+    return normalizeNodeGraphFloatingWindowSize(size, nodeGraphSavedPatchesWindowDefaultSize);
+  }
+  const source = size && typeof size === "object" ? size : {};
+  return {
+    width: Math.max(220, Math.round(Number(source.width) || nodeGraphSavedPatchesWindowDefaultSize.width)),
+    height: Math.max(220, Math.round(Number(source.height) || nodeGraphSavedPatchesWindowDefaultSize.height)),
+  };
+}
+
+function applyNodeGraphSavedPatchesWindowSize(size = {}) {
+  const panel = document.getElementById("nodeSavedPatchesWindow");
+  const normalized = normalizeNodeGraphSavedPatchesWindowSize(size);
+  if (panel) {
+    panel.style.setProperty("--node-saved-patches-width", `${normalized.width}px`);
+    panel.style.setProperty("--node-saved-patches-height", `${normalized.height}px`);
+  }
+  return normalized;
+}
+
+function setNodeGraphCurrentSavedPatch(filename = "") {
+  nodeGraphMvp.currentSavedPatchFilename = String(filename || "");
+  if (nodeGraphMvp.currentSavedPatchFilename) {
+    nodeGraphMvp.selectedSavedPatchFilename = nodeGraphMvp.currentSavedPatchFilename;
+    const entry = nodeGraphSavedPatchEntryByFilename(nodeGraphMvp.currentSavedPatchFilename);
+    if (Number.isFinite(Number(entry?.program))) {
+      nodeGraphMvp.selectedSavedPatchProgram = normalizeNodeGraphSavedPatchProgramIndex(entry.program);
+    }
+  }
+  syncNodeGraphSelectedSavedPatchEditor();
+  syncNodeGraphCurrentSavedPatchHeader();
+  syncNodeGraphSavedPatchRowSelection();
+  if (nodeGraphMvp.workingPatch && typeof saveNodeGraphWorkingPatchToUserSettings === "function") {
+    saveNodeGraphWorkingPatchToUserSettings();
+  }
+}
+
+function selectNodeGraphSavedPatch(filename = "", program = null) {
+  const safeFilename = String(filename || "");
+  nodeGraphMvp.selectedSavedPatchFilename = safeFilename;
+  if (program !== null) {
+    nodeGraphMvp.selectedSavedPatchProgram = normalizeNodeGraphSavedPatchProgramIndex(program);
+  }
+  syncNodeGraphSelectedSavedPatchEditor();
+  syncNodeGraphSavedPatchRowSelection();
+  const slot = String(nodeGraphMvp.selectedSavedPatchProgram).padStart(3, "0");
+  setNodeGraphScriptStatus(safeFilename ? `patch slot ${slot} selected: ${safeFilename}` : `empty patch slot ${slot} selected`, true);
+}
+
+function setNodeGraphPatchDirtyState(state = "edited") {
+  nodeGraphMvp.patchDirtyState = ["saved", "edited", "untouched"].includes(state) ? state : "edited";
+  syncNodeGraphCurrentSavedPatchHeader();
+  if (nodeGraphMvp.workingPatch && typeof saveNodeGraphWorkingPatchToUserSettings === "function") {
+    saveNodeGraphWorkingPatchToUserSettings();
+  }
+}
+
+function saveNodeGraphWorkingPatchToUserSettings() {
+  if (
+    typeof serializeNodeUiDevSettings !== "function" ||
+    typeof saveNodeUiDevLocalDefaultSettings !== "function"
+  ) {
+    return false;
+  }
+  nodeGraphMvp.workingPatch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  syncNodeGraphCurrentSavedPatchHeader();
+  return saveNodeUiDevLocalDefaultSettings(serializeNodeUiDevSettings());
+}
+
+function clearNodeGraphWorkingPatchFromUserSettings() {
+  if (
+    typeof serializeNodeUiDevSettings !== "function" ||
+    typeof saveNodeUiDevLocalDefaultSettings !== "function"
+  ) {
+    return false;
+  }
+  nodeGraphMvp.workingPatch = null;
+  nodeGraphMvp.currentSavedPatchFilename = "";
+  nodeGraphMvp.patchDirtyState = "untouched";
+  return saveNodeUiDevLocalDefaultSettings(serializeNodeUiDevSettings());
+}
+
+function initNodeGraphPatchFromDefault() {
+  clearNodeGraphWorkingPatchFromUserSettings();
+  commitNodeGraphPatch(cloneNodeGraphPatch(nodeGraphMvp.defaultPatch || nodeGraphDefaultPatch), {
+    autosaveWorkingPatch: false,
+    record: true,
+    patchDirtyState: "untouched",
+    status: "default patch initialized",
+  });
+  setNodeGraphCurrentSavedPatch("");
+}
+
+function confirmAndInitNodeGraphPatchFromDefault(event) {
+  const button = event?.currentTarget;
+  if (!confirmNodeGraphDefaultButtonClick(
+    button,
+    () => setNodeGraphScriptStatus("click Confirm Init to initialize the patch", true),
+    { confirmText: "Confirm Init" },
+  )) {
+    return;
+  }
+  flashNodeGraphDefaultButtonSaved(button);
+  initNodeGraphPatchFromDefault();
+}
+
+function syncNodeGraphCurrentSavedPatchHeader() {
+  const button = document.getElementById("nodeCurrentSavedPatchButton");
+  if (!button) {
+    return;
+  }
+  const filename = nodeGraphMvp.currentSavedPatchFilename || "";
+  const dirtyState = ["saved", "edited", "untouched"].includes(nodeGraphMvp.patchDirtyState)
+    ? nodeGraphMvp.patchDirtyState
+    : "untouched";
+  const label = dirtyState === "saved" ? "Saved" : dirtyState === "edited" ? "Edited" : "";
+  button.replaceChildren();
+  const eyebrow = document.createElement("span");
+  eyebrow.textContent = "Patch";
+  const name = document.createElement("strong");
+  name.textContent = label;
+  button.append(eyebrow, name);
+  button.title = filename
+    ? `Current saved patch: ${filename}`
+    : dirtyState === "edited"
+      ? "Current patch has unsaved file changes, but is autosaved in UI settings."
+      : "Default patch";
+  button.classList.toggle("unsaved", dirtyState !== "saved");
+  button.dataset.patchDirtyState = dirtyState;
+}
+
+function syncNodeGraphSavedPatchRowSelection() {
+  const activeFilename = nodeGraphMvp.currentSavedPatchFilename || "";
+  const selectedFilename = nodeGraphMvp.selectedSavedPatchFilename || activeFilename;
+  const selectedProgram = normalizeNodeGraphSavedPatchProgramIndex(nodeGraphMvp.selectedSavedPatchProgram);
+  for (const row of document.querySelectorAll("[data-patch-filename]")) {
+    const active = Boolean(activeFilename && row.dataset.patchFilename === activeFilename);
+    const program = normalizeNodeGraphSavedPatchProgramIndex(row.dataset.patchProgram);
+    const selected = program === selectedProgram ||
+      Boolean(selectedFilename && row.dataset.patchFilename === selectedFilename);
+    row.classList.toggle("active", active);
+    row.classList.toggle("selected", selected);
+    row.setAttribute("aria-current", active ? "true" : "false");
+    row.setAttribute("aria-selected", selected ? "true" : "false");
+  }
+}
+
+function normalizeNodeGraphSavedPatchTag(tag) {
+  return String(tag || "")
+    .trim()
+    .replace(/^#+/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function nodeGraphSavedPatchTagSet(patch = {}) {
+  const text = [
+    patch.tags,
+    patch.name,
+    patch.filename,
+  ].filter(Boolean).join(" ");
+  return new Set(String(text)
+    .split(/[,\s#]+/g)
+    .map(normalizeNodeGraphSavedPatchTag)
+    .filter(Boolean));
+}
+
+function nodeGraphSavedPatchTagLabelList(patch = null) {
+  const activeFilters = Array.isArray(nodeGraphMvp.savedPatchTagFilters)
+    ? nodeGraphMvp.savedPatchTagFilters
+    : [];
+  const patchTags = patch
+    ? String(patch.tags || "")
+      .split(/[,\s#]+/g)
+      .map(normalizeNodeGraphSavedPatchTag)
+      .filter(Boolean)
+    : [];
+  const availableTags = !patch && Array.isArray(nodeGraphMvp.savedPatchEntries)
+    ? nodeGraphMvp.savedPatchEntries
+      .flatMap((entry) => String(entry?.tags || "").split(/[,\s#]+/g))
+      .map(normalizeNodeGraphSavedPatchTag)
+      .filter(Boolean)
+    : [];
+  const tags = [...new Set(patchTags.length ? patchTags : activeFilters.length ? activeFilters : availableTags)]
+    .slice(0, 12);
+  if (tags.length) {
+    return tags.map((tag) => `#${tag}`).join(" ");
+  }
+  return patch ? "#untagged" : "no tags yet";
+}
+
+function nodeGraphSavedPatchMatchesTagFilters(patch = {}) {
+  const filters = Array.isArray(nodeGraphMvp.savedPatchTagFilters)
+    ? nodeGraphMvp.savedPatchTagFilters
+    : [];
+  if (!filters.length) {
+    return true;
+  }
+  const patchTags = nodeGraphSavedPatchTagSet(patch);
+  return filters.every((tag) => patchTags.has(tag));
+}
+
+function filteredNodeGraphSavedPatchEntries(patches = nodeGraphMvp.savedPatchEntries) {
+  const safePatches = Array.isArray(patches) ? patches : [];
+  return safePatches.filter(nodeGraphSavedPatchMatchesTagFilters);
+}
+
+function nodeGraphSavedPatchEntryByFilename(filename) {
+  const safeFilename = String(filename || "");
+  return (Array.isArray(nodeGraphMvp.savedPatchEntries) ? nodeGraphMvp.savedPatchEntries : [])
+    .find((patch) => patch?.filename === safeFilename) || {
+    filename: safeFilename,
+    name: nodeGraphSavedPatchDisplayName(safeFilename) || safeFilename,
+    tags: "",
+  };
+}
+
+function syncNodeGraphSavedPatchTagChips() {
+  const chips = document.getElementById("nodeSavedPatchesTagChips");
+  const input = document.getElementById("nodeSavedPatchesTagInput");
+  if (!chips) {
+    return;
+  }
+  chips.replaceChildren();
+  const filters = Array.isArray(nodeGraphMvp.savedPatchTagFilters)
+    ? nodeGraphMvp.savedPatchTagFilters
+    : [];
+  for (const tag of filters) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "node-saved-patches-tag-chip";
+    chip.dataset.patchTagFilter = tag;
+    chip.textContent = `#${tag} x`;
+    chip.setAttribute("aria-label", `Remove tag filter ${tag}`);
+    chip.addEventListener("click", () => removeNodeGraphSavedPatchTagFilter(tag));
+    chips.append(chip);
+  }
+  if (input && filters.length) {
+    input.placeholder = "search another tag";
+  } else if (input) {
+    input.placeholder = "search tag";
+  }
+}
+
+function addNodeGraphSavedPatchTagFilter(tag) {
+  const normalized = normalizeNodeGraphSavedPatchTag(tag);
+  if (!normalized) {
+    return;
+  }
+  const filters = Array.isArray(nodeGraphMvp.savedPatchTagFilters)
+    ? nodeGraphMvp.savedPatchTagFilters
+    : [];
+  if (!filters.includes(normalized)) {
+    nodeGraphMvp.savedPatchTagFilters = [...filters, normalized];
+  }
+  syncNodeGraphSavedPatchTagChips();
+  renderNodeGraphDemoPatchRows(filteredNodeGraphSavedPatchEntries());
+}
+
+function removeNodeGraphSavedPatchTagFilter(tag) {
+  const normalized = normalizeNodeGraphSavedPatchTag(tag);
+  nodeGraphMvp.savedPatchTagFilters = (nodeGraphMvp.savedPatchTagFilters || [])
+    .filter((candidate) => candidate !== normalized);
+  syncNodeGraphSavedPatchTagChips();
+  renderNodeGraphDemoPatchRows(filteredNodeGraphSavedPatchEntries());
+}
+
+function clearNodeGraphSavedPatchTagFilters() {
+  nodeGraphMvp.savedPatchTagFilters = [];
+  const input = document.getElementById("nodeSavedPatchesTagInput");
+  if (input) {
+    input.value = "";
+  }
+  syncNodeGraphSavedPatchTagChips();
+}
+
+function handleNodeGraphSavedPatchTagInput(event) {
+  const input = event.currentTarget;
+  const value = String(input?.value || "");
+  if (event.type === "input" && !/[,#\s]$/.test(value)) {
+    return;
+  }
+  if (event.type === "keydown" && event.key !== "Enter") {
+    return;
+  }
+  if (event.type === "keydown") {
+    event.preventDefault();
+  }
+  const tags = value
+    .split(/[,\s#]+/g)
+    .map(normalizeNodeGraphSavedPatchTag)
+    .filter(Boolean);
+  for (const tag of tags) {
+    addNodeGraphSavedPatchTagFilter(tag);
+  }
+  if (input) {
+    input.value = "";
+  }
+}
+
+function normalizeNodeGraphSavedPatchBankIndex(value) {
+  const bank = Math.round(Number(value));
+  return Number.isFinite(bank) ? Math.max(0, Math.min(127, bank)) : 0;
+}
+
+function normalizeNodeGraphSavedPatchProgramIndex(value) {
+  const program = Math.round(Number(value));
+  return Number.isFinite(program) ? Math.max(0, Math.min(nodeGraphSavedPatchBankMaxProgram, program)) : 0;
+}
+
+function nodeGraphSelectedSavedPatchEntry() {
+  return nodeGraphSavedPatchEntryAtProgram(nodeGraphMvp.selectedSavedPatchProgram);
+}
+
+function syncNodeGraphSelectedSavedPatchEditor() {
+  const bankNameInput = document.getElementById("nodeSavedPatchesBankNameInput");
+  const nameInput = document.getElementById("nodeSavedPatchesPatchNameInput");
+  const tagsInput = document.getElementById("nodeSavedPatchesPatchTagsInput");
+  const entry = nodeGraphSelectedSavedPatchEntry();
+  const patchInfo = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch.info);
+  const bankName = nodeGraphMvp.savedPatchBankName || entry?.bankName || patchInfo.bankName || "";
+  nodeGraphMvp.savedPatchBankName = bankName;
+  if (bankNameInput && document.activeElement !== bankNameInput) {
+    bankNameInput.value = bankName;
+  }
+  if (nameInput && document.activeElement !== nameInput) {
+    nameInput.value = entry?.name || patchInfo.name || "Patch name";
+  }
+  if (tagsInput && document.activeElement !== tagsInput) {
+    tagsInput.value = entry?.tags || patchInfo.tags || "";
+  }
+}
+
+function syncNodeGraphSavedPatchBankControls(patches = null) {
+  const input = document.getElementById("nodeSavedPatchesBankInput");
+  const status = document.getElementById("nodeSavedPatchesBankStatus");
+  const bank = normalizeNodeGraphSavedPatchBankIndex(nodeGraphMvp.savedPatchBankIndex);
+  nodeGraphMvp.savedPatchBankIndex = bank;
+  if (input) {
+    input.value = String(bank);
+  }
+  if (status && Array.isArray(patches)) {
+    const savedCount = Math.min(nodeGraphSavedPatchBankSlotCount, patches.filter((patch) => patch?.filename).length);
+    status.textContent = `${savedCount}/${nodeGraphSavedPatchBankSlotCount} patches`;
+    status.title = `Bank ${bank}: programs 0-${nodeGraphSavedPatchBankMaxProgram}`;
+  }
+  syncNodeGraphSelectedSavedPatchEditor();
+}
+
+function handleNodeGraphSavedPatchBankInput(event) {
+  nodeGraphMvp.savedPatchBankIndex = normalizeNodeGraphSavedPatchBankIndex(event.currentTarget?.value);
+  syncNodeGraphSavedPatchBankControls();
+  renderNodeGraphDemoPatchList();
+  if (typeof saveNodeGraphWorkspaceWindowStatesToUserSettings === "function") {
+    saveNodeGraphWorkspaceWindowStatesToUserSettings({ status: false });
+  }
+}
+
+function handleNodeGraphSavedPatchBankNameInput(event) {
+  nodeGraphMvp.savedPatchBankName = nodeGraphOneLineText(event.currentTarget?.value);
+  if (typeof saveNodeGraphWorkspaceWindowStatesToUserSettings === "function") {
+    saveNodeGraphWorkspaceWindowStatesToUserSettings({ status: false });
+  }
+}
+
+function handleNodeGraphSavedPatchInfoInput(event) {
+  const field = event.currentTarget?.dataset?.patchInfoField;
+  if (!["name", "tags"].includes(field)) {
+    return;
+  }
+  const value = nodeGraphOneLineText(event.currentTarget?.value);
+  const header = document.getElementById(field === "name" ? "nodePatchNameHeader" : "nodePatchTagsHeader");
+  if (header && document.activeElement !== header) {
+    header.value = value;
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  patch.info = normalizeNodeGraphPatchInfo({
+    ...patch.info,
+    bank: normalizeNodeGraphSavedPatchBankIndex(nodeGraphMvp.savedPatchBankIndex),
+    bankName: nodeGraphMvp.savedPatchBankName,
+    program: normalizeNodeGraphSavedPatchProgramIndex(nodeGraphMvp.selectedSavedPatchProgram),
+    [field]: value,
+  });
+  commitNodeGraphPatch(patch, {
+    markPending: false,
+    record: false,
+    status: "patch metadata synced",
+  });
+  syncNodeGraphCurrentSavedPatchHeader();
+}
 
 function nodeGraphPatchPresetDefaultName() {
   const info = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch.info);
@@ -154,25 +581,66 @@ function handleNodeGraphPatchPresetSelectChange(event) {
 }
 
 async function saveNodeGraphScript() {
+  const script = document.getElementById("nodePatchScript");
+  if (script && document.activeElement !== script) {
+    syncNodeGraphScriptView("script synced before save", true);
+  }
   if (!nodeGraphScriptReadyForGraphAction("save")) {
-    return;
+    return false;
   }
   try {
-    const response = await fetch("/api/patches/save", {
+    const patchToSave = nodeGraphPatchWithLiveHeaderInfo();
+    const patchText = serializeNodeGraphPatch(patchToSave);
+    const info = normalizeNodeGraphPatchInfo(patchToSave.info);
+    const response = await fetch(
+      `/api/patches/save?bank=${encodeURIComponent(info.bank)}&program=${encodeURIComponent(info.program)}`,
+      {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: serializeNodeGraphPatch(),
-    });
+      body: patchText,
+      },
+    );
     const result = await response.json().catch(() => ({}));
     if (!response.ok || result.ok === false) {
       throw new Error(result.error || `HTTP ${response.status}`);
     }
-    setNodeGraphScriptStatus(`patch saved: ${result.filename || nodeGraphPatchFileName()}`, true);
-    renderNodeGraphDemoPatchList();
+    const filename = result.filename || nodeGraphPatchFileName();
+    commitNodeGraphPatch(patchToSave, {
+      markPending: false,
+      patchDirtyState: "saved",
+      record: false,
+      status: `patch saved: ${filename}`,
+    });
+    setNodeGraphCurrentSavedPatch(filename);
+    clearNodeGraphSavedPatchTagFilters();
+    await renderNodeGraphDemoPatchList();
+    setNodeGraphCurrentSavedPatch(filename);
+    const listed = (nodeGraphMvp.savedPatchEntries || []).some((entry) => entry?.filename === filename);
+    setNodeGraphScriptStatus(
+      listed ? `patch saved: ${filename}` : `patch saved, but explorer did not list it: ${filename}`,
+      listed,
+    );
+    return listed;
   } catch (error) {
     setNodeGraphScriptStatus(`patch save failed: ${error?.message || error}`, false);
+    return false;
+  }
+}
+
+async function confirmAndSaveNodeGraphScript(event) {
+  const button = event?.currentTarget;
+  if (!confirmNodeGraphDefaultButtonClick(
+    button,
+    () => setNodeGraphScriptStatus("click Confirm Save to save this patch", true),
+    { confirmText: "Confirm Save" },
+  )) {
+    return;
+  }
+  const saved = await saveNodeGraphScript();
+  if (saved) {
+    flashNodeGraphDefaultButtonSaved(button);
   }
 }
 
@@ -181,6 +649,15 @@ function loadNodeGraphScript() {
     return;
   }
   document.getElementById("nodePatchScriptFileInput")?.click();
+}
+
+async function loadSelectedNodeGraphSavedPatch() {
+  const filename = nodeGraphMvp.selectedSavedPatchFilename || nodeGraphSelectedSavedPatchEntry()?.filename || "";
+  if (!filename) {
+    setNodeGraphScriptStatus("selected patch slot is empty", false);
+    return;
+  }
+  await loadNodeGraphDemoPatch(filename);
 }
 
 function handleNodeGraphScriptFileLoad(event) {
@@ -192,8 +669,10 @@ function handleNodeGraphScriptFileLoad(event) {
   reader.addEventListener("load", () => {
     try {
       commitNodeGraphPatch(loadNodeGraphPatchFromScript(String(reader.result || "")), {
+        patchDirtyState: "saved",
         status: "script loaded",
       });
+      setNodeGraphCurrentSavedPatch("");
     } catch (error) {
       setNodeGraphScriptStatus(error.message, false);
     } finally {
@@ -232,6 +711,18 @@ async function copyNodeGraphScriptToClipboard() {
   }
 }
 
+function nodeGraphDownloadTextFile(filename, text, type = "application/json") {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 async function pasteNodeGraphScriptFromClipboard() {
   const script = document.getElementById("nodePatchScript");
   try {
@@ -245,16 +736,101 @@ async function pasteNodeGraphScriptFromClipboard() {
   }
 }
 
-function nodeGraphDemoPatchEmptySlots(count) {
-  return Array.from({ length: Math.max(0, count) }, (_, index) => ({
-    empty: true,
-    slot: index + 1,
-  }));
+async function setNodeGraphPatchAsDefaultFromButton(event) {
+  if (!confirmNodeGraphDefaultButtonClick(event.currentTarget, () => {
+    setNodeGraphScriptStatus("click Confirm Default to save this patch as default", true);
+  })) {
+    return;
+  }
+  flashNodeGraphDefaultButtonSaved(event.currentTarget);
+  await updateDefaultNodeGraphPreset();
 }
 
-function nodeGraphDemoPatchRows(patches) {
-  const safePatches = Array.isArray(patches) ? patches.slice(0, 10) : [];
-  return safePatches.concat(nodeGraphDemoPatchEmptySlots(10 - safePatches.length));
+async function saveNodeGraphSavedPatchBank() {
+  try {
+    if (!Array.isArray(nodeGraphMvp.savedPatchEntries) || !nodeGraphMvp.savedPatchEntries.length) {
+      await renderNodeGraphDemoPatchList();
+    }
+    const entries = Array.isArray(nodeGraphMvp.savedPatchEntries) ? nodeGraphMvp.savedPatchEntries : [];
+    const slots = [];
+    for (let program = 0; program < nodeGraphSavedPatchBankSlotCount; program += 1) {
+      const entry = nodeGraphSavedPatchEntryAtProgram(program);
+      if (!entry?.filename) {
+        slots.push(null);
+        continue;
+      }
+      const response = await fetch(`/api/patches/file?name=${encodeURIComponent(entry.filename)}`);
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(`failed to read ${entry.filename}: HTTP ${response.status}`);
+      }
+      slots.push({
+        filename: entry.filename,
+        name: entry.name || "",
+        tags: entry.tags || "",
+        modifiedUtc: entry.modifiedUtc || "",
+        text,
+      });
+    }
+    const payload = {
+      kind: "soemdsp-sandbox.patch-bank",
+      version: 1,
+      bank: normalizeNodeGraphSavedPatchBankIndex(nodeGraphMvp.savedPatchBankIndex),
+      bankName: nodeGraphMvp.savedPatchBankName || "",
+      slotCount: nodeGraphSavedPatchBankSlotCount,
+      exportedUtc: new Date().toISOString(),
+      slots,
+    };
+    const bank = String(payload.bank).padStart(3, "0");
+    nodeGraphDownloadTextFile(`soemdsp-patch-bank-${bank}.json`, JSON.stringify(payload, null, 2));
+    setNodeGraphScriptStatus(`patch bank ${bank} saved`, true);
+  } catch (error) {
+    setNodeGraphScriptStatus(`bank save failed: ${error?.message || error}`, false);
+  }
+}
+
+function loadNodeGraphSavedPatchBank() {
+  document.getElementById("nodeSavedPatchesBankFileInput")?.click();
+}
+
+async function handleNodeGraphSavedPatchBankFileLoad(event) {
+  const [file] = event.currentTarget.files || [];
+  if (!file) {
+    return;
+  }
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const slots = Array.isArray(payload?.slots) ? payload.slots : [];
+    const bank = normalizeNodeGraphSavedPatchBankIndex(payload?.bank ?? nodeGraphMvp.savedPatchBankIndex);
+    nodeGraphMvp.savedPatchBankIndex = bank;
+    nodeGraphMvp.savedPatchBankName = nodeGraphOneLineText(payload?.bankName || nodeGraphMvp.savedPatchBankName);
+    let imported = 0;
+    for (const [program, slot] of slots.slice(0, nodeGraphSavedPatchBankSlotCount).entries()) {
+      const patchText = typeof slot?.text === "string" ? slot.text : "";
+      if (!patchText.trim()) {
+        continue;
+      }
+      const response = await fetch(`/api/patches/save?bank=${bank}&program=${program}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: patchText,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+      imported += 1;
+    }
+    setNodeGraphScriptStatus(`patch bank loaded: ${imported} patches`, true);
+    await renderNodeGraphDemoPatchList();
+  } catch (error) {
+    setNodeGraphScriptStatus(`bank load failed: ${error?.message || error}`, false);
+  } finally {
+    event.currentTarget.value = "";
+  }
 }
 
 function renderNodeGraphDemoPatchRows(patches = [], listId = "nodeSavedPatchWindowList") {
@@ -263,30 +839,93 @@ function renderNodeGraphDemoPatchRows(patches = [], listId = "nodeSavedPatchWind
     return;
   }
   list.replaceChildren();
-  for (const [index, patch] of nodeGraphDemoPatchRows(patches).entries()) {
-    const row = document.createElement(patch.empty ? "div" : "button");
-    row.className = "node-demo-patch-row";
-    if (!patch.empty) {
-      row.type = "button";
-      row.dataset.patchFilename = patch.filename;
-      row.addEventListener("click", () => loadNodeGraphDemoPatch(patch.filename));
+  const safePatches = Array.isArray(patches) ? patches : [];
+  const patchesByProgram = new Map();
+  for (const patch of safePatches) {
+    if (patch?.filename) {
+      patchesByProgram.set(normalizeNodeGraphSavedPatchProgramIndex(patch.program), patch);
     }
+  }
+  syncNodeGraphSavedPatchGridColumns(nodeGraphSavedPatchBankSlotCount);
+  syncNodeGraphSavedPatchBankControls(safePatches);
+  for (let program = 0; program < nodeGraphSavedPatchBankSlotCount; program += 1) {
+    const patch = patchesByProgram.get(program) || {
+      filename: "",
+      name: "",
+      program,
+      tags: "",
+    };
+    const row = document.createElement("button");
+    row.className = "node-demo-patch-row";
+    row.type = "button";
+    row.dataset.patchFilename = patch.filename || "";
+    row.dataset.patchProgram = String(program);
+    row.classList.toggle("empty", !patch.filename);
+    row.classList.toggle("active", Boolean(patch.filename && patch.filename === nodeGraphMvp.currentSavedPatchFilename));
+    row.classList.toggle("selected", program === normalizeNodeGraphSavedPatchProgramIndex(nodeGraphMvp.selectedSavedPatchProgram));
+    row.setAttribute("aria-current", patch.filename === nodeGraphMvp.currentSavedPatchFilename ? "true" : "false");
+    row.setAttribute("aria-selected", program === normalizeNodeGraphSavedPatchProgramIndex(nodeGraphMvp.selectedSavedPatchProgram) ? "true" : "false");
+    row.addEventListener("click", () => selectNodeGraphSavedPatch(patch.filename, program));
+    row.addEventListener("dblclick", () => {
+      selectNodeGraphSavedPatch(patch.filename, program);
+      if (patch.filename) {
+        loadNodeGraphDemoPatch(patch.filename);
+      }
+    });
     const slot = document.createElement("span");
     slot.className = "node-demo-patch-slot";
-    slot.textContent = String(index + 1).padStart(2, "0");
+    slot.textContent = String(program).padStart(3, "0");
     const name = document.createElement("strong");
-    name.textContent = patch.empty ? "Empty patch slot" : patch.name || patch.filename;
-    const meta = document.createElement("small");
-    meta.textContent = patch.empty
-      ? "save a patch to fill this slot"
-      : [patch.tags, patch.modifiedUtc].filter(Boolean).join(" - ");
-    row.append(slot, name, meta);
+    name.textContent = patch.name || "Empty";
+    const tags = document.createElement("span");
+    tags.className = "node-demo-patch-tags";
+    tags.textContent = patch.filename ? nodeGraphSavedPatchTagLabelList(patch) : "";
+    row.append(slot, name, tags);
     list.append(row);
+  }
+  syncNodeGraphSavedPatchRowSelection();
+  syncNodeGraphSelectedSavedPatchEditor();
+}
+
+function normalizeNodeGraphSavedPatchGridColumns(value) {
+  const columns = Math.round(Number(value));
+  return Number.isFinite(columns) ? Math.max(1, Math.min(16, columns)) : 3;
+}
+
+function nodeGraphSavedPatchVisibleGridColumns(columns, patchCount = null) {
+  const count = Math.max(0, Math.round(Number(patchCount)));
+  if (!Number.isFinite(count) || count <= 0) {
+    return columns;
+  }
+  return Math.max(1, Math.min(columns, count));
+}
+
+function syncNodeGraphSavedPatchGridColumns() {
+  const patchCount = arguments.length > 0 ? arguments[0] : null;
+  const input = document.getElementById("nodeSavedPatchesFitInput");
+  const list = document.getElementById("nodeSavedPatchWindowList");
+  const requestedColumns = normalizeNodeGraphSavedPatchGridColumns(nodeGraphMvp.savedPatchGridColumns);
+  const columns = nodeGraphSavedPatchVisibleGridColumns(requestedColumns, patchCount);
+  nodeGraphMvp.savedPatchGridColumns = requestedColumns;
+  if (input) {
+    input.value = String(requestedColumns);
+  }
+  if (list) {
+    list.style.setProperty("--node-saved-patch-columns", String(columns));
+  }
+}
+
+function handleNodeGraphSavedPatchGridColumnsInput(event) {
+  nodeGraphMvp.savedPatchGridColumns = normalizeNodeGraphSavedPatchGridColumns(event.currentTarget?.value);
+  syncNodeGraphSavedPatchGridColumns();
+  if (typeof saveNodeGraphWorkspaceWindowStatesToUserSettings === "function") {
+    saveNodeGraphWorkspaceWindowStatesToUserSettings({ status: false });
   }
 }
 
 async function loadNodeGraphDemoPatchEntries() {
-  const response = await fetch("/api/patches");
+  const bank = normalizeNodeGraphSavedPatchBankIndex(nodeGraphMvp.savedPatchBankIndex);
+  const response = await fetch(`/api/patches?bank=${encodeURIComponent(bank)}`);
   const result = await response.json().catch(() => ({}));
   if (!response.ok || result.ok === false) {
     throw new Error(result.error || `HTTP ${response.status}`);
@@ -297,21 +936,27 @@ async function loadNodeGraphDemoPatchEntries() {
 async function renderNodeGraphDemoPatchList(listId = "nodeSavedPatchWindowList") {
   const list = document.getElementById(listId);
   if (!list) {
-    return;
+    return [];
   }
   list.replaceChildren();
   const loading = document.createElement("div");
-  loading.className = "node-demo-patch-row";
-  loading.textContent = "Loading saved patches...";
+  loading.className = "node-demo-patch-row node-demo-patch-status";
+  loading.textContent = "Loading patch explorer...";
   list.append(loading);
+  syncNodeGraphSavedPatchGridColumns();
+  syncNodeGraphSavedPatchTagChips();
   try {
-    renderNodeGraphDemoPatchRows(await loadNodeGraphDemoPatchEntries(), listId);
+    nodeGraphMvp.savedPatchEntries = await loadNodeGraphDemoPatchEntries();
+    renderNodeGraphDemoPatchRows(filteredNodeGraphSavedPatchEntries(), listId);
+    return nodeGraphMvp.savedPatchEntries;
   } catch (error) {
     list.replaceChildren();
     const row = document.createElement("div");
-    row.className = "node-demo-patch-row error";
+    row.className = "node-demo-patch-row node-demo-patch-status error";
     row.textContent = `Patch list unavailable: ${error?.message || error}`;
     list.append(row);
+    syncNodeGraphSavedPatchGridColumns();
+    return [];
   }
 }
 
@@ -330,42 +975,250 @@ async function loadNodeGraphDemoPatch(filename) {
       throw new Error(`HTTP ${response.status}`);
     }
     commitNodeGraphPatch(loadNodeGraphPatchFromScript(text), {
+      patchDirtyState: "saved",
       status: `patch loaded: ${safeFilename}`,
     });
-    setNodeGraphSavedPatchesWindowVisible(false);
+    setNodeGraphCurrentSavedPatch(safeFilename);
   } catch (error) {
     setNodeGraphScriptStatus(`patch load failed: ${error?.message || error}`, false);
   }
 }
 
+function nodeGraphSavedPatchProgramIndex(filename) {
+  const entries = Array.isArray(nodeGraphMvp.savedPatchEntries) ? nodeGraphMvp.savedPatchEntries : [];
+  const matchIndex = entries.findIndex((entry) => entry?.filename === filename);
+  const match = matchIndex >= 0 ? entries[matchIndex] : null;
+  const program = Number(match?.program);
+  if (Number.isFinite(program)) {
+    return Math.max(0, Math.min(nodeGraphSavedPatchBankMaxProgram, Math.round(program)));
+  }
+  return matchIndex >= 0 ? Math.max(0, Math.min(nodeGraphSavedPatchBankMaxProgram, matchIndex)) : -1;
+}
+
+function nodeGraphSavedPatchEntryAtProgram(program) {
+  const entries = Array.isArray(nodeGraphMvp.savedPatchEntries) ? nodeGraphMvp.savedPatchEntries : [];
+  return entries.find((entry) => Math.round(Number(entry?.program)) === program) || entries[program] || null;
+}
+
+async function loadAdjacentNodeGraphSavedPatch(direction) {
+  if (!Array.isArray(nodeGraphMvp.savedPatchEntries) || !nodeGraphMvp.savedPatchEntries.length) {
+    await renderNodeGraphDemoPatchList();
+  }
+  const step = direction < 0 ? -1 : 1;
+  const currentProgram = nodeGraphSavedPatchProgramIndex(nodeGraphMvp.currentSavedPatchFilename);
+  const startProgram = currentProgram >= 0 ? currentProgram : (step > 0 ? -1 : nodeGraphSavedPatchBankSlotCount);
+  for (let offset = 1; offset <= nodeGraphSavedPatchBankSlotCount; offset += 1) {
+    const program = (startProgram + step * offset + nodeGraphSavedPatchBankSlotCount) % nodeGraphSavedPatchBankSlotCount;
+    const entry = nodeGraphSavedPatchEntryAtProgram(program);
+    if (entry?.filename) {
+      await loadNodeGraphDemoPatch(entry.filename);
+      return;
+    }
+  }
+  setNodeGraphScriptStatus("no saved patches in this bank", false);
+}
+
 function positionNodeGraphSavedPatchesWindowNearButton() {
   const panel = document.getElementById("nodeSavedPatchesWindow");
-  const button = document.getElementById("nodeSavedPatchesWindowButton");
-  if (!panel || !button) {
+  if (!panel) {
     return;
   }
-  const margin = 10;
-  const rect = button.getBoundingClientRect();
+  const anchor =
+    document.getElementById("nodeSceneOpenSavedPatches") ||
+    document.getElementById("nodeCurrentSavedPatchButton");
+  const rect = anchor?.getBoundingClientRect?.() || {
+    left: nodeGraphMvp.sceneContextPoint?.x ?? window.innerWidth * 0.5,
+    bottom: nodeGraphMvp.sceneContextPoint?.y ?? window.innerHeight * 0.25,
+  };
   panel.hidden = false;
-  const panelRect = panel.getBoundingClientRect();
-  const left = Math.max(margin, Math.min(window.innerWidth - panelRect.width - margin, rect.left));
-  const top = Math.max(margin, Math.min(window.innerHeight - panelRect.height - margin, rect.bottom + 8));
+  const { left, top } = nodeGraphFloatingWindowPosition(panel, rect.left, rect.bottom + 8);
+  positionNodeGraphSavedPatchesWindow(left, top);
+}
+
+function positionNodeGraphSavedPatchesWindow(x, y) {
+  const panel = document.getElementById("nodeSavedPatchesWindow");
+  if (!panel) {
+    return;
+  }
+  const { left, top } = nodeGraphFloatingWindowPosition(panel, x, y);
+  panel.style.position = "fixed";
   panel.style.left = `${left}px`;
   panel.style.top = `${top}px`;
+  panel.style.right = "auto";
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "patchExplorer",
+      panel,
+      { open: !panel.hidden, position: { left, top } },
+      { persist: false },
+    );
+  }
+}
+
+function nodeGraphSavedPatchesWindowSizeFromElement(panel = document.getElementById("nodeSavedPatchesWindow")) {
+  const rect = panel?.getBoundingClientRect?.();
+  return normalizeNodeGraphSavedPatchesWindowSize({
+    width: rect?.width,
+    height: rect?.height,
+  });
+}
+
+function saveNodeGraphSavedPatchesWindowSizeToUserSettings() {
+  const panel = document.getElementById("nodeSavedPatchesWindow");
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "patchExplorer",
+      panel,
+      { open: !panel?.hidden, size: nodeGraphSavedPatchesWindowSizeFromElement(panel) },
+      { status: false },
+    );
+  }
+}
+
+function beginNodeGraphSavedPatchesWindowResize(event) {
+  if (event.button > 0) {
+    return;
+  }
+  const panel = document.getElementById("nodeSavedPatchesWindow");
+  if (!panel || panel.hidden) {
+    return;
+  }
+  const rect = panel.getBoundingClientRect();
+  nodeGraphMvp.savedPatchesWindowResizing = {
+    handle: event.currentTarget,
+    pointerId: event.pointerId ?? null,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    startWidth: rect.width,
+    startHeight: rect.height,
+  };
+  event.currentTarget.classList.add("dragging");
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphSavedPatchesWindowResize(event) {
+  const drag = nodeGraphMvp.savedPatchesWindowResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  applyNodeGraphSavedPatchesWindowSize({
+    width: drag.startWidth + event.clientX - drag.startClientX,
+    height: drag.startHeight + event.clientY - drag.startClientY,
+  });
+  event.preventDefault();
+}
+
+function endNodeGraphSavedPatchesWindowResize(event) {
+  const drag = nodeGraphMvp.savedPatchesWindowResizing;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  drag.handle.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.savedPatchesWindowResizing = null;
+  saveNodeGraphSavedPatchesWindowSizeToUserSettings();
+}
+
+function beginNodeGraphSavedPatchesWindowDrag(event) {
+  if (event.button > 0 || nodeGraphDialogDragTargetIsInteractive(event)) {
+    return;
+  }
+  const panel = document.getElementById("nodeSavedPatchesWindow");
+  if (!panel || panel.hidden) {
+    return;
+  }
+  const rect = panel.getBoundingClientRect();
+  const heading = document.getElementById("nodeSavedPatchesWindowHeading");
+  nodeGraphMvp.savedPatchesWindowDragging = {
+    handle: event.currentTarget,
+    heading,
+    offsetX: event.clientX - rect.left,
+    offsetY: event.clientY - rect.top,
+    pointerId: event.pointerId ?? null,
+  };
+  event.currentTarget.classList.add("dragging");
+  heading?.classList.add("dragging");
+  positionNodeGraphSavedPatchesWindow(rect.left, rect.top);
+  if (event.pointerId !== undefined) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function dragNodeGraphSavedPatchesWindow(event) {
+  const drag = nodeGraphMvp.savedPatchesWindowDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  positionNodeGraphSavedPatchesWindow(
+    event.clientX - drag.offsetX,
+    event.clientY - drag.offsetY,
+  );
+  event.preventDefault();
+}
+
+function endNodeGraphSavedPatchesWindowDrag(event) {
+  const drag = nodeGraphMvp.savedPatchesWindowDragging;
+  if (
+    !drag ||
+    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
+  ) {
+    return;
+  }
+  drag.handle.classList.remove("dragging");
+  drag.heading?.classList.remove("dragging");
+  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
+    drag.handle.releasePointerCapture(event.pointerId);
+  }
+  nodeGraphMvp.savedPatchesWindowDragging = null;
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState(
+      "patchExplorer",
+      document.getElementById("nodeSavedPatchesWindow"),
+      { open: true },
+      { status: false },
+    );
+  }
 }
 
 function setNodeGraphSavedPatchesWindowVisible(visible) {
   const panel = document.getElementById("nodeSavedPatchesWindow");
   const button = document.getElementById("nodeSavedPatchesWindowButton");
-  if (!panel || !button) {
+  if (!panel) {
     return;
   }
   panel.hidden = !visible;
-  button.classList.toggle("active", visible);
-  button.setAttribute("aria-pressed", String(visible));
+  button?.classList.toggle("active", visible);
+  button?.setAttribute("aria-pressed", String(visible));
   if (visible) {
-    positionNodeGraphSavedPatchesWindowNearButton();
+    applyNodeGraphSavedPatchesWindowSize(nodeGraphMvp.workspaceWindowStates?.patchExplorer?.size);
+    if (
+      typeof positionNodeGraphWorkspaceWindowFromState !== "function" ||
+      !positionNodeGraphWorkspaceWindowFromState("patchExplorer", panel)
+    ) {
+      positionNodeGraphSavedPatchesWindowNearButton();
+    }
+    syncNodeGraphSavedPatchGridColumns();
     renderNodeGraphDemoPatchList();
+  }
+  if (typeof rememberNodeGraphWorkspaceWindowState === "function") {
+    rememberNodeGraphWorkspaceWindowState("patchExplorer", panel, { open: visible }, { status: false });
   }
 }
 

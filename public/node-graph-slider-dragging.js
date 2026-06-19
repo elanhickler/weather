@@ -125,7 +125,20 @@ function updateNodeSliderCurrentValue(slider, rawValue) {
 }
 
 function setNodeSliderValue(slider, value) {
-  delete slider.dataset.unboundedValue;
+  const number = Number(value);
+  const min = Number(slider.min);
+  const max = Number(slider.max);
+  const unboundedMin = slider.dataset.unboundedMin === "true";
+  const unboundedMax = slider.dataset.unboundedMax === "true";
+  if (
+    Number.isFinite(number) &&
+    ((unboundedMin && Number.isFinite(min) && number < min) ||
+      (unboundedMax && Number.isFinite(max) && number > max))
+  ) {
+    slider.dataset.unboundedValue = String(number);
+  } else {
+    delete slider.dataset.unboundedValue;
+  }
   slider.value = String(
     normalizeNodeSliderValue(slider, value),
   );
@@ -353,7 +366,7 @@ function dragNodeSlider(event) {
       drag.slider,
       quantizeNodeSliderDragValue(
         drag.slider,
-        nodeSliderValueFromPointerTravel(drag.slider, nextTravel),
+        nodeSliderValueFromRelativeTravel(drag.slider, nextTravel),
       ),
     );
     if (nextTravel <= 0 || nextTravel >= 1) {

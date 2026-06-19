@@ -839,6 +839,25 @@ function nodeGraphStartGpuAdditiveProducer(plan, audio) {
   producer.timer = setInterval(produce, 8);
 }
 
+function queueNodeGraphLivePatchCommand(command, nodeId = "") {
+  const direction = command === "nextPatch" ? 1 : command === "previousPatch" ? -1 : 0;
+  if (!direction) {
+    return;
+  }
+  const key = `${command}:${nodeId || ""}`;
+  if (!nodeGraphMvp.live.patchCommandQueue) {
+    nodeGraphMvp.live.patchCommandQueue = new Set();
+  }
+  if (nodeGraphMvp.live.patchCommandQueue.has(key)) {
+    return;
+  }
+  nodeGraphMvp.live.patchCommandQueue.add(key);
+  window.setTimeout(async () => {
+    nodeGraphMvp.live.patchCommandQueue?.delete(key);
+    await loadAdjacentNodeGraphSavedPatch(direction);
+  }, 0);
+}
+
 function handleNodeGraphLiveWorkletMessage(event) {
   const message = event.data || {};
   if (message.type === "meter") {
@@ -884,6 +903,11 @@ function handleNodeGraphLiveWorkletMessage(event) {
         protectionMuteCount: Number(message.protectionMuteCount) || 0,
       });
     }
+  } else if (message.type === "patchCommand") {
+    if (message.sessionId !== nodeGraphMvp.live.sessionId || !nodeGraphMvp.live.node) {
+      return;
+    }
+    queueNodeGraphLivePatchCommand(message.command, message.nodeId || "");
   } else if (message.type === "planApplied") {
     if (
       message.sessionId !== nodeGraphMvp.live.sessionId ||
@@ -1112,10 +1136,20 @@ function sendNodeGraphLiveParameterUpdate() {
   try {
     const nodes = nodeGraphBuildLiveParameterNodes(nodeGraphMvp.live.activeNodeIds);
     const patchFingerprint = nodeGraphPatchFingerprint();
+    const now = performance.now();
+    const previous = Number(nodeGraphMvp.live.lastParameterUpdateTime) || 0;
+    const measuredSeconds = previous > 0 ? (now - previous) / 1000 : nodeGraphMvp.live.autoSmoothingSeconds;
+    nodeGraphMvp.live.lastParameterUpdateTime = now;
+    nodeGraphMvp.live.autoSmoothingSeconds = clampNodeGraphAutoSmoothingSeconds(
+      (Number(nodeGraphMvp.live.autoSmoothingSeconds) || nodeGraphAutoSmoothingDefaultSeconds) * 0.82 +
+      clampNodeGraphAutoSmoothingSeconds(measuredSeconds) * 0.18,
+    );
+    const autoSmoothingSeconds = nodeGraphMvp.live.autoSmoothingSeconds;
     updateNodeGraphLiveModuleScopeFingerprint(patchFingerprint);
     nodeGraphMvp.live.planSerial += 1;
     if (nodeGraphMvp.live.usesWorklet) {
       setNodeGraphLiveEvidence("params-sent", {
+        autoSmoothingSeconds,
         nodeCount: nodes.length,
         parameterCount: nodeGraphLiveParameterCount(nodes),
         patchFingerprint,
@@ -1124,6 +1158,7 @@ function sendNodeGraphLiveParameterUpdate() {
       setNodeGraphLivePlanStatus(nodeGraphLiveParametersSentStatusText(nodes), "warn");
       nodeGraphMvp.live.node?.port?.postMessage({
         nodes,
+        autoSmoothingSeconds,
         patchFingerprint,
         planSerial: nodeGraphMvp.live.planSerial,
         sessionId: nodeGraphMvp.live.sessionId,
@@ -1133,8 +1168,10 @@ function sendNodeGraphLiveParameterUpdate() {
       const audio = nodeGraphAudioDerivation(nodeGraphMvp.patch);
       nodeGraphStartGpuAdditiveProducer(plan, audio);
     } else if (nodeGraphMvp.live.runtime) {
+      nodeGraphMvp.live.runtime.autoSmoothingSeconds = autoSmoothingSeconds;
       updateNodeGraphLiveRuntimeParameters(nodeGraphMvp.live.runtime, nodes);
       setNodeGraphLiveEvidence("params-applied", {
+        autoSmoothingSeconds,
         nodeCount: nodes.length,
         parameterCount: nodeGraphLiveParameterCount(nodes),
         patchFingerprint,
@@ -1265,8 +1302,10 @@ async function stopNodeGraphLiveAudio() {
   nodeGraphMvp.live.outputGain = null;
   nodeGraphMvp.live.activeNodeIds = new Set();
   nodeGraphMvp.live.lastEvidence = null;
+  nodeGraphMvp.live.lastParameterUpdateTime = 0;
   nodeGraphMvp.live.planEvidence = null;
   nodeGraphMvp.live.planSerial = 0;
+  nodeGraphMvp.live.autoSmoothingSeconds = nodeGraphAutoSmoothingDefaultSeconds;
   nodeGraphMvp.live.runtime = null;
   nodeGraphMvp.live.scriptNode = null;
   nodeGraphMvp.live.sessionId += 1;
@@ -1307,7 +1346,7 @@ async function createNodeGraphLiveWorkletNode(context) {
     throw new Error("AudioWorklet unavailable");
   }
   await nodeGraphLiveAwaitStartup(
-    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=beta-polish-1"),
+    context.audioWorklet.addModule("./public/node-live-audio-worklet.js?v=module-home-actions-1"),
     "AudioWorklet startup timed out",
   );
   const workletNode = new AudioWorkletNode(
