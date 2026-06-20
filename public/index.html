@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=patch-card-even-stroke-1">
+  <link rel="stylesheet" href="./public/styles.css?v=ui-window-resize-limits-2">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -189,19 +189,18 @@
               aria-label="Move patch explorer">&#x2725;</button>
             <div>
               <span>Patch Explorer</span>
-              <small id="nodeSavedPatchesBankStatus">0/128 patches</small>
+            </div>
+            <div class="node-patch-clipboard-controls node-saved-patches-title-actions" role="group" aria-label="Patch clipboard">
+              <button id="nodeSavedPatchesCopyPatch" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>
+              <button id="nodeSavedPatchesPastePatch" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>
             </div>
             <button id="nodeSavedPatchesCloseButton" class="panel-close-button" type="button" aria-label="Close patch explorer">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <div class="node-saved-patches-header-tools">
-            <div class="node-saved-patches-step-controls" role="group" aria-label="Patch navigation">
-              <button id="nodeSavedPatchesPreviousButton" type="button" aria-label="Load previous saved patch">&larr;</button>
-              <button id="nodeSavedPatchesNextButton" type="button" aria-label="Load next saved patch">&rarr;</button>
-            </div>
+          <div class="node-saved-patches-row-control">
             <label class="node-saved-patches-fit-control">
-              <span>Fit</span>
+              <span>Rows</span>
               <input
                 id="nodeSavedPatchesFitInput"
                 type="number"
@@ -209,82 +208,9 @@
                 max="16"
                 step="1"
                 value="3"
-                aria-label="Patch explorer buttons fit horizontally">
+                aria-label="Patch explorer modules per row">
             </label>
           </div>
-          <div class="node-saved-patches-actions" aria-label="Patch bank actions">
-            <label class="node-saved-patches-bank-control">
-              <span>Bank</span>
-              <input
-                id="nodeSavedPatchesBankInput"
-                type="number"
-                min="0"
-                max="127"
-                step="1"
-                value="0"
-                aria-label="Saved patch bank">
-            </label>
-            <button id="nodeSavedPatchesSaveBank" type="button">Save Bank</button>
-            <button id="nodeSavedPatchesLoadBank" type="button">Load Bank</button>
-          </div>
-          <div class="node-saved-patches-slot-editor" aria-label="Selected patch slot">
-            <label>
-              <span>Bank Name</span>
-              <input
-                id="nodeSavedPatchesBankNameInput"
-                type="text"
-                autocomplete="off"
-                placeholder="music"
-                aria-label="Patch bank name">
-            </label>
-            <label>
-              <span>Patch Name</span>
-              <input
-                id="nodeSavedPatchesPatchNameInput"
-                type="text"
-                data-patch-info-field="name"
-                autocomplete="off"
-                placeholder="Patch name"
-                aria-label="Selected patch name">
-            </label>
-            <label>
-              <span>Tags</span>
-              <input
-                id="nodeSavedPatchesPatchTagsInput"
-                type="text"
-                data-patch-info-field="tags"
-                autocomplete="off"
-                placeholder="tags"
-                aria-label="Selected patch tags">
-            </label>
-          </div>
-          <div class="node-saved-patches-tag-filter" aria-label="Saved patch tag filters">
-            <label>
-              <input
-                id="nodeSavedPatchesTagInput"
-                type="text"
-                autocomplete="off"
-                placeholder="search tag"
-                aria-label="Search patch explorer by tag">
-            </label>
-            <div
-              id="nodeSavedPatchesTagChips"
-              class="node-saved-patches-tag-chips"
-              aria-live="polite"></div>
-          </div>
-          <div class="node-saved-patches-command-row" aria-label="Patch actions">
-            <button id="nodeSavedPatchesInitPatch" type="button">Init</button>
-            <button id="nodeSavedPatchesLoadPatch" type="button" aria-label="Open patch" title="Open patch">Open</button>
-            <button id="nodeSavedPatchesSavePatch" type="button" aria-label="Save patch" title="Save patch">Save</button>
-            <button id="nodeSavedPatchesSetDefault" type="button">Set Default</button>
-            <button id="nodeSavedPatchesCopyPatch" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>
-            <button id="nodeSavedPatchesPastePatch" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>
-          </div>
-          <input
-            id="nodeSavedPatchesBankFileInput"
-            type="file"
-            accept="application/json,.json"
-            hidden>
           <div
             id="nodeSavedPatchWindowList"
             class="node-demo-patch-list node-saved-patch-window-list"
@@ -2170,7 +2096,19 @@
             class="node-current-saved-patch-button"
             type="button"
             aria-label="Open patch explorer"><span>Patch</span><strong>Unsaved</strong></button>
+          <div class="node-patch-save-controls" role="group" aria-label="Patch save controls">
+            <button id="nodePatchInitButton" type="button">Init</button>
+            <button id="nodePatchSaveButton" type="button">Save</button>
+          </div>
           <div class="node-patch-header-fields">
+            <input
+              id="nodePatchBankNameHeader"
+              class="node-patch-header-field bank"
+              type="text"
+              autocomplete="off"
+              placeholder="Bank name"
+              aria-label="Patch bank name"
+              data-patch-bank-name-field>
             <input
               id="nodePatchNameHeader"
               class="node-patch-header-field name"
@@ -2859,12 +2797,13 @@
   <script src="./public/manifest-view.js?v=manifest-view-refactor-1780360800000"></script>
   <script src="./public/manifest-loader.js?v=manifest-loader-refactor-1780389600000"></script>
   <script src="./public/node-graph-wires.js?v=external-graph-inputs-1780816800000"></script>
-  <script src="./public/node-graph-file-actions.js?v=patch-slot-overlap-1"></script>
+  <script src="./public/node-graph-floating-windows.js?v=ui-window-resize-limits-2"></script>
+  <script src="./public/node-graph-file-actions.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-default-buttons.js?v=patch-save-refresh-1"></script>
   <script src="./public/node-graph-cookbook-filter.js?v=filter-curve-zero-cutoffs-1780822200000"></script>
   <script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>
   <script src="./public/node-graph-module-definitions.js?v=module-home-actions-1"></script>
-  <script src="./public/node-graph-module-store.js?v=module-home-actions-1"></script>
+  <script src="./public/node-graph-module-store.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-module-sizing.js?v=scope-extra-height-1"></script>
   <script src="./public/node-graph-metadata-kinds.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-parameter-metadata.js?v=audio-player-editable-metadata-1"></script>
@@ -2874,10 +2813,10 @@
   <script src="./public/node-graph-graph-utils.js?v=graph2-through-curves-1"></script>
   <script src="./public/node-graph-samples.js?v=missing-sample-dismiss-1"></script>
   <script src="./public/node-graph-text-box-rendering.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-patch-normalizers.js?v=patch-bank-slots-1"></script>
-  <script src="./public/node-graph-ui-view.js?v=graph-endpoint-lock-1"></script>
+  <script src="./public/node-graph-patch-normalizers.js?v=ui-window-resize-limits-2"></script>
+  <script src="./public/node-graph-ui-view.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-audio-derivation.js?v=sample-rate-oversampling-1780468200000"></script>
-  <script src="./public/node-graph-grid-utils.js?v=workspace-viewport-clamp-1"></script>
+  <script src="./public/node-graph-grid-utils.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-patch-runtime.js?v=ellipsoid-xy-1"></script>
   <script src="./public/node-graph-code-screen-model.js?v=code-screen-1"></script>
   <script src="./public/node-graph-patch-serialization.js?v=required-assets-1"></script>
@@ -2889,12 +2828,12 @@
   <script src="./public/node-graph-view-controls.js?v=floating-window-header-clamp-1"></script>
   <script src="./public/node-graph-workspace-geometry.js?v=workspace-viewport-clamp-1"></script>
   <script src="./public/node-graph-workspace-zoom.js?v=patch-view-zoom-1"></script>
-  <script src="./public/node-graph-workspace-view.js?v=workspace-viewport-clamp-1"></script>
+  <script src="./public/node-graph-workspace-view.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-camera-view.js?v=utility-camera-feed-1780810000000"></script>
   <script src="./public/node-graph-clap-host.js?v=clap-under-construction-2"></script>
   <script src="./public/node-graph-marquee-selection.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-node-dragging.js?v=io-alt-bypass-1"></script>
-  <script src="./public/node-graph-context-menu.js?v=command-center-stable-position-1"></script>
+  <script src="./public/node-graph-context-menu.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-module-actions.js?v=module-placement-unclamped-1"></script>
   <script src="./public/node-graph-code-screen.js?v=canvas-ratio-language-2"></script>
   <script src="./public/node-graph-module-scopes.js?v=scope-zoom-gain-1"></script>
@@ -2916,7 +2855,7 @@
   <script src="./public/node-graph-slider-readout-controls.js?v=unbounded-speed-1"></script>
   <script src="./public/node-graph-ghost-sliders.js?v=unbounded-speed-1"></script>
   <script src="./public/node-code-settings-editor.js?v=code-settings-shell-1"></script>
-  <script src="./public/node-graph-metadata-editor.js?v=metadata-textarea-resize-1"></script>
+  <script src="./public/node-graph-metadata-editor.js?v=ui-window-resize-limits-2"></script>
   <script src="./public/node-graph-render-settings.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-ear-protection.js?v=ear-protection-reset-1"></script>
   <script src="./public/node-graph-rendered-audio.js?v=ear-protection-reset-1"></script>

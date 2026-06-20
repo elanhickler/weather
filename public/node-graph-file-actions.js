@@ -13,6 +13,7 @@ function nodeGraphPatchFileName() {
 
 function nodeGraphPatchWithLiveHeaderInfo(patch = nodeGraphMvp.patch) {
   const nextPatch = cloneNodeGraphPatch(patch);
+  const headerBankName = document.getElementById("nodePatchBankNameHeader");
   const headerName = document.getElementById("nodePatchNameHeader");
   const headerTags = document.getElementById("nodePatchTagsHeader");
   const explorerName = document.getElementById("nodeSavedPatchesPatchNameInput");
@@ -23,7 +24,7 @@ function nodeGraphPatchWithLiveHeaderInfo(patch = nodeGraphMvp.patch) {
   nextPatch.info = normalizeNodeGraphPatchInfo({
     ...nextPatch.info,
     bank,
-    bankName: explorerBankName ? explorerBankName.value : nodeGraphMvp.savedPatchBankName,
+    bankName: explorerBankName ? explorerBankName.value : headerBankName ? headerBankName.value : nodeGraphMvp.savedPatchBankName,
     name: explorerName ? explorerName.value : headerName ? headerName.value : nextPatch.info?.name,
     program,
     tags: explorerTags ? explorerTags.value : headerTags ? headerTags.value : nextPatch.info?.tags,
@@ -37,6 +38,10 @@ const nodeGraphSavedPatchBankMaxProgram = nodeGraphSavedPatchBankSlotCount - 1;
 const nodeGraphSavedPatchesWindowDefaultSize = Object.freeze({
   width: 420,
   height: 620,
+  minWidth: 80,
+  maxWidth: 720,
+  minHeight: 96,
+  maxHeight: 760,
 });
 
 function nodeGraphSavedPatchDisplayName(filename) {
@@ -53,8 +58,20 @@ function normalizeNodeGraphSavedPatchesWindowSize(size = {}) {
   }
   const source = size && typeof size === "object" ? size : {};
   return {
-    width: Math.max(220, Math.round(Number(source.width) || nodeGraphSavedPatchesWindowDefaultSize.width)),
-    height: Math.max(220, Math.round(Number(source.height) || nodeGraphSavedPatchesWindowDefaultSize.height)),
+    width: Math.max(
+      nodeGraphSavedPatchesWindowDefaultSize.minWidth,
+      Math.min(
+        nodeGraphSavedPatchesWindowDefaultSize.maxWidth,
+        Math.round(Number(source.width) || nodeGraphSavedPatchesWindowDefaultSize.width),
+      ),
+    ),
+    height: Math.max(
+      nodeGraphSavedPatchesWindowDefaultSize.minHeight,
+      Math.min(
+        nodeGraphSavedPatchesWindowDefaultSize.maxHeight,
+        Math.round(Number(source.height) || nodeGraphSavedPatchesWindowDefaultSize.height),
+      ),
+    ),
   };
 }
 
@@ -62,8 +79,12 @@ function applyNodeGraphSavedPatchesWindowSize(size = {}) {
   const panel = document.getElementById("nodeSavedPatchesWindow");
   const normalized = normalizeNodeGraphSavedPatchesWindowSize(size);
   if (panel) {
-    panel.style.setProperty("--node-saved-patches-width", `${normalized.width}px`);
-    panel.style.setProperty("--node-saved-patches-height", `${normalized.height}px`);
+    if (typeof applyNodeGraphFloatingWindowSizeVars === "function") {
+      applyNodeGraphFloatingWindowSizeVars(panel, "node-saved-patches", nodeGraphSavedPatchesWindowDefaultSize, normalized);
+    } else {
+      panel.style.setProperty("--node-saved-patches-width", `${normalized.width}px`);
+      panel.style.setProperty("--node-saved-patches-height", `${normalized.height}px`);
+    }
   }
   return normalized;
 }
@@ -186,8 +207,9 @@ function syncNodeGraphSavedPatchRowSelection() {
   for (const row of document.querySelectorAll("[data-patch-filename]")) {
     const active = Boolean(activeFilename && row.dataset.patchFilename === activeFilename);
     const program = normalizeNodeGraphSavedPatchProgramIndex(row.dataset.patchProgram);
-    const selected = program === selectedProgram ||
-      Boolean(selectedFilename && row.dataset.patchFilename === selectedFilename);
+    const selected = selectedFilename
+      ? row.dataset.patchFilename === selectedFilename
+      : program === selectedProgram;
     row.classList.toggle("active", active);
     row.classList.toggle("selected", selected);
     row.setAttribute("aria-current", active ? "true" : "false");
@@ -238,6 +260,15 @@ function nodeGraphSavedPatchTagLabelList(patch = null) {
     return tags.map((tag) => `#${tag}`).join(" ");
   }
   return patch ? "#untagged" : "no tags yet";
+}
+
+function nodeGraphSavedPatchBankLabel(patch = null) {
+  const bankName = nodeGraphOneLineText(patch?.bankName || "");
+  if (bankName) {
+    return bankName;
+  }
+  const patchInfo = normalizeNodeGraphPatchInfo(nodeGraphMvp.patch?.info);
+  return nodeGraphOneLineText(patchInfo.bankName || "") || "Default Bank";
 }
 
 function nodeGraphSavedPatchMatchesTagFilters(patch = {}) {
@@ -365,6 +396,7 @@ function nodeGraphSelectedSavedPatchEntry() {
 
 function syncNodeGraphSelectedSavedPatchEditor() {
   const bankNameInput = document.getElementById("nodeSavedPatchesBankNameInput");
+  const headerBankNameInput = document.getElementById("nodePatchBankNameHeader");
   const nameInput = document.getElementById("nodeSavedPatchesPatchNameInput");
   const tagsInput = document.getElementById("nodeSavedPatchesPatchTagsInput");
   const entry = nodeGraphSelectedSavedPatchEntry();
@@ -373,6 +405,9 @@ function syncNodeGraphSelectedSavedPatchEditor() {
   nodeGraphMvp.savedPatchBankName = bankName;
   if (bankNameInput && document.activeElement !== bankNameInput) {
     bankNameInput.value = bankName;
+  }
+  if (headerBankNameInput && document.activeElement !== headerBankNameInput) {
+    headerBankNameInput.value = bankName;
   }
   if (nameInput && document.activeElement !== nameInput) {
     nameInput.value = entry?.name || patchInfo.name || "Patch name";
@@ -839,50 +874,40 @@ function renderNodeGraphDemoPatchRows(patches = [], listId = "nodeSavedPatchWind
     return;
   }
   list.replaceChildren();
-  const safePatches = Array.isArray(patches) ? patches : [];
-  const patchesByProgram = new Map();
-  for (const patch of safePatches) {
-    if (patch?.filename) {
-      patchesByProgram.set(normalizeNodeGraphSavedPatchProgramIndex(patch.program), patch);
-    }
-  }
-  syncNodeGraphSavedPatchGridColumns(nodeGraphSavedPatchBankSlotCount);
+  const safePatches = Array.isArray(patches)
+    ? patches.filter((patch) => patch?.filename)
+    : [];
+  syncNodeGraphSavedPatchGridColumns(safePatches.length);
   syncNodeGraphSavedPatchBankControls(safePatches);
-  for (let program = 0; program < nodeGraphSavedPatchBankSlotCount; program += 1) {
-    const patch = patchesByProgram.get(program) || {
-      filename: "",
-      name: "",
-      program,
-      tags: "",
-    };
+  if (!safePatches.length) {
+    syncNodeGraphSavedPatchRowSelection();
+    syncNodeGraphSelectedSavedPatchEditor();
+    return;
+  }
+  safePatches.forEach((patch, index) => {
+    const program = normalizeNodeGraphSavedPatchProgramIndex(patch.program ?? index);
     const row = document.createElement("button");
     row.className = "node-demo-patch-row";
     row.type = "button";
     row.dataset.patchFilename = patch.filename || "";
     row.dataset.patchProgram = String(program);
-    row.classList.toggle("empty", !patch.filename);
-    row.classList.toggle("active", Boolean(patch.filename && patch.filename === nodeGraphMvp.currentSavedPatchFilename));
-    row.classList.toggle("selected", program === normalizeNodeGraphSavedPatchProgramIndex(nodeGraphMvp.selectedSavedPatchProgram));
+    row.classList.toggle("active", patch.filename === nodeGraphMvp.currentSavedPatchFilename);
+    row.classList.toggle("selected", patch.filename === nodeGraphMvp.selectedSavedPatchFilename);
     row.setAttribute("aria-current", patch.filename === nodeGraphMvp.currentSavedPatchFilename ? "true" : "false");
-    row.setAttribute("aria-selected", program === normalizeNodeGraphSavedPatchProgramIndex(nodeGraphMvp.selectedSavedPatchProgram) ? "true" : "false");
+    row.setAttribute("aria-selected", patch.filename === nodeGraphMvp.selectedSavedPatchFilename ? "true" : "false");
     row.addEventListener("click", () => selectNodeGraphSavedPatch(patch.filename, program));
     row.addEventListener("dblclick", () => {
       selectNodeGraphSavedPatch(patch.filename, program);
-      if (patch.filename) {
-        loadNodeGraphDemoPatch(patch.filename);
-      }
+      loadNodeGraphDemoPatch(patch.filename);
     });
-    const slot = document.createElement("span");
-    slot.className = "node-demo-patch-slot";
-    slot.textContent = String(program).padStart(3, "0");
+    const bank = document.createElement("span");
+    bank.className = "node-demo-patch-bank";
+    bank.textContent = nodeGraphSavedPatchBankLabel(patch);
     const name = document.createElement("strong");
-    name.textContent = patch.name || "Empty";
-    const tags = document.createElement("span");
-    tags.className = "node-demo-patch-tags";
-    tags.textContent = patch.filename ? nodeGraphSavedPatchTagLabelList(patch) : "";
-    row.append(slot, name, tags);
+    name.textContent = patch.name || nodeGraphSavedPatchDisplayName(patch.filename) || "Patch";
+    row.append(bank, name);
     list.append(row);
-  }
+  });
   syncNodeGraphSavedPatchRowSelection();
   syncNodeGraphSelectedSavedPatchEditor();
 }
@@ -924,8 +949,7 @@ function handleNodeGraphSavedPatchGridColumnsInput(event) {
 }
 
 async function loadNodeGraphDemoPatchEntries() {
-  const bank = normalizeNodeGraphSavedPatchBankIndex(nodeGraphMvp.savedPatchBankIndex);
-  const response = await fetch(`/api/patches?bank=${encodeURIComponent(bank)}`);
+  const response = await fetch("/api/patches");
   const result = await response.json().catch(() => ({}));
   if (!response.ok || result.ok === false) {
     throw new Error(result.error || `HTTP ${response.status}`);
@@ -947,7 +971,7 @@ async function renderNodeGraphDemoPatchList(listId = "nodeSavedPatchWindowList")
   syncNodeGraphSavedPatchTagChips();
   try {
     nodeGraphMvp.savedPatchEntries = await loadNodeGraphDemoPatchEntries();
-    renderNodeGraphDemoPatchRows(filteredNodeGraphSavedPatchEntries(), listId);
+    renderNodeGraphDemoPatchRows(nodeGraphMvp.savedPatchEntries, listId);
     return nodeGraphMvp.savedPatchEntries;
   } catch (error) {
     list.replaceChildren();
@@ -1004,18 +1028,18 @@ async function loadAdjacentNodeGraphSavedPatch(direction) {
   if (!Array.isArray(nodeGraphMvp.savedPatchEntries) || !nodeGraphMvp.savedPatchEntries.length) {
     await renderNodeGraphDemoPatchList();
   }
-  const step = direction < 0 ? -1 : 1;
-  const currentProgram = nodeGraphSavedPatchProgramIndex(nodeGraphMvp.currentSavedPatchFilename);
-  const startProgram = currentProgram >= 0 ? currentProgram : (step > 0 ? -1 : nodeGraphSavedPatchBankSlotCount);
-  for (let offset = 1; offset <= nodeGraphSavedPatchBankSlotCount; offset += 1) {
-    const program = (startProgram + step * offset + nodeGraphSavedPatchBankSlotCount) % nodeGraphSavedPatchBankSlotCount;
-    const entry = nodeGraphSavedPatchEntryAtProgram(program);
-    if (entry?.filename) {
-      await loadNodeGraphDemoPatch(entry.filename);
-      return;
-    }
+  const entries = (Array.isArray(nodeGraphMvp.savedPatchEntries) ? nodeGraphMvp.savedPatchEntries : [])
+    .filter((entry) => entry?.filename);
+  if (!entries.length) {
+    setNodeGraphScriptStatus("no saved patches available", false);
+    return;
   }
-  setNodeGraphScriptStatus("no saved patches in this bank", false);
+  const step = direction < 0 ? -1 : 1;
+  const currentFilename = nodeGraphMvp.currentSavedPatchFilename || nodeGraphMvp.selectedSavedPatchFilename || "";
+  const currentIndex = entries.findIndex((entry) => entry.filename === currentFilename);
+  const startIndex = currentIndex >= 0 ? currentIndex : (step > 0 ? -1 : 0);
+  const nextIndex = (startIndex + step + entries.length) % entries.length;
+  await loadNodeGraphDemoPatch(entries[nextIndex].filename);
 }
 
 function positionNodeGraphSavedPatchesWindowNearButton() {
@@ -1076,59 +1100,16 @@ function saveNodeGraphSavedPatchesWindowSizeToUserSettings() {
 }
 
 function beginNodeGraphSavedPatchesWindowResize(event) {
-  if (event.button > 0) {
-    return;
-  }
   const panel = document.getElementById("nodeSavedPatchesWindow");
-  if (!panel || panel.hidden) {
-    return;
-  }
-  const rect = panel.getBoundingClientRect();
-  nodeGraphMvp.savedPatchesWindowResizing = {
-    handle: event.currentTarget,
-    pointerId: event.pointerId ?? null,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
-    startWidth: rect.width,
-    startHeight: rect.height,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowResize(event, panel, "savedPatchesWindowResizing");
 }
 
 function dragNodeGraphSavedPatchesWindowResize(event) {
-  const drag = nodeGraphMvp.savedPatchesWindowResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  applyNodeGraphSavedPatchesWindowSize({
-    width: drag.startWidth + event.clientX - drag.startClientX,
-    height: drag.startHeight + event.clientY - drag.startClientY,
-  });
-  event.preventDefault();
+  dragNodeGraphFloatingWindowResize(event, "savedPatchesWindowResizing", applyNodeGraphSavedPatchesWindowSize);
 }
 
 function endNodeGraphSavedPatchesWindowResize(event) {
-  const drag = nodeGraphMvp.savedPatchesWindowResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.savedPatchesWindowResizing = null;
-  saveNodeGraphSavedPatchesWindowSizeToUserSettings();
+  endNodeGraphFloatingWindowResize(event, "savedPatchesWindowResizing", saveNodeGraphSavedPatchesWindowSizeToUserSettings);
 }
 
 function beginNodeGraphSavedPatchesWindowDrag(event) {

@@ -985,11 +985,35 @@ function syncNodeGraphModuleShopGridColumns() {
   panel?.style.setProperty("--node-module-shop-label-size", `${labelSizeRem.toFixed(3)}rem`);
 }
 
+const nodeGraphModuleShopWindowDefaultSize = Object.freeze({
+  width: 520,
+  height: 620,
+  minWidth: 96,
+  maxWidth: 980,
+  minHeight: 120,
+  maxHeight: 760,
+});
+
 function normalizeNodeGraphModuleShopWindowSize(size = {}) {
+  if (typeof normalizeNodeGraphFloatingWindowSize === "function") {
+    return normalizeNodeGraphFloatingWindowSize(size, nodeGraphModuleShopWindowDefaultSize);
+  }
   const source = size && typeof size === "object" ? size : {};
   return {
-    width: Math.max(260, Math.min(980, Math.round(Number(source.width) || 520))),
-    height: Math.max(260, Math.round(Number(source.height) || 620)),
+    width: Math.max(
+      nodeGraphModuleShopWindowDefaultSize.minWidth,
+      Math.min(
+        nodeGraphModuleShopWindowDefaultSize.maxWidth,
+        Math.round(Number(source.width) || nodeGraphModuleShopWindowDefaultSize.width),
+      ),
+    ),
+    height: Math.max(
+      nodeGraphModuleShopWindowDefaultSize.minHeight,
+      Math.min(
+        nodeGraphModuleShopWindowDefaultSize.maxHeight,
+        Math.round(Number(source.height) || nodeGraphModuleShopWindowDefaultSize.height),
+      ),
+    ),
   };
 }
 
@@ -997,8 +1021,12 @@ function applyNodeGraphModuleShopWindowSize(size = {}) {
   const panel = document.getElementById("nodeModuleShopView");
   const normalized = normalizeNodeGraphModuleShopWindowSize(size);
   if (panel) {
-    panel.style.setProperty("--node-module-shop-width", `${normalized.width}px`);
-    panel.style.setProperty("--node-module-shop-height", `${normalized.height}px`);
+    if (typeof applyNodeGraphFloatingWindowSizeVars === "function") {
+      applyNodeGraphFloatingWindowSizeVars(panel, "node-module-shop", nodeGraphModuleShopWindowDefaultSize, normalized);
+    } else {
+      panel.style.setProperty("--node-module-shop-width", `${normalized.width}px`);
+      panel.style.setProperty("--node-module-shop-height", `${normalized.height}px`);
+    }
   }
   return normalized;
 }
@@ -1446,59 +1474,16 @@ function endNodeGraphModuleShopViewDrag(event) {
 }
 
 function beginNodeGraphModuleShopViewResize(event) {
-  if (event.button > 0) {
-    return;
-  }
   const panel = document.getElementById("nodeModuleShopView");
-  if (!panel || panel.hidden) {
-    return;
-  }
-  const rect = panel.getBoundingClientRect();
-  nodeGraphMvp.moduleShopResizing = {
-    handle: event.currentTarget,
-    pointerId: event.pointerId ?? null,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
-    startWidth: rect.width,
-    startHeight: rect.height,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowResize(event, panel, "moduleShopResizing");
 }
 
 function dragNodeGraphModuleShopViewResize(event) {
-  const drag = nodeGraphMvp.moduleShopResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  applyNodeGraphModuleShopWindowSize({
-    width: drag.startWidth + event.clientX - drag.startClientX,
-    height: drag.startHeight + event.clientY - drag.startClientY,
-  });
-  event.preventDefault();
+  dragNodeGraphFloatingWindowResize(event, "moduleShopResizing", applyNodeGraphModuleShopWindowSize);
 }
 
 function endNodeGraphModuleShopViewResize(event) {
-  const drag = nodeGraphMvp.moduleShopResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.moduleShopResizing = null;
-  saveNodeGraphModuleShopWindowSizeToUserSettings();
+  endNodeGraphFloatingWindowResize(event, "moduleShopResizing", saveNodeGraphModuleShopWindowSizeToUserSettings);
 }
 
 function openNodeGraphModuleShop(point = null) {

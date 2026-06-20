@@ -62,19 +62,25 @@ function nodeGraphWorkspaceViewportInsetPx(workspace = document.getElementById("
 
 function nodeGraphWorkspaceMaxViewportGridSize(workspace = document.getElementById("nodeGraphWorkspace")) {
   const inset = nodeGraphWorkspaceViewportInsetPx(workspace);
+  const limits = typeof nodeGraphWorkspaceViewLimits === "object"
+    ? nodeGraphWorkspaceViewLimits
+    : { minWidthGu: 1, minHeightGu: 1 };
   const maxWidthPx = Math.max(0, window.innerWidth - inset * 2 - nodeGraphWorkspaceChromeSize("x"));
   const maxHeightPx = Math.max(0, window.innerHeight - inset * 2 - nodeGraphWorkspaceChromeSize("y"));
   return {
-    heightGu: Math.max(1, Math.floor(maxHeightPx / Math.max(1, nodeGraphGridHeight()))),
-    widthGu: Math.max(1, Math.floor(maxWidthPx / Math.max(1, nodeGraphGridWidth()))),
+    heightGu: Math.max(limits.minHeightGu, Math.floor(maxHeightPx / Math.max(1, nodeGraphGridHeight()))),
+    widthGu: Math.max(limits.minWidthGu, Math.floor(maxWidthPx / Math.max(1, nodeGraphGridWidth()))),
   };
 }
 
 function clampNodeGraphWorkspaceGridSizeToViewport(size = {}, workspace = document.getElementById("nodeGraphWorkspace")) {
   const maxSize = nodeGraphWorkspaceMaxViewportGridSize(workspace);
+  const limits = typeof nodeGraphWorkspaceViewLimits === "object"
+    ? nodeGraphWorkspaceViewLimits
+    : { minWidthGu: 1, minHeightGu: 1 };
   return {
-    heightGu: Math.max(1, Math.min(maxSize.heightGu, Math.round(Number(size.heightGu) || 0))),
-    widthGu: Math.max(1, Math.min(maxSize.widthGu, Math.round(Number(size.widthGu) || 0))),
+    heightGu: Math.max(limits.minHeightGu, Math.min(maxSize.heightGu, Math.round(Number(size.heightGu) || 0))),
+    widthGu: Math.max(limits.minWidthGu, Math.min(maxSize.widthGu, Math.round(Number(size.widthGu) || 0))),
   };
 }
 

@@ -705,7 +705,7 @@ audio {
 
 .node-sample-identity {
   display: grid;
-  grid-template-columns: auto minmax(74px, 112px) minmax(0, 1fr);
+  grid-template-columns: auto minmax(74px, 112px) minmax(88px, 116px) minmax(0, 1fr);
   grid-template-rows: minmax(42px, auto);
   min-width: 0;
   align-items: stretch;
@@ -1844,10 +1844,10 @@ audio {
 
 .node-patch-header-fields {
   display: grid;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   align-self: stretch;
   min-width: 0;
-  gap: 2px;
+  gap: 1px;
 }
 
 .node-patch-community-control {
@@ -1930,13 +1930,19 @@ audio {
 
 .node-patch-header-field.name {
   color: var(--text);
-  font-size: clamp(0.92rem, 1.5vw, 1.16rem);
+  font-size: clamp(0.82rem, 1.25vw, 1.02rem);
   font-weight: 650;
+}
+
+.node-patch-header-field.bank {
+  color: rgba(127, 199, 217, 0.92);
+  font-size: 0.76rem;
+  font-weight: 600;
 }
 
 .node-patch-header-field.tags {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 400;
 }
 
@@ -1973,6 +1979,84 @@ audio {
 
 .node-patch-step-controls button:hover,
 .node-patch-step-controls button:focus-visible {
+  background: rgba(127, 199, 217, 0.16);
+  color: var(--text);
+}
+
+.node-patch-clipboard-controls {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(32px, 1fr));
+  align-self: stretch;
+  min-width: 68px;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(127, 199, 217, 0.16);
+  border-radius: 4px;
+}
+
+.node-saved-patches-title-actions {
+  align-self: stretch;
+  justify-self: stretch;
+  min-width: 68px;
+  border-block: 0;
+  border-radius: 0;
+}
+
+.node-patch-clipboard-controls button {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(9, 13, 16, 0.78);
+  color: rgba(243, 241, 236, 0.88);
+  font: 750 0.58rem/1 var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-patch-clipboard-controls button + button {
+  border-left: 1px solid rgba(127, 199, 217, 0.16);
+}
+
+.node-patch-clipboard-controls button:hover,
+.node-patch-clipboard-controls button:focus-visible {
+  background: rgba(127, 199, 217, 0.16);
+  color: var(--text);
+}
+
+.node-patch-save-controls {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(42px, 1fr));
+  align-self: stretch;
+  min-width: 88px;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(127, 199, 217, 0.16);
+  border-radius: 4px;
+}
+
+.node-patch-save-controls button {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: rgba(9, 13, 16, 0.78);
+  color: rgba(243, 241, 236, 0.9);
+  font: 750 0.72rem/1 var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-patch-save-controls button + button {
+  border-left: 1px solid rgba(127, 199, 217, 0.16);
+}
+
+.node-patch-save-controls button:hover,
+.node-patch-save-controls button:focus-visible {
   background: rgba(127, 199, 217, 0.16);
   color: var(--text);
 }
@@ -5875,13 +5959,22 @@ audio {
   position: fixed;
   z-index: 78;
   display: grid;
-  grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 0;
-  width: min(var(--node-saved-patches-width, 420px), calc(100vw - 20px));
-  height: min(var(--node-saved-patches-height, 620px), calc(100vh - 20px));
-  min-width: 220px;
-  min-height: 260px;
-  max-height: min(760px, calc(100vh - 20px));
+  width: clamp(
+    var(--node-saved-patches-min-width, 80px),
+    var(--node-saved-patches-width, 420px),
+    min(var(--node-saved-patches-max-width, 720px), calc(100vw - 20px))
+  );
+  height: clamp(
+    var(--node-saved-patches-min-height, 96px),
+    var(--node-saved-patches-height, 620px),
+    min(var(--node-saved-patches-max-height, 760px), calc(100vh - 20px))
+  );
+  min-width: var(--node-saved-patches-min-width, 80px);
+  min-height: var(--node-saved-patches-min-height, 96px);
+  max-width: min(var(--node-saved-patches-max-width, 720px), calc(100vw - 20px));
+  max-height: min(var(--node-saved-patches-max-height, 760px), calc(100vh - 20px));
   overflow: hidden;
   padding: 0;
   border: 1px solid rgba(127, 199, 217, 0.18);
@@ -6019,7 +6112,55 @@ audio {
 }
 
 .node-saved-patches-heading {
+  grid-template-columns: 28px minmax(0, 1fr) minmax(68px, auto) 28px;
+  min-height: 26px;
   margin: 0;
+}
+
+.node-saved-patches-heading > .panel-close-button,
+.node-saved-patches-heading > .node-saved-patches-drag-handle {
+  inline-size: 28px;
+  min-inline-size: 28px;
+  max-inline-size: 28px;
+}
+
+.node-saved-patches-row-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 18px;
+  border-bottom: 1px solid rgba(127, 199, 217, 0.12);
+  background: rgba(5, 9, 11, 0.64);
+}
+
+.node-saved-patches-row-control .node-saved-patches-fit-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4ch;
+  align-items: center;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: rgba(127, 199, 217, 0.86);
+  font: 700 0.58rem/1 var(--mono);
+  text-transform: none;
+}
+
+.node-saved-patches-row-control .node-saved-patches-fit-control span {
+  color: rgba(127, 199, 217, 0.86);
+  font-size: 0.58rem;
+}
+
+.node-saved-patches-row-control .node-saved-patches-fit-control input {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 0.82rem/1 var(--mono);
+  text-align: center;
 }
 
 .node-saved-patches-header-tools {
@@ -6347,7 +6488,7 @@ audio {
   z-index: 0;
   display: grid;
   grid-template-columns: repeat(var(--node-saved-patch-columns, 3), minmax(0, 1fr));
-  grid-auto-rows: calc(100cqw / var(--node-saved-patch-columns, 3));
+  grid-auto-rows: auto;
   align-content: start;
   gap: 0;
   min-height: 0;
@@ -6365,12 +6506,12 @@ audio {
 .node-demo-patch-row {
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: minmax(0, 0.72fr) minmax(0, 2fr) minmax(0, 0.9fr);
+  grid-template-rows: minmax(0, 0.78fr) minmax(0, 2.2fr);
   align-items: start;
   gap: 0;
   width: 100%;
-  height: 100%;
-  aspect-ratio: auto;
+  height: auto;
+  aspect-ratio: 1 / 1;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -6399,7 +6540,7 @@ audio {
 
 .node-demo-patch-row button,
 .node-demo-patch-row strong,
-.node-demo-patch-tags,
+.node-demo-patch-bank,
 .node-demo-patch-row small {
   min-width: 0;
 }
@@ -6433,10 +6574,10 @@ audio {
   background: rgba(9, 13, 15, 0.54);
 }
 
-.node-demo-patch-slot {
+.node-demo-patch-bank {
   align-self: start;
   min-height: 0;
-  padding: 1px 2px 0;
+  padding: 2px 3px 0;
   color: rgba(127, 199, 217, 0.9);
   font-size: clamp(
     0.5rem,
@@ -6446,10 +6587,11 @@ audio {
   font-weight: 900;
   line-height: 1;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .node-demo-patch-row strong,
-.node-demo-patch-tags,
 .node-demo-patch-row small {
   min-width: 0;
   overflow: hidden;
@@ -6469,21 +6611,6 @@ audio {
   );
   line-height: 1.04;
   overflow-wrap: anywhere;
-}
-
-.node-demo-patch-tags {
-  align-self: end;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  color: rgba(127, 199, 217, 0.72);
-  font: clamp(
-    0.42rem,
-    calc(0.62rem - (var(--node-saved-patch-columns, 3) - 3) * 0.02rem),
-    0.62rem
-  )/1 var(--mono);
-  overflow-wrap: anywhere;
-  white-space: normal;
 }
 
 .node-demo-patch-row small {
@@ -6523,10 +6650,20 @@ audio {
   display: grid;
   gap: 12px;
   box-sizing: border-box;
-  width: min(var(--node-module-shop-width, 520px), calc(100vw - 28px));
-  height: min(var(--node-module-shop-height, 620px), calc(100vh - 24px));
-  max-width: 980px;
-  max-height: calc(100vh - 24px);
+  width: clamp(
+    var(--node-module-shop-min-width, 96px),
+    var(--node-module-shop-width, 520px),
+    min(var(--node-module-shop-max-width, 980px), calc(100vw - 28px))
+  );
+  height: clamp(
+    var(--node-module-shop-min-height, 120px),
+    var(--node-module-shop-height, 620px),
+    min(var(--node-module-shop-max-height, 760px), calc(100vh - 24px))
+  );
+  min-width: var(--node-module-shop-min-width, 96px);
+  min-height: var(--node-module-shop-min-height, 120px);
+  max-width: min(var(--node-module-shop-max-width, 980px), calc(100vw - 28px));
+  max-height: min(var(--node-module-shop-max-height, 760px), calc(100vh - 24px));
   margin: 16px auto 0;
   overflow: auto;
   padding: 14px;
@@ -6534,6 +6671,12 @@ audio {
   border-radius: 8px;
   background: #111418;
   z-index: 82;
+}
+
+.node-module-shop-view *,
+.node-module-shop-view *::before,
+.node-module-shop-view *::after {
+  min-width: 0;
 }
 
 .node-module-shop-view[hidden] {
@@ -10592,10 +10735,20 @@ audio {
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
-  width: min(var(--metadata-popover-width, 680px), calc(100vw - 12px));
-  height: min(var(--metadata-popover-height, 620px), calc(100vh - 12px));
-  max-width: calc(100vw - 12px);
-  max-height: calc(100vh - 12px);
+  width: clamp(
+    var(--metadata-popover-min-width, 140px),
+    var(--metadata-popover-width, 680px),
+    min(var(--metadata-popover-max-width, 900px), calc(100vw - 12px))
+  );
+  height: clamp(
+    var(--metadata-popover-min-height, 120px),
+    var(--metadata-popover-height, 620px),
+    min(var(--metadata-popover-max-height, 820px), calc(100vh - 12px))
+  );
+  min-width: var(--metadata-popover-min-width, 140px);
+  min-height: var(--metadata-popover-min-height, 120px);
+  max-width: min(var(--metadata-popover-max-width, 900px), calc(100vw - 12px));
+  max-height: min(var(--metadata-popover-max-height, 820px), calc(100vh - 12px));
   overflow: auto;
   padding: 12px;
   border: 1px solid rgba(127, 199, 217, 0.42);
@@ -11183,16 +11336,142 @@ button.saved-default,
 }
 
 .node-module-actions-window {
-  width: min(var(--node-module-actions-width, 180px), calc(100vw - 28px));
+  width: clamp(
+    var(--node-module-actions-min-width, 24px),
+    var(--node-module-actions-width, 140px),
+    min(var(--node-module-actions-max-width, 360px), calc(100vw - 28px))
+  );
   height: var(--node-module-actions-height, auto);
-  min-width: 160px;
-  min-height: 0;
+  min-width: var(--node-module-actions-min-width, 24px);
+  max-width: min(var(--node-module-actions-max-width, 360px), calc(100vw - 28px));
+  min-height: var(--node-module-actions-min-height, 40px);
+  max-height: min(var(--node-module-actions-max-height, 520px), calc(100vh - 28px));
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  box-sizing: border-box;
+  contain: layout paint;
+}
+
+.node-module-actions-window *,
+.node-module-actions-window *::before,
+.node-module-actions-window *::after {
+  min-width: 0;
 }
 
 .node-module-actions-window-body {
   display: grid;
-  gap: 8px;
+  gap: 0;
   min-width: 0;
+  min-inline-size: 0;
+  max-width: 100%;
+  overflow: hidden auto;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.node-module-actions-window .scene-context-heading {
+  grid-template-columns: minmax(0, 18px) minmax(0, 1fr) minmax(0, 18px);
+  min-height: 24px;
+  max-height: 24px;
+  margin: 0;
+  overflow: hidden;
+  background: rgb(3, 5, 7);
+}
+
+.node-module-actions-window .scene-context-title {
+  justify-items: center;
+  padding-inline: 2px;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.node-module-actions-window .scene-context-title > span {
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.node-module-actions-window .scene-context-title > small {
+  font-size: 0.52rem;
+  line-height: 1;
+}
+
+.node-module-actions-window .scene-context-drag-handle,
+.node-module-actions-window .panel-close-button {
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 18px;
+  block-size: 24px;
+  min-height: 0;
+  overflow: hidden;
+  font-size: clamp(0.45rem, 8vw, 0.8rem);
+}
+
+.node-module-actions-window .panel-close-button span {
+  font-size: clamp(0.5rem, 9vw, 1rem);
+}
+
+.node-module-actions-window button:not(.scene-context-drag-handle):not(.panel-close-button):not(.scene-context-resize-handle) {
+  min-width: 0;
+  min-height: 22px;
+  padding: 0;
+  overflow: hidden;
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-module-actions-window .scene-context-selected-module {
+  min-height: 28px;
+  min-width: 0;
+  padding: 2px;
+  overflow: hidden;
+}
+
+.node-module-actions-window .scene-context-selected-module span,
+.node-module-actions-window .scene-context-alias-control span,
+.node-module-actions-window .scene-context-text-box-controls > span {
+  font-size: 0.54rem;
+}
+
+.node-module-actions-window .scene-context-selected-module strong {
+  font-size: 0.68rem;
+}
+
+.node-module-actions-window .scene-context-alias-control,
+.node-module-actions-window .scene-context-text-box-controls {
+  gap: 0;
+  min-width: 0;
+  padding: 2px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.node-module-actions-window .scene-context-alias-control input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 0 2px;
+  font-size: 0.68rem;
+  box-sizing: border-box;
+}
+
+.node-module-actions-window .scene-context-width-controls {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 30px) minmax(0, 1fr);
+}
+
+.node-module-actions-window .scene-context-width-controls button {
+  padding: 0;
+}
+
+.node-module-actions-window .scene-context-width-controls output {
+  min-height: 22px;
+  min-width: 0;
+  font-size: 0.62rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .scene-context-heading {

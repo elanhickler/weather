@@ -780,6 +780,13 @@ function normalizeNodeGraphPatchView(view = {}) {
   };
 }
 
+const nodeGraphPatchUiItemSizeLimits = Object.freeze({
+  minWidth: 64,
+  maxWidth: 720,
+  minHeight: 28,
+  maxHeight: 420,
+});
+
 function normalizeNodeGraphPatchUiItems(uiItems = [], options = {}) {
   if (!Array.isArray(uiItems)) {
     return [];
@@ -807,12 +814,16 @@ function normalizeNodeGraphPatchUiItems(uiItems = [], options = {}) {
       const label = nodeGraphOneLineText(source.label).slice(0, 64) || sourceNodeId || id;
       const type = ["graphEditor", "moduleControl"].includes(source.type) ? source.type : "moduleControl";
       return {
-        h: Number.isFinite(h) ? Math.max(28, Math.min(420, h)) : type === "graphEditor" ? 260 : 44,
+        h: Number.isFinite(h)
+          ? Math.max(nodeGraphPatchUiItemSizeLimits.minHeight, Math.min(nodeGraphPatchUiItemSizeLimits.maxHeight, h))
+          : type === "graphEditor" ? 260 : 44,
         id,
         label,
         sourceNodeId,
         type,
-        w: Number.isFinite(w) ? Math.max(64, Math.min(720, w)) : type === "graphEditor" ? 460 : 132,
+        w: Number.isFinite(w)
+          ? Math.max(nodeGraphPatchUiItemSizeLimits.minWidth, Math.min(nodeGraphPatchUiItemSizeLimits.maxWidth, w))
+          : type === "graphEditor" ? 460 : 132,
         x: Number.isFinite(x) ? Math.max(0, Math.min(2000, x)) : 24,
         y: Number.isFinite(y) ? Math.max(0, Math.min(2000, y)) : 24,
       };

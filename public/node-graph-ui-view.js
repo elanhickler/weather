@@ -2,6 +2,22 @@ function nodeGraphUiItemTypeForNode(node) {
   return nodeGraphModuleIsGraphType(node?.type) ? "graphEditor" : "moduleControl";
 }
 
+function clampNodeGraphUiItemSize(size = {}) {
+  const width = Math.round(Number(size.w ?? size.width));
+  const height = Math.round(Number(size.h ?? size.height));
+  const limits = typeof nodeGraphPatchUiItemSizeLimits === "object"
+    ? nodeGraphPatchUiItemSizeLimits
+    : { minWidth: 64, maxWidth: 720, minHeight: 28, maxHeight: 420 };
+  return {
+    h: Number.isFinite(height)
+      ? Math.max(limits.minHeight, Math.min(limits.maxHeight, height))
+      : limits.minHeight,
+    w: Number.isFinite(width)
+      ? Math.max(limits.minWidth, Math.min(limits.maxWidth, width))
+      : limits.minWidth,
+  };
+}
+
 function nodeGraphUiItemsPatchClone() {
   const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
   patch.uiItems = normalizeNodeGraphPatchUiItems(patch.uiItems, {
@@ -96,8 +112,10 @@ function dragNodeGraphUiItem(event) {
   const dx = Math.round(event.clientX - drag.startX);
   const dy = Math.round(event.clientY - drag.startY);
   if (drag.mode === "resize") {
-    const w = Math.max(180, Math.min(720, drag.w + dx));
-    const h = Math.max(120, Math.min(420, drag.h + dy));
+    const { w, h } = clampNodeGraphUiItemSize({
+      h: drag.h + dy,
+      w: drag.w + dx,
+    });
     itemElement.style.width = `${w}px`;
     itemElement.style.height = `${h}px`;
   } else {
@@ -120,10 +138,10 @@ function endNodeGraphUiItemDrag(event) {
   const dx = Math.round(event.clientX - drag.startX);
   const dy = Math.round(event.clientY - drag.startY);
   const updates = drag.mode === "resize"
-    ? {
-        h: Math.max(120, Math.min(420, drag.h + dy)),
-        w: Math.max(180, Math.min(720, drag.w + dx)),
-      }
+    ? clampNodeGraphUiItemSize({
+        h: drag.h + dy,
+        w: drag.w + dx,
+      })
     : {
         x: Math.max(0, Math.min(2000, drag.x + dx)),
         y: Math.max(0, Math.min(2000, drag.y + dy)),

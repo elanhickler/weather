@@ -453,6 +453,7 @@ class SandboxServer(BaseHTTPRequestHandler):
     def serve_demo_patches(self) -> None:
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
+        bank_filter_enabled = "bank" in params
         requested_bank = self.normalized_patch_bank(params.get("bank", ["0"])[0])
         patches = []
         legacy_program = 0
@@ -469,7 +470,7 @@ class SandboxServer(BaseHTTPRequestHandler):
                 except (OSError, json.JSONDecodeError):
                     continue
                 bank = self.patch_bank_for_file(path, info)
-                if bank != requested_bank:
+                if bank_filter_enabled and bank != requested_bank:
                     continue
                 program = self.patch_program_for_file(path, info, legacy_program)
                 legacy_program += 1
@@ -493,8 +494,8 @@ class SandboxServer(BaseHTTPRequestHandler):
                         .replace("+00:00", "Z"),
                     }
                 )
-        patches.sort(key=lambda patch: int(patch["program"]))
-        self.send_json({"ok": True, "bank": requested_bank, "patches": patches[:128], "path": str(SAVED_PATCHES)})
+        patches.sort(key=lambda patch: (int(patch["bank"]), int(patch["program"]), str(patch["name"]).lower()))
+        self.send_json({"ok": True, "bank": requested_bank, "patches": patches, "path": str(SAVED_PATCHES)})
 
     def serve_demo_patch_file(self, query: str) -> None:
         params = parse_qs(query)

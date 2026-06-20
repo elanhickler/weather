@@ -25,32 +25,16 @@ function closeNodeSceneContextMenu(options = {}) {
 
 const nodeSceneContextWindowDefaultSize = Object.freeze({
   width: 215,
+  minWidth: 160,
 });
 
 const nodeModuleActionsWindowDefaultSize = Object.freeze({
-  width: 180,
+  width: 140,
+  minWidth: 24,
+  maxWidth: 360,
+  minHeight: 40,
+  maxHeight: 520,
 });
-
-function normalizeNodeGraphFloatingWindowSize(size = {}, defaults = {}) {
-  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 720;
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 760;
-  const minWidth = 160;
-  const maxWidth = Math.max(minWidth, Math.min(720, viewportWidth - 28));
-  const minHeight = 120;
-  const maxHeight = Math.max(minHeight, Math.min(760, viewportHeight - 28));
-  const source = size && typeof size === "object" ? size : {};
-  const width = Math.max(
-    minWidth,
-    Math.min(maxWidth, Number(source.width) || Number(defaults.width) || minWidth),
-  );
-  const height = Number.isFinite(Number(source.height))
-    ? Math.max(minHeight, Math.min(maxHeight, Number(source.height)))
-    : null;
-  return {
-    width: Math.round(width),
-    ...(height ? { height: Math.round(height) } : {}),
-  };
-}
 
 function normalizeNodeSceneContextWindowSize(size = {}) {
   const normalized = normalizeNodeGraphFloatingWindowSize(size, nodeSceneContextWindowDefaultSize);
@@ -68,8 +52,7 @@ function applyNodeSceneContextWindowSize(size = nodeGraphMvp.sceneContextWindowS
   if (!menu) {
     return normalized;
   }
-  menu.style.setProperty("--node-scene-context-width", `${normalized.width}px`);
-  menu.style.removeProperty("--node-scene-context-height");
+  applyNodeGraphFloatingWindowSizeVars(menu, "node-scene-context", nodeSceneContextWindowDefaultSize, normalized);
   return normalized;
 }
 
@@ -80,12 +63,7 @@ function applyNodeModuleActionsWindowSize(size = nodeGraphMvp.moduleActionWindow
   if (!menu) {
     return normalized;
   }
-  menu.style.setProperty("--node-module-actions-width", `${normalized.width}px`);
-  if (Number.isFinite(Number(normalized.height))) {
-    menu.style.setProperty("--node-module-actions-height", `${normalized.height}px`);
-  } else {
-    menu.style.removeProperty("--node-module-actions-height");
-  }
+  applyNodeGraphFloatingWindowSizeVars(menu, "node-module-actions", nodeModuleActionsWindowDefaultSize, normalized);
   return normalized;
 }
 
@@ -367,56 +345,16 @@ function endNodeSceneContextMenuDrag(event) {
 }
 
 function beginNodeSceneContextMenuResize(event) {
-  if (event.button > 0) {
-    return;
-  }
   const menu = document.getElementById("nodeSceneContextMenu");
-  if (!menu || menu.hidden) {
-    return;
-  }
-  const rect = menu.getBoundingClientRect();
-  nodeGraphMvp.sceneContextResizing = {
-    handle: event.currentTarget,
-    pointerId: event.pointerId ?? null,
-    startClientX: event.clientX,
-    startWidth: rect.width,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowResize(event, menu, "sceneContextResizing");
 }
 
 function dragNodeSceneContextMenuResize(event) {
-  const drag = nodeGraphMvp.sceneContextResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  applyNodeSceneContextWindowSize({
-    width: drag.startWidth + event.clientX - drag.startClientX,
-  });
-  event.preventDefault();
+  dragNodeGraphFloatingWindowResize(event, "sceneContextResizing", applyNodeSceneContextWindowSize, { height: false });
 }
 
 function endNodeSceneContextMenuResize(event) {
-  const drag = nodeGraphMvp.sceneContextResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.sceneContextResizing = null;
-  saveNodeSceneContextWindowSizeToUserSettings();
+  endNodeGraphFloatingWindowResize(event, "sceneContextResizing", saveNodeSceneContextWindowSizeToUserSettings);
 }
 
 function beginNodeModuleActionsWindowDrag(event) {
@@ -481,59 +419,16 @@ function endNodeModuleActionsWindowDrag(event) {
 }
 
 function beginNodeModuleActionsWindowResize(event) {
-  if (event.button > 0) {
-    return;
-  }
   const menu = document.getElementById("nodeModuleActionsWindow");
-  if (!menu || menu.hidden) {
-    return;
-  }
-  const rect = menu.getBoundingClientRect();
-  nodeGraphMvp.moduleActionResizing = {
-    handle: event.currentTarget,
-    pointerId: event.pointerId ?? null,
-    startClientX: event.clientX,
-    startClientY: event.clientY,
-    startWidth: rect.width,
-    startHeight: rect.height,
-  };
-  event.currentTarget.classList.add("dragging");
-  if (event.pointerId !== undefined) {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  event.preventDefault();
-  event.stopPropagation();
+  beginNodeGraphFloatingWindowResize(event, menu, "moduleActionResizing");
 }
 
 function dragNodeModuleActionsWindowResize(event) {
-  const drag = nodeGraphMvp.moduleActionResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  applyNodeModuleActionsWindowSize({
-    width: drag.startWidth + event.clientX - drag.startClientX,
-    height: drag.startHeight + event.clientY - drag.startClientY,
-  });
-  event.preventDefault();
+  dragNodeGraphFloatingWindowResize(event, "moduleActionResizing", applyNodeModuleActionsWindowSize);
 }
 
 function endNodeModuleActionsWindowResize(event) {
-  const drag = nodeGraphMvp.moduleActionResizing;
-  if (
-    !drag ||
-    (drag.pointerId !== null && event.pointerId !== undefined && drag.pointerId !== event.pointerId)
-  ) {
-    return;
-  }
-  drag.handle.classList.remove("dragging");
-  if (event.pointerId !== undefined && drag.handle.hasPointerCapture?.(event.pointerId)) {
-    drag.handle.releasePointerCapture(event.pointerId);
-  }
-  nodeGraphMvp.moduleActionResizing = null;
-  saveNodeSceneContextWindowSizeToUserSettings();
+  endNodeGraphFloatingWindowResize(event, "moduleActionResizing", saveNodeSceneContextWindowSizeToUserSettings);
 }
 
 function beginNodeScopeContextMenuDrag(event) {

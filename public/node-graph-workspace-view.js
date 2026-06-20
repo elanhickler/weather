@@ -450,6 +450,16 @@ function nodeGraphWorkspaceCurrentGridSize() {
   };
 }
 
+const nodeGraphWorkspaceResizeSteps = Object.freeze({
+  widthGu: 2,
+  heightGu: 1,
+});
+
+function nodeGraphWorkspaceResizeDeltaGu(pixelDelta, gridSize, stepGu = 1) {
+  const safeStep = Math.max(1, Math.round(Number(stepGu) || 1));
+  return Math.round((Number(pixelDelta) || 0) / Math.max(1, gridSize)) * safeStep;
+}
+
 function setNodeGraphWorkspacePreviewSize(widthGu, heightGu) {
   const workspace = document.getElementById("nodeGraphWorkspace");
   const visibleSize = clampNodeGraphWorkspaceGridSizeToViewport({ widthGu, heightGu }, workspace);
@@ -500,11 +510,19 @@ function dragNodeGraphWorkspaceResize(event) {
   const resizeGridHeight = nodeGraphGridHeight();
   const requestedWidthGu = Math.max(
     nodeGraphWorkspaceViewLimits.minWidthGu,
-    drag.startWidthGu + Math.round((event.clientX - drag.startClientX) / resizeGridWidth) * 2,
+    drag.startWidthGu + nodeGraphWorkspaceResizeDeltaGu(
+      event.clientX - drag.startClientX,
+      resizeGridWidth,
+      nodeGraphWorkspaceResizeSteps.widthGu,
+    ),
   );
   const requestedHeightGu = Math.max(
     nodeGraphWorkspaceViewLimits.minHeightGu,
-    drag.startHeightGu + Math.round((event.clientY - drag.startClientY) / resizeGridHeight),
+    drag.startHeightGu + nodeGraphWorkspaceResizeDeltaGu(
+      event.clientY - drag.startClientY,
+      resizeGridHeight,
+      nodeGraphWorkspaceResizeSteps.heightGu,
+    ),
   );
   const { widthGu, heightGu } = clampNodeGraphWorkspaceGridSizeToViewport({
     heightGu: requestedHeightGu,

@@ -23,7 +23,7 @@ function beginNodeGraphNodeDrag(event) {
     return;
   }
   const handle = event.currentTarget.closest(
-    ".node-drag-handle, .node-header-title-row, .node-led-face, .node-knob-widget-body, .dsp-node-io-section",
+    ".node-drag-handle, .node-header-title-row, .node-led-face, .node-knob-widget-body, .dsp-node-io-section, .node-parameter-row",
   );
   if (!handle) {
     return;

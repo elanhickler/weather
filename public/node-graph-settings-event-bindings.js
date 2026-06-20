@@ -13,6 +13,10 @@ function bindNodeGraphSettingsFormEvents() {
     field.addEventListener("input", handleNodeGraphHeaderInfoInput);
     field.addEventListener("change", commitNodeGraphSettingsHistory);
   }
+  for (const field of document.querySelectorAll("[data-patch-bank-name-field]")) {
+    field.addEventListener("input", handleNodeGraphSavedPatchBankNameInput);
+    field.addEventListener("change", commitNodeGraphSettingsHistory);
+  }
   for (const field of document.querySelectorAll("[data-patch-visual-field]")) {
     field.addEventListener("input", handleNodeGraphSettingsInput);
     field.addEventListener("change", commitNodeGraphSettingsHistory);
