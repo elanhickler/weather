@@ -4070,7 +4070,7 @@ def require_node_graph_mvp_contract() -> None:
             "\n".join([graph_contract_sources["index"], graph_contract_sources["state"], graph_contract_sources["runtime"]]),
             [
                 "ellipsoid-xy-1",
-                "beta-clean-start-2",
+                "typed-display-settings-1",
                 "node-graph-graph-utils.js",
                 "graphNodeDragging: null",
                 "graphClipboard: null",
@@ -6199,17 +6199,17 @@ def require_node_graph_mvp_contract() -> None:
         "Show Displays",
         "nodeSceneOpenModuleActions",
         "nodeSceneOpenMetaparameters",
-        "nodeSceneOpenOscilloscopeSettings",
+        "nodeSceneOpenTraceSettings",
         "nodeSceneOpenUiSettings",
         "nodeSceneOpenPostProcessing",
         "scene-context-window-button",
-        "beta-clean-start-2",
+        "typed-display-settings-1",
         "share-link-1",
         "hidden-io-proxy-1",
         "control-surface-visibility-1",
         "Module Actions",
         "Metaparameters",
-        "Display Settings",
+        "Trace Settings",
         "control-surface-visibility-1",
         "nodeMasterScopeLineThickness",
         "nodeMasterScopeDotCore1Enabled",
@@ -6245,7 +6245,7 @@ def require_node_graph_mvp_contract() -> None:
         "display background",
         "nodeGlobalScopeMenu",
         "node-scope-global-settings",
-        "Global Settings",
+        "Internal Controls",
         "node-scope-local-settings",
         "Local Settings",
         "nodeGlobalScopeDragHandle",
@@ -6613,7 +6613,7 @@ def require_node_graph_mvp_contract() -> None:
     command_center_button_order = [
         "nodeSceneOpenSavedPatches",
         "nodeSceneOpenModuleBrowser",
-        "nodeSceneOpenOscilloscopeSettings",
+        "nodeSceneOpenTraceSettings",
         "nodeSceneOpenModuleActions",
         "nodeSceneOpenMetaparameters",
         "nodeSceneOpenUiSettings",
@@ -6630,11 +6630,13 @@ def require_node_graph_mvp_contract() -> None:
         "command center buttons should use the requested order and singular Metaparameter label",
     )
     require(
-        'id="nodeSceneOpenOscilloscopeSettings" class="scene-context-window-button" type="button" hidden disabled aria-hidden="true"' in scene_context_source
-        and 'bindNodeGraphSceneElementEvent("nodeSceneOpenOscilloscopeSettings", "click", () => {\n    closeNodeGlobalScopeMenu();' in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        'id="nodeSceneOpenTraceSettings" class="scene-context-window-button" type="button"' in scene_context_source
+        and '<span class="scene-context-window-button-label">Trace Settings</span>' in scene_context_source
+        and 'bindNodeGraphSceneElementEvent("nodeSceneOpenTraceSettings", "click", (event) => {' in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
+        and "openNodeGraphGlobalTraceSettings(event);" in script_sources["./public/node-graph-scene-menu-event-bindings.js"]
         and "function openNodeGlobalScopeMenu()" in script_sources["./public/node-graph-context-menu.js"]
         and 'rememberNodeGraphWorkspaceWindowState("oscilloscopeSettings", menu, { open: false }' in script_sources["./public/node-graph-context-menu.js"],
-        "old code-based display settings should stay parked and inaccessible",
+        "trace settings should replace the old code-based display settings entry",
     )
     scope_shader_open_source = script_sources["./public/node-graph-shader-script.js"][
         script_sources["./public/node-graph-shader-script.js"].index("function openNodeGraphScopeShaderScript(nodeId)"):
@@ -7146,15 +7148,18 @@ def require_node_graph_mvp_contract() -> None:
             ],
         ),
         (
-            "scope x/y",
+            "trace display",
             "\n".join([
                 audio_player_contract_sources["patch normalizers"],
+                audio_player_contract_sources["definitions"],
                 audio_player_contract_sources["scopes"],
             ]),
             [
                 "const nodeGraphScopeShaderAudioPlayerDefaultSource",
                 'moduleType === "audioPlayer"',
-                'nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, "Left", "Right")',
+                'audioPlayer: {\n    displayType: "trace"',
+                'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"',
+                "nodeGraphGlobalTraceSettings()",
             ],
         ),
         (
@@ -7655,7 +7660,9 @@ def require_node_graph_mvp_contract() -> None:
         'layout: "traceDisplay"',
         'key: "traceDisplay"',
         "drawNodeGraphTraceDisplayItem",
-        'slot?.type === "traceDisplay"',
+        'displayType: "trace"',
+        "function nodeGraphModuleDisplayTypeForSlot(slot)",
+        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace"',
         "nodeGraphTraceDisplaySettingsDefaults",
         "normalizeNodeGraphTraceDisplaySettings",
         "nodeGraphTraceDisplaySettingsForSlot",
@@ -7668,7 +7675,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeTraceDisplayColor",
         "openNodeGraphTraceDisplaySettings",
         "traceDisplaySettings: normalizeNodeGraphTraceDisplaySettings(node.traceDisplaySettings)",
-        '"traceDisplay") {\n    buffer = prepareNodeGraphTraceDisplayBuffer(capturedBuffer, nodeGraphTraceDisplaySettingsForSlot(slot));',
+        'nodeGraphModuleDisplayTypeForSlot(slot) === "trace") {\n    buffer = prepareNodeGraphTraceDisplayBuffer(capturedBuffer, nodeGraphTraceDisplaySettingsForSlot(slot));',
         '"traceDisplaySettings"',
         'traceDisplaySettings: "nodeTraceDisplaySettingsPopover"',
         "const nodeGraphSharedInspectorWindowKeys = Object.freeze([",
@@ -8418,7 +8425,7 @@ def require_node_graph_mvp_contract() -> None:
         'bindNodeGraphSceneElementEvent("nodeSceneOpenModuleActions", "click", openNodeGraphModuleActionsFromContextWindow)',
         'bindNodeGraphSceneElementEvent("nodeSceneOpenMetaparameters", "click", openNodeGraphMetaparametersFromContextWindow)',
         'bindNodeGraphSceneElementEvent("nodeSceneOpenSavedPatches", "click", () => {',
-        'bindNodeGraphSceneElementEvent("nodeSceneOpenOscilloscopeSettings", "click", () => {',
+        'bindNodeGraphSceneElementEvent("nodeSceneOpenTraceSettings", "click", (event) => {',
         'bindNodeGraphSceneElementEvent("nodeSceneOpenUiSettings", "click", () => {',
         'bindNodeGraphSceneElementEvent("nodeSceneOpenPostProcessing", "click", () => {',
         "document.getElementById(\"nodeSavedPatchesWindowHeading\").addEventListener(\"pointerdown\", beginNodeGraphSavedPatchesWindowDrag)",
@@ -10800,7 +10807,7 @@ def require_node_graph_mvp_contract() -> None:
         "function dragNodeUserUiSettings(event)",
         "function endNodeUserUiSettingsDrag(event)",
         "const nodeUiDevDefaultSettingsUrl = \"./public/presets/useruisettings.json\"",
-        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v10\"",
+        "const nodeUiDevDefaultSettingsStorageKey = \"soemdsp-sandbox.userUiSettings.startup.v11\"",
         "function sanitizeNodeUiDevWorkingPatchForStartup(patch)",
         'node?.type === "moduleHome" || node?.type === "moduleShop"',
         "nodeGraphMissingSampleAssets(patch).length",
@@ -10882,7 +10889,7 @@ def require_node_graph_mvp_contract() -> None:
         "sliderAmountVisible",
         "sliderPositionVisible",
         "hideMouseWhileDragging",
-        "nodeSceneOpenOscilloscopeSettings",
+        "nodeSceneOpenTraceSettings",
         "nodeGlobalScopeMenu",
         "nodeGlobalScopeDragHandle",
         "nodeGlobalScopeCloseMenu",

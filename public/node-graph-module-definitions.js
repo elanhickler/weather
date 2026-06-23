@@ -710,6 +710,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   clock: {
+    displayType: "clock",
     displayRenderer: "pulseDot",
     inputs: ["Reset"],
     outputAliases: {
@@ -1324,6 +1325,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   audioPlayer: {
+    displayType: "trace",
     inputs: ["Reset", "Speed", "Phase"],
     outputs: ["Mono", "Left", "Right", "Phase", "Trigger"],
     parameters: [
@@ -1677,6 +1679,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   traceDisplay: {
     bufferedInputs: ["In"],
+    displayType: "trace",
     inputs: ["In"],
     layout: "traceDisplay",
     outputs: [],

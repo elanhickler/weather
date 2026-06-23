@@ -55,8 +55,11 @@ function bindNodeGraphSceneMenuEvents() {
   bindNodeGraphSceneElementEvent("nodeSceneOpenSavedPatches", "click", () => {
     setNodeGraphSavedPatchesWindowVisible(true);
   });
-  bindNodeGraphSceneElementEvent("nodeSceneOpenOscilloscopeSettings", "click", () => {
+  bindNodeGraphSceneElementEvent("nodeSceneOpenTraceSettings", "click", (event) => {
     closeNodeGlobalScopeMenu();
+    if (typeof openNodeGraphGlobalTraceSettings === "function") {
+      openNodeGraphGlobalTraceSettings(event);
+    }
   });
   bindNodeGraphSceneElementEvent("nodeSceneOpenUiSettings", "click", () => {
     setNodeUserUiSettingsVisible(true);

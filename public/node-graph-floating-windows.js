@@ -414,14 +414,6 @@ function nodeGraphFloatingWindowKeyboardTargets() {
       sizeAxes: { width: true, height: false },
     },
     {
-      draggingKey: "globalScopeDragging",
-      resizingKey: "",
-      elementId: "nodeGlobalScopeMenu",
-      workspaceKey: "oscilloscopeSettings",
-      applySize: null,
-      sizeAxes: { width: false, height: false },
-    },
-    {
       draggingKey: "metadataDragging",
       resizingKey: "metadataResizing",
       elementId: "nodeParameterMetadataPopover",

@@ -145,6 +145,7 @@ var nodeGraphMvp = {
   moduleScopeLineThickness: 1,
   moduleScopeDiscontinuitySkipSamples: 1,
   moduleScopeSettings: {},
+  traceSettings: normalizeNodeGraphTraceDisplaySettings(),
   scopeBloomEnabled: false,
   moduleStoreDepartment: "",
   moduleStoreDepartmentSearch: "",

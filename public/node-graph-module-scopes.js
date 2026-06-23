@@ -2484,7 +2484,45 @@ function nodeGraphTraceDisplaySettingsForNode(node) {
   return normalizeNodeGraphTraceDisplaySettings(node.traceDisplaySettings);
 }
 
+function nodeGraphGlobalTraceSettings() {
+  const popover = document.getElementById("nodeTraceDisplaySettingsPopover");
+  if (
+    popover &&
+    !popover.hidden &&
+    nodeGraphTraceDisplaySettingsEditingGlobal() &&
+    nodeGraphMvp.traceDisplaySettingsDraft
+  ) {
+    return normalizeNodeGraphTraceDisplaySettings(nodeGraphMvp.traceDisplaySettingsDraft);
+  }
+  return normalizeNodeGraphTraceDisplaySettings(nodeGraphMvp?.traceSettings);
+}
+
+function nodeGraphTraceDisplaySettingsEditingGlobal() {
+  return nodeGraphMvp?.traceDisplaySettingsTargetNode === "__globalTraceSettings";
+}
+
+function nodeGraphModuleDisplayTypeForType(type) {
+  const declared = nodeGraphModuleDefinitions?.[type]?.displayType;
+  if (declared === "trace" || declared === "clock") {
+    return declared;
+  }
+  if (type === "traceDisplay" || type === "audioPlayer") {
+    return "trace";
+  }
+  if (type === "clock") {
+    return "clock";
+  }
+  return "legacy";
+}
+
+function nodeGraphModuleDisplayTypeForSlot(slot) {
+  return nodeGraphModuleDisplayTypeForType(slot?.type);
+}
+
 function nodeGraphTraceDisplaySettingsForSlot(slot) {
+  if (nodeGraphModuleDisplayTypeForSlot(slot) === "trace" && slot?.type !== "traceDisplay") {
+    return nodeGraphGlobalTraceSettings();
+  }
   return nodeGraphTraceDisplaySettingsForNode(nodeGraphModuleScopeNodeForSlot(slot));
 }
 
@@ -3202,12 +3240,10 @@ function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null) {
     buffer = nodeGraphModuleScopeCapturedVisualOscilloscopeXyBuffer(slot, capturedBuffer) ||
       capturedBuffer ||
       nodeGraphModuleScopeOfflineVisualOscilloscopeBuffer(slot);
-  } else if (slot?.type === "traceDisplay") {
+  } else if (nodeGraphModuleDisplayTypeForSlot(slot) === "trace") {
     buffer = prepareNodeGraphTraceDisplayBuffer(capturedBuffer, nodeGraphTraceDisplaySettingsForSlot(slot));
   } else if (slot?.type === "spiral" || slot?.type === "ellipsoid" || slot?.type === "lorenzAttractor") {
     buffer = nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, "X", "Y") || capturedBuffer;
-  } else if (slot?.type === "audioPlayer") {
-    buffer = nodeGraphModuleScopeCapturedOutputPairXyBuffer(slot, "Left", "Right") || capturedBuffer;
   } else if (slot?.type === "output") {
     const offlineAnalyzer = nodeGraphModuleScopeOfflineOutputAnalyzerBuffer(slot);
     const capturedAnalyzer = nodeGraphModuleScopeCapturedOutputAnalyzerBuffer(slot, capturedBuffer);
@@ -3222,7 +3258,7 @@ function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null) {
       nodeGraphModuleScopeOfflineGainAnalyzerBuffer(slot) ||
       capturedBuffer;
   }
-  return slot?.type === "traceDisplay"
+  return nodeGraphModuleDisplayTypeForSlot(slot) === "trace"
     ? buffer
     : nodeGraphModuleScopeApplyShaderDisplayMode(slot, buffer);
 }
@@ -3471,7 +3507,7 @@ function readNodeGraphTraceDisplaySettingsForm() {
       next[key] = input.value;
     }
   }
-  for (const key of ["color"]) {
+  for (const key of ["color", "dot2Color"]) {
     const input = document.querySelector(`[data-trace-display-color="${key}"]`);
     if (input) {
       next[key] = input.value;
@@ -3705,6 +3741,15 @@ function updateNodeGraphTraceDisplaySettingsDraft() {
 }
 
 function saveNodeGraphTraceDisplaySettings() {
+  if (nodeGraphTraceDisplaySettingsEditingGlobal()) {
+    nodeGraphMvp.traceSettings = normalizeNodeGraphTraceDisplaySettings(nodeGraphMvp.traceDisplaySettingsDraft);
+    setNodeGraphTraceDisplaySettingsDirty(false);
+    if (typeof serializeNodeUiDevSettings === "function" && typeof saveNodeUiDevLocalDefaultSettings === "function") {
+      saveNodeUiDevLocalDefaultSettings(serializeNodeUiDevSettings());
+    }
+    scheduleNodeGraphModuleScopeDraw();
+    return;
+  }
   const node = nodeGraphPatchNode(nodeGraphMvp.traceDisplaySettingsTargetNode);
   if (!node || node.type !== "traceDisplay") {
     return;
@@ -3727,6 +3772,13 @@ function saveNodeGraphTraceDisplaySettings() {
 }
 
 function restoreNodeGraphTraceDisplaySettings() {
+  if (nodeGraphTraceDisplaySettingsEditingGlobal()) {
+    nodeGraphMvp.traceDisplaySettingsDraft = nodeGraphGlobalTraceSettings();
+    writeNodeGraphTraceDisplaySettingsForm(nodeGraphMvp.traceDisplaySettingsDraft);
+    setNodeGraphTraceDisplaySettingsDirty(false);
+    scheduleNodeGraphModuleScopeDraw();
+    return;
+  }
   const node = nodeGraphPatchNode(nodeGraphMvp.traceDisplaySettingsTargetNode);
   if (!node || node.type !== "traceDisplay") {
     return;
@@ -3822,6 +3874,15 @@ function restoreNodeGraphTraceDisplaySettingsWindowFromState(state = {}) {
   const popover = nodeGraphTraceDisplaySettingsElement();
   bindNodeGraphTraceDisplaySettingsEvents(popover);
   nodeGraphMvp.sharedInspectorActive = "traceDisplaySettings";
+  if (nodeId === "__globalTraceSettings") {
+    nodeGraphMvp.traceDisplaySettingsTargetNode = "__globalTraceSettings";
+    nodeGraphMvp.traceDisplaySettingsDraft = nodeGraphGlobalTraceSettings();
+    document.getElementById("nodeTraceDisplaySettingsTitle").textContent = "Trace";
+    document.getElementById("nodeTraceDisplaySettingsSubtitle").textContent = "Settings";
+    writeNodeGraphTraceDisplaySettingsForm(nodeGraphMvp.traceDisplaySettingsDraft);
+    setNodeGraphTraceDisplaySettingsDirty(false);
+    return;
+  }
   if (!node || node.type !== "traceDisplay") {
     document.getElementById("nodeTraceDisplaySettingsTitle").textContent = "Display";
     document.getElementById("nodeTraceDisplaySettingsSubtitle").textContent = "Settings";
@@ -3837,6 +3898,74 @@ function restoreNodeGraphTraceDisplaySettingsWindowFromState(state = {}) {
   document.getElementById("nodeTraceDisplaySettingsSubtitle").textContent = "Settings";
   writeNodeGraphTraceDisplaySettingsForm(nodeGraphMvp.traceDisplaySettingsDraft);
   setNodeGraphTraceDisplaySettingsDirty(false);
+}
+
+function openNodeGraphGlobalTraceSettings(event = {}) {
+  const metadataRect = typeof prepareNodeMetadataPopoverForInspectorReplacement === "function"
+    ? prepareNodeMetadataPopoverForInspectorReplacement()
+    : null;
+  if (metadataRect === false) {
+    return true;
+  }
+  const moduleActionsRect = typeof prepareNodeModuleActionsWindowForInspectorReplacement === "function"
+    ? prepareNodeModuleActionsWindowForInspectorReplacement()
+    : null;
+  const replacementRect = metadataRect || moduleActionsRect;
+  const popover = nodeGraphTraceDisplaySettingsElement();
+  bindNodeGraphTraceDisplaySettingsEvents(popover);
+  nodeGraphMvp.traceDisplaySettingsTargetNode = "__globalTraceSettings";
+  nodeGraphMvp.traceDisplaySettingsDraft = nodeGraphGlobalTraceSettings();
+  nodeGraphMvp.sharedInspectorActive = "traceDisplaySettings";
+  document.getElementById("nodeTraceDisplaySettingsTitle").textContent = "Trace";
+  document.getElementById("nodeTraceDisplaySettingsSubtitle").textContent = "Settings";
+  writeNodeGraphTraceDisplaySettingsForm(nodeGraphMvp.traceDisplaySettingsDraft);
+  setNodeGraphTraceDisplaySettingsDirty(false);
+  const sharedInspectorState = typeof normalizeNodeGraphSharedInspectorWindowState === "function"
+    ? normalizeNodeGraphSharedInspectorWindowState(nodeGraphMvp.sharedInspectorWindowState, nodeGraphMvp.workspaceWindowStates)
+    : (nodeGraphMvp.sharedInspectorWindowState || {});
+  const savedPosition = sharedInspectorState.position;
+  const hasSavedPosition =
+    Number.isFinite(Number(savedPosition?.left)) &&
+    Number.isFinite(Number(savedPosition?.top));
+  applyNodeGraphTraceDisplaySettingsWindowSize(sharedInspectorState.size);
+  popover.hidden = false;
+  const rect = popover.getBoundingClientRect();
+  const replacementLeft = Number(replacementRect?.left);
+  const replacementTop = Number(replacementRect?.top);
+  const replacementWidth = Number(replacementRect?.width);
+  const eventX = Number(event.clientX);
+  const eventY = Number(event.clientY);
+  const x = hasSavedPosition
+    ? savedPosition.left
+    : Number.isFinite(replacementLeft)
+    ? replacementLeft + (Number.isFinite(replacementWidth) ? replacementWidth * 0.5 : 0) - rect.width * 0.5
+    : Number.isFinite(eventX)
+    ? eventX
+    : window.innerWidth * 0.5 - rect.width * 0.5;
+  const y = hasSavedPosition
+    ? savedPosition.top
+    : Number.isFinite(replacementTop)
+    ? replacementTop
+    : Number.isFinite(eventY)
+    ? eventY
+    : window.innerHeight * 0.25;
+  const position = hasSavedPosition
+    ? { left: Math.round(Number(savedPosition.left)), top: Math.round(Number(savedPosition.top)) }
+    : nodeGraphFloatingWindowPosition(popover, x, y);
+  popover.style.position = "fixed";
+  if (typeof setNodeGraphFloatingWindowViewportPosition === "function") {
+    setNodeGraphFloatingWindowViewportPosition(popover, position.left, position.top);
+  } else {
+    popover.style.left = `${position.left}px`;
+    popover.style.top = `${position.top}px`;
+    popover.style.right = "auto";
+  }
+  rememberNodeGraphTraceDisplaySettingsWindowState(
+    { open: true, position, targetNode: "__globalTraceSettings" },
+    { status: false },
+  );
+  scheduleNodeGraphModuleScopeDraw();
+  return true;
 }
 
 function beginNodeGraphTraceDisplaySettingsDrag(event) {
@@ -7499,7 +7628,7 @@ function nodeGraphModuleScopeTraceDisplayFrameUnchanged(visibleItems) {
   let traceCount = 0;
   for (const item of visibleItems) {
     const slot = item?.slot;
-    if (slot?.type !== "traceDisplay") {
+    if (nodeGraphModuleDisplayTypeForSlot(slot) !== "trace") {
       return false;
     }
     traceCount += 1;
@@ -7656,7 +7785,7 @@ function drawNodeGraphModuleScopes() {
       visibleProgressRange,
       visibleScopeRect,
     } = item;
-    if (slot?.type === "traceDisplay") {
+    if (nodeGraphModuleDisplayTypeForSlot(slot) === "trace") {
       drawNodeGraphTraceDisplayItem(renderer, item, pixelRatio);
       continue;
     }

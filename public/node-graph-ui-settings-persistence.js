@@ -1,5 +1,5 @@
 const nodeUiDevDefaultSettingsUrl = "./public/presets/useruisettings.json";
-const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v10";
+const nodeUiDevDefaultSettingsStorageKey = "soemdsp-sandbox.userUiSettings.startup.v11";
 
 const nodeGraphWorkspaceWindowStateKeys = Object.freeze([
   "commandCenter",
@@ -533,6 +533,9 @@ function normalizeNodeUiDevSettings(settings = {}) {
   const moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     view.moduleScopeDiscontinuitySkipSamples ?? nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
   );
+  const traceSettings = typeof normalizeNodeGraphTraceDisplaySettings === "function"
+    ? normalizeNodeGraphTraceDisplaySettings(view.traceSettings ?? nodeGraphMvp.traceSettings)
+    : (view.traceSettings ?? nodeGraphMvp.traceSettings ?? {});
   const sliderLayout = normalizeNodeGraphSliderLayout(view.sliderLayout ?? nodeGraphMvp.sliderLayout);
   const sliderAmountVisible = Boolean(view.sliderAmountVisible ?? nodeGraphMvp.sliderAmountVisible);
   const sliderPositionVisible = Boolean(
@@ -647,6 +650,7 @@ function normalizeNodeUiDevSettings(settings = {}) {
       moduleScopeFramesPerSecond,
       moduleScopeLineThickness,
       moduleScopeDiscontinuitySkipSamples,
+      traceSettings,
       sliderLayout,
       sliderAmountVisible,
       sliderPositionVisible,
@@ -725,6 +729,9 @@ function readNodeUiDevSettingsFromControls() {
       moduleScopeDiscontinuitySkipSamples: normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
         nodeGraphMvp.moduleScopeDiscontinuitySkipSamples ?? 1,
       ),
+      traceSettings: typeof normalizeNodeGraphTraceDisplaySettings === "function"
+        ? normalizeNodeGraphTraceDisplaySettings(nodeGraphMvp.traceSettings)
+        : nodeGraphMvp.traceSettings,
       sliderLayout: normalizeNodeGraphSliderLayout(nodeGraphMvp.sliderLayout),
       sliderAmountVisible: Boolean(nodeGraphMvp.sliderAmountVisible),
       sliderPositionVisible: Boolean(nodeGraphMvp.sliderPositionVisible),
@@ -828,6 +835,9 @@ function applyNodeUiDevSettings(settings) {
   nodeGraphMvp.moduleScopeDiscontinuitySkipSamples = normalizeNodeGraphModuleScopeDiscontinuitySkipSamples(
     normalized.view.moduleScopeDiscontinuitySkipSamples,
   );
+  nodeGraphMvp.traceSettings = typeof normalizeNodeGraphTraceDisplaySettings === "function"
+    ? normalizeNodeGraphTraceDisplaySettings(normalized.view.traceSettings)
+    : normalized.view.traceSettings;
   nodeGraphMvp.sliderLayout = normalizeNodeGraphSliderLayout(normalized.view.sliderLayout);
   nodeGraphMvp.sliderAmountVisible = Boolean(normalized.view.sliderAmountVisible);
   nodeGraphMvp.sliderPositionVisible = Boolean(normalized.view.sliderPositionVisible);
