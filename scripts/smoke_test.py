@@ -13747,6 +13747,11 @@ def require_node_graph_mvp_contract() -> None:
         and 'scopeInput: "framesPerSecond"' in fps_header_source,
         "header FPS drag number should allow 0 to freeze displays",
     )
+    require(
+        "nodeMasterScopePointBudget" not in header_scope_source
+        and "Display point budget" not in header_scope_source,
+        "display point budget should not be exposed as a normal header quality knob",
+    )
     scope_drag_scale_start = script_sources["./public/node-graph-module-scopes.js"].index(
         "function nodeGraphScopeNumberDragScale"
     )

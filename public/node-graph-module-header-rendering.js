@@ -275,19 +275,6 @@ function createNodeGraphHeaderTimingWidgets() {
         step: 1,
       },
     ),
-    createNodeGraphHeaderScopeInput(
-      "nodeMasterScopePointBudget",
-      "PTS",
-      normalizeNodeGraphModuleScopePointBudget(nodeGraphMvp.moduleScopePointBudget ?? 4096),
-      {
-        ariaLabel: "Display point budget",
-        inputMode: "numeric",
-        max: 65536,
-        min: 1,
-        scopeInput: "pointBudget",
-        step: 1,
-      },
-    ),
     createNodeGraphHeaderSpeedPlaceholder(),
   );
   return group;
