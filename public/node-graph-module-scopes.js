@@ -8818,6 +8818,11 @@ function nodeGraphScope2dInterpolationSpacingPx() {
   return 0.5;
 }
 
+function nodeGraphScope2dMaxBridgeDistancePx(square, pixelRatio) {
+  const size = Math.max(1, Math.min(Number(square?.width) || 1, Number(square?.height) || 1) * (Number(pixelRatio) || 1));
+  return Math.max(8, size * 0.18);
+}
+
 function nodeGraphScope2dPointBudget() {
   return 262144;
 }
@@ -8933,17 +8938,21 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   const dotSpace = Math.min(canvas.width, canvas.height);
   const pathPoints = [];
   const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx();
+  const maxBridgeDistancePx = nodeGraphScope2dMaxBridgeDistancePx(square, pixelRatio);
   const centerRunMask = nodeGraphScope2dCenterRunMask(square, buffer, count);
   let previousPoint = null;
+  let skippedCenterSamples = 0;
   const appendPointAt = (index) => {
     if (centerRunMask[index]) {
       if (pathPoints[pathPoints.length - 1] !== null) {
         pathPoints.push(null);
       }
       previousPoint = null;
+      skippedCenterSamples = 0;
       return;
     }
     if (!nodeGraphScope2dSampleHasVisibleOffset(square, buffer.x[index], buffer.y[index])) {
+      skippedCenterSamples += 1;
       return;
     }
     const point = nodeGraphScope2dPointToCanvas(
@@ -8954,6 +8963,17 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
     if (!point) {
       return;
     }
+    if (previousPoint && skippedCenterSamples > 0) {
+      const dx = point.x - previousPoint.x;
+      const dy = point.y - previousPoint.y;
+      if (Math.sqrt(dx * dx + dy * dy) > maxBridgeDistancePx) {
+        if (pathPoints[pathPoints.length - 1] !== null) {
+          pathPoints.push(null);
+        }
+        previousPoint = null;
+      }
+    }
+    skippedCenterSamples = 0;
     previousPoint = appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx);
   };
   for (let index = 0; index < count; index += 1) {
