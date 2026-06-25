@@ -12785,6 +12785,10 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphScope2dPointBudget()" in scope2d_helper_source
         and "return 262144;" in scope2d_helper_source
         and "function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2dPointBudget())" in scope2d_helper_source
+        and "const subpaths = [];" in scope2d_helper_source
+        and "subpaths.push(currentSubpath);" in scope2d_helper_source
+        and "capped.push(null);" in scope2d_helper_source
+        and "const proportionalBudget = Math.round(" in scope2d_helper_source
         and "const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints)" in scope2d_helper_source
         and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      budgetedPathPoints," in scope2d_helper_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source

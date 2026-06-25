@@ -8830,13 +8830,48 @@ function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2d
   if (points.length <= safeBudget) {
     return points;
   }
+  const subpaths = [];
+  let currentSubpath = [];
+  for (const point of points) {
+    if (!point) {
+      if (currentSubpath.length) {
+        subpaths.push(currentSubpath);
+        currentSubpath = [];
+      }
+      continue;
+    }
+    currentSubpath.push(point);
+  }
+  if (currentSubpath.length) {
+    subpaths.push(currentSubpath);
+  }
+  if (!subpaths.length) {
+    return [];
+  }
+  const totalDrawablePoints = subpaths.reduce((total, subpath) => total + subpath.length, 0);
+  if (totalDrawablePoints <= safeBudget) {
+    return points;
+  }
   const capped = [];
-  const lastIndex = points.length - 1;
-  const outputCount = Math.min(safeBudget, points.length);
-  for (let index = 0; index < outputCount; index += 1) {
-    const sourceIndex = Math.round((index / Math.max(1, outputCount - 1)) * lastIndex);
-    const point = points[sourceIndex];
-    capped.push(point || null);
+  let remainingBudget = safeBudget;
+  let remainingSourcePoints = totalDrawablePoints;
+  for (const subpath of subpaths) {
+    if (capped.length && capped[capped.length - 1] !== null) {
+      capped.push(null);
+    }
+    const proportionalBudget = Math.round((subpath.length / Math.max(1, remainingSourcePoints)) * remainingBudget);
+    const subpathBudget = Math.max(2, Math.min(subpath.length, proportionalBudget || 2));
+    remainingBudget -= subpathBudget;
+    remainingSourcePoints -= subpath.length;
+    if (subpath.length <= subpathBudget) {
+      capped.push(...subpath);
+      continue;
+    }
+    const lastIndex = subpath.length - 1;
+    for (let index = 0; index < subpathBudget; index += 1) {
+      const sourceIndex = Math.round((index / Math.max(1, subpathBudget - 1)) * lastIndex);
+      capped.push(subpath[sourceIndex]);
+    }
   }
   return capped;
 }
