@@ -8823,9 +8823,10 @@ function nodeGraphScope2dInterpolationSpacingPx() {
 }
 
 function nodeGraphScope2dPointBudget() {
-  return typeof normalizeNodeGraphModuleScopePointBudget === "function"
+  const globalBudget = typeof normalizeNodeGraphModuleScopePointBudget === "function"
     ? normalizeNodeGraphModuleScopePointBudget(nodeGraphMvp?.moduleScopePointBudget ?? 4096)
     : 4096;
+  return Math.max(65536, globalBudget);
 }
 
 function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2dPointBudget()) {

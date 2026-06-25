@@ -12781,6 +12781,7 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphScope2dInterpolationSpacingPx()" in scope2d_helper_source
         and "return 0.5;" in scope2d_helper_source
         and "function nodeGraphScope2dPointBudget()" in scope2d_helper_source
+        and "return Math.max(65536, globalBudget);" in scope2d_helper_source
         and "function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2dPointBudget())" in scope2d_helper_source
         and "const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints)" in scope2d_helper_source
         and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      budgetedPathPoints," in scope2d_helper_source
