@@ -13239,16 +13239,15 @@ def require_node_graph_mvp_contract() -> None:
         and "const dot1ThicknessPx = traceScale * clampNodeSliderValue(settings.dot1Size, 0, 1)" in node_graph_source
         and "settings.dot2Enabled !== false && settings.dot2Brightness > 0 && dot2ThicknessPx > 0" in node_graph_source
         and "settings.dot1Enabled !== false && settings.brightness > 0 && dot1ThicknessPx > 0" in node_graph_source
-        and '["sourceSync", "dot1Enabled", "dot2Enabled", "capEnabled"]' in node_graph_source
         and '["burn", "decay", "dot1Size", "dot2Size", "lineLength", "capSize", "capLength"].includes(key)' in node_graph_source
         and 'formType === "dot" && ["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)' in node_graph_source
         and '["dot1Brightness", "dot2Brightness", "lineThickness", "dot2LineThickness"].includes(key)' in node_graph_source
         and "function setNodeGraphTraceDisplaySettingsFormType(node = null)" in node_graph_source
-        and "popover.dataset.displaySettingsType = displayType;" in node_graph_source
-        and "const dotDisplay = displayType === \"dot\"" in node_graph_source
-        and "element.hidden = dotDisplay" in node_graph_source
+        and "nodeGraphTraceDisplayActiveControlsByType" in node_graph_source
+        and "dot: Object.freeze({" in node_graph_source
+        and "const activeToggles = nodeGraphTraceDisplayActiveControlSet(\"toggles\", formType)" in node_graph_source
         and "normalizeNodeGraphTraceDisplaySettingValueForKey(key, value)" in node_graph_source
-        and "for (const key of [\"dot1Color\", \"dot2Color\"])" in node_graph_source
+        and "for (const key of activeColors)" in node_graph_source
         and "zeroDBurnSettings: normalizeNodeGraphZeroDBurnSettings(node.zeroDBurnSettings)" in node_graph_source,
         "0D Burn settings should expose real normalized dot sizes and restore both dot colors",
     )
@@ -13261,19 +13260,29 @@ def require_node_graph_mvp_contract() -> None:
         "Oscilloscope settings should present Thick controls as Blur",
     )
     require(
-        '.node-trace-display-settings-popover[data-display-settings-type="dot"] .node-trace-display-trace-section' in style_source
-        and ".node-trace-display-dot2-thickness-row" in style_source
-        and 'element.hidden = !(dotDisplay || valueDisplay || displayType === "trace")' in node_graph_source,
-        "0D Burn, 1D Value, and 1D Trace settings should expose dot toggle rows while dot settings hide trace-only rows",
+        "const nodeGraphTraceDisplayActiveControlsByType = Object.freeze({" in node_graph_source
+        and "function nodeGraphTraceDisplayActiveControlsForType(type = nodeGraphTraceDisplaySettingsFormType())" in node_graph_source
+        and "function nodeGraphTraceDisplayActiveControlSet(kind, type = nodeGraphTraceDisplaySettingsFormType())" in node_graph_source
+        and "for (const key of activeFields)" in node_graph_source
+        and "for (const key of activeToggles)" in node_graph_source
+        and "for (const field of nodeGraphTraceDisplaySettingControlKeys.fields)" in node_graph_source
+        and "setControlHidden(" in node_graph_source,
+        "Display settings should use an active-control registry for each display type",
     )
     require(
         "node-trace-display-caps-title" in node_graph_source
         and "node-trace-display-caps-section" in node_graph_source
+        and "node-trace-display-value-title" in node_graph_source
+        and "node-trace-display-value-section" in node_graph_source
         and 'data-trace-display-toggle="capEnabled"' in node_graph_source
         and 'data-trace-display-field="lineLength"' in node_graph_source
         and 'data-trace-display-field="capSize"' in node_graph_source
         and 'data-trace-display-field="capLength"' in node_graph_source
-        and 'element.hidden = !valueDisplay' in node_graph_source
+        and 'value: Object.freeze({' in node_graph_source
+        and '"lineLength",' in node_graph_source
+        and '"capSize",' in node_graph_source
+        and '"capLength",' in node_graph_source
+        and 'const valueSectionVisible = formType === "value"' in node_graph_source
         and "capEnabled: \"traceDisplaySettings.capEnabled\"" in node_graph_source
         and "lineLength: \"traceDisplaySettings.lineLength\"" in node_graph_source
         and "capSize: \"traceDisplaySettings.capSize\"" in node_graph_source
@@ -13281,6 +13290,20 @@ def require_node_graph_mvp_contract() -> None:
         and "1D Value line length. 1 reaches the display edge; lower values pull both ends inward." in tooltip_source
         and "1D Value cap thickness as a 0..1 fraction of the display square." in tooltip_source,
         "1D Value settings should expose a Value-only Caps section with line length, caps on, size, and cap length controls",
+    )
+    value_registry_source = node_graph_source[
+        node_graph_source.index("  value: Object.freeze({"):
+        node_graph_source.index("});", node_graph_source.index("  value: Object.freeze({"))
+    ]
+    require(
+        '"zoomSeconds"' not in value_registry_source
+        and '"padding"' not in value_registry_source
+        and '"skipSamples"' not in value_registry_source
+        and '"burn"' not in value_registry_source
+        and '"decay"' not in value_registry_source
+        and '"sourceSync"' not in value_registry_source
+        and '"lineBurnMode"' not in value_registry_source,
+        "1D Value display settings should not expose trace-only or burn-only controls",
     )
     require(
         "function nodeGraphTraceDisplayNumberDragMultiplier(event)" in node_graph_source

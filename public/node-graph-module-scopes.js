@@ -3409,6 +3409,83 @@ const nodeGraphTraceDisplaySettingFields = Object.freeze([
   ["capLength", "Cap length"],
 ]);
 
+const nodeGraphTraceDisplaySettingControlKeys = Object.freeze({
+  fields: nodeGraphTraceDisplaySettingFields.map(([key]) => key),
+  colors: ["dot1Color", "dot2Color"],
+  toggles: ["sourceSync", "dot1Enabled", "dot2Enabled", "capEnabled"],
+  choices: ["lineBurnMode"],
+});
+
+const nodeGraphTraceDisplayActiveControlsByType = Object.freeze({
+  trace: Object.freeze({
+    fields: Object.freeze([
+      "zoomSeconds",
+      "padding",
+      "skipSamples",
+      "dot1Size",
+      "lineThickness",
+      "dot1Brightness",
+      "dot2Size",
+      "dot2LineThickness",
+      "dot2Brightness",
+    ]),
+    colors: Object.freeze(["dot1Color", "dot2Color"]),
+    toggles: Object.freeze(["sourceSync", "dot1Enabled", "dot2Enabled"]),
+    choices: Object.freeze([]),
+  }),
+  dot: Object.freeze({
+    fields: Object.freeze([
+      "dot1Size",
+      "lineThickness",
+      "dot1Brightness",
+      "dot2Size",
+      "dot2LineThickness",
+      "dot2Brightness",
+    ]),
+    colors: Object.freeze(["dot1Color", "dot2Color"]),
+    toggles: Object.freeze(["dot1Enabled", "dot2Enabled"]),
+    choices: Object.freeze([]),
+  }),
+  lineBurn: Object.freeze({
+    fields: Object.freeze([
+      "zoomSeconds",
+      "dot1Size",
+      "lineThickness",
+      "dot1Brightness",
+      "dot2Size",
+      "dot2LineThickness",
+      "dot2Brightness",
+    ]),
+    colors: Object.freeze(["dot1Color", "dot2Color"]),
+    toggles: Object.freeze(["dot1Enabled", "dot2Enabled"]),
+    choices: Object.freeze(["lineBurnMode"]),
+  }),
+  value: Object.freeze({
+    fields: Object.freeze([
+      "lineLength",
+      "dot1Size",
+      "lineThickness",
+      "dot1Brightness",
+      "dot2Size",
+      "dot2LineThickness",
+      "dot2Brightness",
+      "capSize",
+      "capLength",
+    ]),
+    colors: Object.freeze(["dot1Color", "dot2Color"]),
+    toggles: Object.freeze(["dot1Enabled", "dot2Enabled", "capEnabled"]),
+    choices: Object.freeze([]),
+  }),
+});
+
+function nodeGraphTraceDisplayActiveControlsForType(type = nodeGraphTraceDisplaySettingsFormType()) {
+  return nodeGraphTraceDisplayActiveControlsByType[type] || nodeGraphTraceDisplayActiveControlsByType.trace;
+}
+
+function nodeGraphTraceDisplayActiveControlSet(kind, type = nodeGraphTraceDisplaySettingsFormType()) {
+  return new Set(nodeGraphTraceDisplayActiveControlsForType(type)[kind] || []);
+}
+
 function formatNodeGraphTraceDisplaySetting(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) {
@@ -3508,7 +3585,18 @@ function nodeGraphTraceDisplaySettingsElement() {
           <input id="nodeTraceDisplaySkipSamples" type="text" inputmode="numeric" data-trace-display-field="skipSamples">
         </label>
       </div>
-      <div class="metadata-section-title">Dot 1</div>
+      <div class="metadata-section-title node-trace-display-value-title">Value</div>
+      <div class="metadata-field-section node-trace-display-value-section">
+        <label>
+          <span>Line length</span>
+          <span class="metadata-stepper-control">
+            <button type="button" data-trace-display-step-target="lineLength" data-trace-display-step-direction="-1">-</button>
+            <input id="nodeTraceDisplayValueLineLength" type="text" inputmode="decimal" data-trace-display-field="lineLength">
+            <button type="button" data-trace-display-step-target="lineLength" data-trace-display-step-direction="1">+</button>
+          </span>
+        </label>
+      </div>
+      <div class="metadata-section-title node-trace-display-dot1-title">Dot 1</div>
       <div class="metadata-field-section node-trace-display-dot1-section">
         <label class="metadata-checkbox-label node-trace-display-dot-toggle-row">
           <input id="nodeTraceDisplayDot1Enabled" type="checkbox" data-trace-display-toggle="dot1Enabled">
@@ -3540,7 +3628,7 @@ function nodeGraphTraceDisplaySettingsElement() {
         </label>
         <label><input id="nodeTraceDisplayColor" type="color" data-trace-display-color="dot1Color" aria-label="Dot 1 color"></label>
       </div>
-      <div class="metadata-section-title">Dot 2</div>
+      <div class="metadata-section-title node-trace-display-dot2-title">Dot 2</div>
       <div class="metadata-field-section node-trace-display-dot2-section">
         <label class="metadata-checkbox-label node-trace-display-dot-toggle-row">
           <input id="nodeTraceDisplayDot2Enabled" type="checkbox" data-trace-display-toggle="dot2Enabled">
@@ -3574,14 +3662,6 @@ function nodeGraphTraceDisplaySettingsElement() {
       </div>
       <div class="metadata-section-title node-trace-display-caps-title">Caps</div>
       <div class="metadata-field-section node-trace-display-caps-section">
-        <label>
-          <span>Line length</span>
-          <span class="metadata-stepper-control">
-            <button type="button" data-trace-display-step-target="lineLength" data-trace-display-step-direction="-1">-</button>
-            <input id="nodeTraceDisplayValueLineLength" type="text" inputmode="decimal" data-trace-display-field="lineLength">
-            <button type="button" data-trace-display-step-target="lineLength" data-trace-display-step-direction="1">+</button>
-          </span>
-        </label>
         <label class="metadata-checkbox-label">
           <input id="nodeTraceDisplayCapEnabled" type="checkbox" data-trace-display-toggle="capEnabled">
           Caps on
@@ -3680,37 +3760,47 @@ function setNodeGraphTraceDisplaySettingsFormType(node = null) {
   const displayType = node
     ? nodeGraphModuleDisplayTypeForType(node.type)
     : "";
-  popover.dataset.displaySettingsType = displayType;
-  const dotDisplay = displayType === "dot";
-  const valueDisplay = displayType === "value";
-  const lineBurnDisplay = displayType === "lineBurn";
-  for (const element of popover.querySelectorAll(".node-trace-display-caps-title, .node-trace-display-caps-section")) {
-    element.hidden = !valueDisplay;
-  }
-  for (const selector of [
-    ".node-trace-display-trace-title",
-    ".node-trace-display-trace-section",
-    ".node-trace-display-trace-thickness-row",
-    ".node-trace-display-dot2-thickness-row",
-  ]) {
+  const formType = displayType || "trace";
+  popover.dataset.displaySettingsType = formType;
+  const activeFields = nodeGraphTraceDisplayActiveControlSet("fields", formType);
+  const activeColors = nodeGraphTraceDisplayActiveControlSet("colors", formType);
+  const activeToggles = nodeGraphTraceDisplayActiveControlSet("toggles", formType);
+  const activeChoices = nodeGraphTraceDisplayActiveControlSet("choices", formType);
+  const setControlHidden = (selector, hidden) => {
     for (const element of popover.querySelectorAll(selector)) {
-      element.hidden = dotDisplay;
+      const row = element.closest("label") || element;
+      row.hidden = hidden;
     }
+  };
+  for (const field of nodeGraphTraceDisplaySettingControlKeys.fields) {
+    setControlHidden(
+      `[data-trace-display-field="${field}"], [data-trace-display-step-target="${field}"]`,
+      !activeFields.has(field),
+    );
   }
-  for (const element of popover.querySelectorAll(".node-trace-display-line-burn-mode-row")) {
-    element.hidden = !lineBurnDisplay;
+  for (const color of nodeGraphTraceDisplaySettingControlKeys.colors) {
+    setControlHidden(`[data-trace-display-color="${color}"]`, !activeColors.has(color));
   }
-  for (const element of popover.querySelectorAll(".node-trace-display-line-burn-row")) {
-    element.hidden = !lineBurnDisplay;
+  for (const toggle of nodeGraphTraceDisplaySettingControlKeys.toggles) {
+    setControlHidden(`[data-trace-display-toggle="${toggle}"]`, !activeToggles.has(toggle));
   }
-  for (const element of popover.querySelectorAll("#nodeTraceDisplaySourceSync, #nodeTraceDisplaySkipSamples")) {
-    element.closest("label").hidden = dotDisplay || valueDisplay || lineBurnDisplay;
+  for (const choice of nodeGraphTraceDisplaySettingControlKeys.choices) {
+    setControlHidden(`[data-trace-display-choice="${choice}"]`, !activeChoices.has(choice));
   }
-  for (const element of popover.querySelectorAll("[data-trace-display-field='padding']")) {
-    element.closest("label").hidden = dotDisplay || valueDisplay || lineBurnDisplay;
+  const traceSectionVisible = formType === "trace" || formType === "lineBurn";
+  for (const element of popover.querySelectorAll(".node-trace-display-trace-title, .node-trace-display-trace-section")) {
+    element.hidden = !traceSectionVisible;
   }
-  for (const element of popover.querySelectorAll(".node-trace-display-dot-toggle-row")) {
-    element.hidden = !(dotDisplay || valueDisplay || displayType === "trace");
+  const traceTitle = popover.querySelector(".node-trace-display-trace-title");
+  if (traceTitle) {
+    traceTitle.textContent = formType === "lineBurn" ? "Burn" : "Trace";
+  }
+  const valueSectionVisible = formType === "value";
+  for (const element of popover.querySelectorAll(".node-trace-display-value-title, .node-trace-display-value-section")) {
+    element.hidden = !valueSectionVisible;
+  }
+  for (const element of popover.querySelectorAll(".node-trace-display-caps-title, .node-trace-display-caps-section")) {
+    element.hidden = !valueSectionVisible;
   }
 }
 
@@ -3791,25 +3881,29 @@ function readNodeGraphTraceDisplaySettingsForm() {
   const formType = nodeGraphTraceDisplaySettingsFormType();
   const current = normalizeNodeGraphDisplaySettingsForFormType(nodeGraphMvp.traceDisplaySettingsDraft, formType);
   const next = { ...current };
-  for (const [key] of nodeGraphTraceDisplaySettingFields) {
+  const activeFields = nodeGraphTraceDisplayActiveControlSet("fields", formType);
+  const activeColors = nodeGraphTraceDisplayActiveControlSet("colors", formType);
+  const activeToggles = nodeGraphTraceDisplayActiveControlSet("toggles", formType);
+  const activeChoices = nodeGraphTraceDisplayActiveControlSet("choices", formType);
+  for (const key of activeFields) {
     const input = document.querySelector(`[data-trace-display-field="${key}"]`);
     if (input) {
       next[key] = input.value;
     }
   }
-  for (const key of ["dot1Color", "dot2Color"]) {
+  for (const key of activeColors) {
     const input = document.querySelector(`[data-trace-display-color="${key}"]`);
     if (input) {
       next[key] = input.value;
     }
   }
-  for (const key of ["sourceSync", "dot1Enabled", "dot2Enabled", "capEnabled"]) {
+  for (const key of activeToggles) {
     const input = document.querySelector(`[data-trace-display-toggle="${key}"]`);
     if (input) {
       next[key] = input.checked;
     }
   }
-  for (const key of ["lineBurnMode"]) {
+  for (const key of activeChoices) {
     const input = document.querySelector(`[data-trace-display-choice="${key}"]`);
     if (input) {
       next[key] = input.value;
@@ -3829,8 +3923,13 @@ function nodeGraphDisplaySettingsFormValue(settings, key) {
 }
 
 function writeNodeGraphTraceDisplaySettingsForm(settings) {
-  const normalized = normalizeNodeGraphDisplaySettingsForFormType(settings);
-  for (const [key] of nodeGraphTraceDisplaySettingFields) {
+  const formType = nodeGraphTraceDisplaySettingsFormType();
+  const normalized = normalizeNodeGraphDisplaySettingsForFormType(settings, formType);
+  const activeFields = nodeGraphTraceDisplayActiveControlSet("fields", formType);
+  const activeColors = nodeGraphTraceDisplayActiveControlSet("colors", formType);
+  const activeToggles = nodeGraphTraceDisplayActiveControlSet("toggles", formType);
+  const activeChoices = nodeGraphTraceDisplayActiveControlSet("choices", formType);
+  for (const key of activeFields) {
     const input = document.querySelector(`[data-trace-display-field="${key}"]`);
     if (input) {
       input.value = formatNodeGraphTraceDisplaySetting(nodeGraphDisplaySettingsFormValue(normalized, key));
@@ -3838,19 +3937,19 @@ function writeNodeGraphTraceDisplaySettingsForm(settings) {
       input.classList.toggle("trace-display-field-editing", false);
     }
   }
-  for (const key of ["dot1Color", "dot2Color"]) {
+  for (const key of activeColors) {
     const input = document.querySelector(`[data-trace-display-color="${key}"]`);
     if (input) {
       input.value = nodeGraphDisplaySettingsFormValue(normalized, key);
     }
   }
-  for (const key of ["sourceSync", "dot1Enabled", "dot2Enabled", "capEnabled"]) {
+  for (const key of activeToggles) {
     const input = document.querySelector(`[data-trace-display-toggle="${key}"]`);
     if (input) {
       input.checked = Boolean(normalized[key]);
     }
   }
-  for (const key of ["lineBurnMode"]) {
+  for (const key of activeChoices) {
     const input = document.querySelector(`[data-trace-display-choice="${key}"]`);
     if (input) {
       input.value = nodeGraphDisplaySettingsFormValue(normalized, key);
