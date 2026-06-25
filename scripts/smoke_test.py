@@ -12748,6 +12748,15 @@ def require_node_graph_mvp_contract() -> None:
         and 'popover.addEventListener("change", updateNodeGraphTraceDisplaySettingsDraft)' in node_graph_source,
         "1D Burn settings should expose and save local Burn/Decay and Sweep/Scroll mode",
     )
+    trace_settings_draft_start = node_graph_source.index("function updateNodeGraphTraceDisplaySettingsDraft()")
+    trace_settings_draft_end = node_graph_source.index("function saveNodeGraphTraceDisplaySettings()", trace_settings_draft_start)
+    trace_settings_draft_source = node_graph_source[trace_settings_draft_start:trace_settings_draft_end]
+    require(
+        "scheduleNodeGraphModuleScopeDraw();" in trace_settings_draft_source
+        and "setNodeGraphTraceDisplaySettingsDirty(true);" in trace_settings_draft_source
+        and "scheduleNodeGraphLivePlanSync" not in trace_settings_draft_source,
+        "Display settings draft edits should redraw displays without rebuilding the live plan",
+    )
     require("function drawNodeGraphScope2dItem" in node_graph_source, "2D Scope should have a renderer")
     require(
         "const nodeGraphScope2dSettingsDefaults = Object.freeze({" in node_graph_source

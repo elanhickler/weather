@@ -4372,9 +4372,6 @@ function stepNodeGraphTraceDisplaySetting(event) {
 function updateNodeGraphTraceDisplaySettingsDraft() {
   nodeGraphMvp.traceDisplaySettingsDraft = readNodeGraphTraceDisplaySettingsForm();
   setNodeGraphTraceDisplaySettingsDirty(true);
-  if (typeof scheduleNodeGraphLivePlanSync === "function") {
-    scheduleNodeGraphLivePlanSync();
-  }
   scheduleNodeGraphModuleScopeDraw();
 }
 
