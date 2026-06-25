@@ -8860,14 +8860,23 @@ function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2d
   const capped = [];
   let remainingBudget = safeBudget;
   let remainingSourcePoints = totalDrawablePoints;
-  for (const subpath of subpaths) {
+  for (let subpathIndex = 0; subpathIndex < subpaths.length && remainingBudget > 0; subpathIndex += 1) {
+    const subpath = subpaths[subpathIndex];
     if (capped.length && capped[capped.length - 1] !== null) {
       capped.push(null);
     }
     const proportionalBudget = Math.round((subpath.length / Math.max(1, remainingSourcePoints)) * remainingBudget);
-    const subpathBudget = Math.max(2, Math.min(subpath.length, proportionalBudget || 2));
+    const minimumSegmentBudget = Math.min(subpath.length, subpath.length > 1 ? 2 : 1);
+    const subpathBudget = Math.min(
+      remainingBudget,
+      subpath.length,
+      Math.max(minimumSegmentBudget, proportionalBudget || minimumSegmentBudget),
+    );
     remainingBudget -= subpathBudget;
     remainingSourcePoints -= subpath.length;
+    if (subpathBudget < minimumSegmentBudget) {
+      continue;
+    }
     if (subpath.length <= subpathBudget) {
       capped.push(...subpath);
       continue;
