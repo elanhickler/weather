@@ -12801,21 +12801,12 @@ def require_node_graph_mvp_contract() -> None:
         and "if (Math.sqrt(dx * dx + dy * dy) > maxBridgeDistancePx)" in scope2d_helper_source
         and "if (distance < safeSpacing)" in scope2d_helper_source
         and "return previousPoint;" in scope2d_helper_source
-        and "function nodeGraphScope2dPointBudget()" in scope2d_helper_source
-        and "return 262144;" in scope2d_helper_source
-        and "function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2dPointBudget())" in scope2d_helper_source
-        and "const subpaths = [];" in scope2d_helper_source
-        and "subpaths.push(currentSubpath);" in scope2d_helper_source
-        and "capped.push(null);" in scope2d_helper_source
-        and "const proportionalBudget = Math.round(" in scope2d_helper_source
-        and "for (let subpathIndex = 0; subpathIndex < subpaths.length && remainingBudget > 0; subpathIndex += 1)" in scope2d_helper_source
-        and "const minimumSegmentBudget = Math.min(subpath.length, subpath.length > 1 ? 2 : 1)" in scope2d_helper_source
-        and "remainingBudget," in scope2d_helper_source
-        and "if (subpathBudget < minimumSegmentBudget)" in scope2d_helper_source
-        and "const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints)" in scope2d_helper_source
-        and "const pointCount = budgetedPathPoints.filter(Boolean).length" in scope2d_helper_source
+        and "function nodeGraphScope2dPointBudget()" not in scope2d_helper_source
+        and "function nodeGraphScope2dApplyPointBudget" not in scope2d_helper_source
+        and "const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints)" not in scope2d_helper_source
+        and "const pointCount = pathPoints.filter(Boolean).length" in scope2d_helper_source
         and "if (pointCount < 2) {\n    return;\n  }\n  nodeGraphOneDimensionalBurnFadeTrail(context, canvas, settings);" in scope2d_helper_source
-        and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      budgetedPathPoints," in scope2d_helper_source
+        and "drawNodeGraphScopeCanvasBurnPath(\n      context,\n      pathPoints," in scope2d_helper_source
         and "function nodeGraphScope2dSampleHasVisibleOffset(square, x, y, minimumPixels = 0.5)" in scope2d_helper_source
         and "function nodeGraphScope2dCenterRunMask(square, buffer, count, minimumRunLength = 4)" in scope2d_helper_source
         and "runEnd - runStart >= minimumRunLength" in scope2d_helper_source

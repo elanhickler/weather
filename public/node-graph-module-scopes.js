@@ -8831,73 +8831,6 @@ function nodeGraphScope2dMaxBridgeDistancePx(square, pixelRatio) {
   return Math.max(8, size * 0.18);
 }
 
-function nodeGraphScope2dPointBudget() {
-  return 262144;
-}
-
-function nodeGraphScope2dApplyPointBudget(points, pointBudget = nodeGraphScope2dPointBudget()) {
-  if (!Array.isArray(points) || points.length <= 2) {
-    return points;
-  }
-  const safeBudget = Math.max(2, Math.floor(Number(pointBudget) || 0));
-  if (points.length <= safeBudget) {
-    return points;
-  }
-  const subpaths = [];
-  let currentSubpath = [];
-  for (const point of points) {
-    if (!point) {
-      if (currentSubpath.length) {
-        subpaths.push(currentSubpath);
-        currentSubpath = [];
-      }
-      continue;
-    }
-    currentSubpath.push(point);
-  }
-  if (currentSubpath.length) {
-    subpaths.push(currentSubpath);
-  }
-  if (!subpaths.length) {
-    return [];
-  }
-  const totalDrawablePoints = subpaths.reduce((total, subpath) => total + subpath.length, 0);
-  if (totalDrawablePoints <= safeBudget) {
-    return points;
-  }
-  const capped = [];
-  let remainingBudget = safeBudget;
-  let remainingSourcePoints = totalDrawablePoints;
-  for (let subpathIndex = 0; subpathIndex < subpaths.length && remainingBudget > 0; subpathIndex += 1) {
-    const subpath = subpaths[subpathIndex];
-    if (capped.length && capped[capped.length - 1] !== null) {
-      capped.push(null);
-    }
-    const proportionalBudget = Math.round((subpath.length / Math.max(1, remainingSourcePoints)) * remainingBudget);
-    const minimumSegmentBudget = Math.min(subpath.length, subpath.length > 1 ? 2 : 1);
-    const subpathBudget = Math.min(
-      remainingBudget,
-      subpath.length,
-      Math.max(minimumSegmentBudget, proportionalBudget || minimumSegmentBudget),
-    );
-    remainingBudget -= subpathBudget;
-    remainingSourcePoints -= subpath.length;
-    if (subpathBudget < minimumSegmentBudget) {
-      continue;
-    }
-    if (subpath.length <= subpathBudget) {
-      capped.push(...subpath);
-      continue;
-    }
-    const lastIndex = subpath.length - 1;
-    for (let index = 0; index < subpathBudget; index += 1) {
-      const sourceIndex = Math.round((index / Math.max(1, subpathBudget - 1)) * lastIndex);
-      capped.push(subpath[sourceIndex]);
-    }
-  }
-  return capped;
-}
-
 function nodeGraphScope2dCenterRunMask(square, buffer, count, minimumRunLength = 4) {
   const safeCount = Math.max(0, Math.floor(Number(count) || 0));
   const mask = new Uint8Array(safeCount);
@@ -9032,8 +8965,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   for (let index = 0; index < count; index += 1) {
     appendPointAt(index);
   }
-  const budgetedPathPoints = nodeGraphScope2dApplyPointBudget(pathPoints);
-  const pointCount = budgetedPathPoints.filter(Boolean).length;
+  const pointCount = pathPoints.filter(Boolean).length;
   if (pointCount < 2) {
     return;
   }
@@ -9043,7 +8975,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   if (settings.dot2Enabled !== false) {
     drawNodeGraphScopeCanvasBurnPath(
       context,
-      budgetedPathPoints,
+      pathPoints,
       dotSpace * clampNodeSliderValue(settings.dot2Size, 0, 1) * 0.5,
       nodeGraphScopeHexColorToRgb(settings.dot2Color),
       settings.dot2Brightness * intensity,
@@ -9053,7 +8985,7 @@ function drawNodeGraphScope2dCanvasTrail(item, pixelRatio, square, buffer, setti
   if (settings.dot1Enabled !== false) {
     drawNodeGraphScopeCanvasBurnPath(
       context,
-      budgetedPathPoints,
+      pathPoints,
       dotSpace * clampNodeSliderValue(settings.dot1Size, 0, 1) * 0.5,
       nodeGraphScopeHexColorToRgb(settings.dot1Color),
       settings.dot1Brightness * intensity,
