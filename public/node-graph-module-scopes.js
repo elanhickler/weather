@@ -1521,6 +1521,9 @@ function updateNodeGraphLiveModuleScopeFingerprint(patchFingerprint = nodeGraphP
   if (!fingerprint || nodeGraphModuleScopeState.patchFingerprint === fingerprint) {
     return;
   }
+  nodeGraphModuleScopeState.buffers.clear();
+  nodeGraphModuleScopeState.traceDisplayDrawCache.clear();
+  nodeGraphModuleScopeState.traceDisplayScratch.clear();
   nodeGraphModuleScopeState.patchFingerprint = fingerprint;
 }
 
@@ -5279,7 +5282,8 @@ function nodeGraphModuleScopeBuffersCurrent() {
   }
   const patch = nodeGraphMvp?.patch;
   if (nodeGraphModuleScopeState.mode === "live") {
-    return Boolean(nodeGraphMvp?.live?.node);
+    return Boolean(nodeGraphMvp?.live?.node)
+      && nodeGraphModuleScopeState.patchFingerprint === nodeGraphPatchFingerprint();
   }
   return nodeGraphModuleScopeState.patchFingerprint === nodeGraphPatchFingerprint()
     && nodeGraphModuleScopeState.monitorFingerprint === nodeGraphModuleScopeMonitorFingerprint(
