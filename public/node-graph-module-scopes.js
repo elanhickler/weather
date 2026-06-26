@@ -9130,7 +9130,7 @@ function drawNodeGraphScope2dRetainedBurn(item, pixelRatio, square, buffer, sett
     canvas,
     pathPoints,
     nodeGraphScope2dTraceMaxSegmentPixels(canvasSquare),
-    nodeGraphScope2dInterpolationSpacingPx(),
+    nodeGraphScope2dInterpolationSpacingPx(settings, Math.min(canvasSquare.width, canvasSquare.height)),
   );
   drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings, {
     endFrame: Number(buffer.nodeGraphScopeAbsoluteFrame),
@@ -9291,6 +9291,26 @@ function nodeGraphScope2dTraceMaxSegmentPixels(square) {
   return Math.max(8, size * 0.08);
 }
 
+function nodeGraphScope2dLayerRadiusPx(settings, dotSpace, dotName) {
+  const isDot2 = dotName === "dot2";
+  const enabled = isDot2 ? settings?.dot2Enabled !== false : settings?.dot1Enabled !== false;
+  if (!enabled) {
+    return 0;
+  }
+  const sizeValue = Number(isDot2 ? settings?.dot2Size : settings?.dot1Size);
+  const size = Number.isFinite(sizeValue) ? clampNodeSliderValue(sizeValue, 0, 1) : 0;
+  return Math.max(0, (Number(dotSpace) || 0) * size * 0.5);
+}
+
+function nodeGraphScope2dContinuitySpacingPx(settings, dotSpace) {
+  const radii = [
+    nodeGraphScope2dLayerRadiusPx(settings, dotSpace, "dot1"),
+    nodeGraphScope2dLayerRadiusPx(settings, dotSpace, "dot2"),
+  ].filter((radius) => Number.isFinite(radius) && radius > 0);
+  const radius = radii.length ? Math.min(...radii) : 1;
+  return Math.max(0.5, radius * 0.18);
+}
+
 function nodeGraphScope2dTraceSegmentIsContinuous(previousPoint, point, maxSegmentPixels) {
   if (!previousPoint || !point) {
     return true;
@@ -9309,6 +9329,10 @@ function buildNodeGraphScope2dTraceCanvasPoints(item, pixelRatio, square, buffer
   }
   const points = [];
   const maxSegmentPixels = nodeGraphScope2dTraceMaxSegmentPixels(canvasSquare);
+  const spacingPx = nodeGraphScope2dContinuitySpacingPx(
+    settings,
+    Math.min(canvasSquare.width, canvasSquare.height),
+  );
   let previousPoint = null;
   for (let index = 0; index < count; index += 1) {
     const point = nodeGraphScope2dTracePointFromSamples(canvasSquare, buffer.x[index], buffer.y[index], settings);
@@ -9319,9 +9343,9 @@ function buildNodeGraphScope2dTraceCanvasPoints(item, pixelRatio, square, buffer
     }
     if (!nodeGraphScope2dTraceSegmentIsContinuous(previousPoint, point, maxSegmentPixels)) {
       breakNodeGraphScope2dPath(points);
+      previousPoint = null;
     }
-    points.push(point);
-    previousPoint = point;
+    previousPoint = appendNodeGraphScope2dSegment(points, previousPoint, point, spacingPx);
   }
   return points;
 }
@@ -9529,8 +9553,8 @@ function appendNodeGraphScope2dSegment(points, previousPoint, point, spacingPx =
   return point;
 }
 
-function nodeGraphScope2dInterpolationSpacingPx() {
-  return 0.5;
+function nodeGraphScope2dInterpolationSpacingPx(settings = {}, dotSpace = 1) {
+  return nodeGraphScope2dContinuitySpacingPx(settings, dotSpace);
 }
 
 function breakNodeGraphScope2dPath(points) {
@@ -9622,7 +9646,10 @@ function buildNodeGraphScope2dPathPoints(square, buffer, startIndex = 0, options
     return [];
   }
   const pathPoints = [];
-  const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx();
+  const interpolationSpacingPx = nodeGraphScope2dInterpolationSpacingPx(
+    options.settings,
+    Math.min(Number(square?.width) || 1, Number(square?.height) || 1),
+  );
   const interpolate = options.interpolate !== false;
   let previousPoint = null;
   for (let index = Math.max(0, Math.floor(Number(startIndex) || 0)); index < count; index += 1) {

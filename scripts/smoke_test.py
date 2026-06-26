@@ -13000,8 +13000,11 @@ def require_node_graph_mvp_contract() -> None:
         and "return null;" in scope2d_buffer_source
         and "function nodeGraphScope2dFiniteSample(value)" in scope2d_helper_source
         and "return Number.isFinite(sample) ? sample : null;" in scope2d_helper_source
-        and "function nodeGraphScope2dInterpolationSpacingPx()" in scope2d_helper_source
-        and "return 0.5;" in scope2d_helper_source
+        and "function nodeGraphScope2dLayerRadiusPx(settings, dotSpace, dotName)" in scope2d_helper_source
+        and "function nodeGraphScope2dContinuitySpacingPx(settings, dotSpace)" in scope2d_helper_source
+        and "return Math.max(0.5, radius * 0.18);" in scope2d_helper_source
+        and "function nodeGraphScope2dInterpolationSpacingPx(settings = {}, dotSpace = 1)" in scope2d_helper_source
+        and "return nodeGraphScope2dContinuitySpacingPx(settings, dotSpace);" in scope2d_helper_source
         and "if (sampleX === null || sampleY === null) {\n    return null;\n  }" in scope2d_helper_source
         and "skippedCenterSamples" not in scope2d_helper_source
         and "function nodeGraphScope2dDrawStartIndex(state, buffer, count)" in node_graph_source
@@ -13024,6 +13027,7 @@ def require_node_graph_mvp_contract() -> None:
         and "const canvasSquare = nodeGraphScope2dBurnCanvasSquare(canvas);" in scope2d_burn_source
         and "buildNodeGraphScope2dPathPoints(canvasSquare, buffer, drawStartIndex, { interpolate: true, settings })" in scope2d_burn_source
         and "pathPoints = bridgeNodeGraphScope2dAdjacentFramePath(" in scope2d_burn_source
+        and "nodeGraphScope2dInterpolationSpacingPx(settings, Math.min(canvasSquare.width, canvasSquare.height))" in scope2d_burn_source
         and "drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings" in scope2d_burn_source
         and "function drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings, options = {})" in scope2d_burn_source
         and "buildNodeGraphScope2dBurnVertices(points)" in scope2d_burn_source
@@ -13045,6 +13049,8 @@ def require_node_graph_mvp_contract() -> None:
         and "if (!nodeGraphScope2dSampleIsFinite(buffer.x[index], buffer.y[index])) {" in scope2d_helper_source
         and "previousPoint = null;" in scope2d_helper_source
         and "appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx)" in scope2d_helper_source
+        and "const spacingPx = nodeGraphScope2dContinuitySpacingPx(" in scope2d_helper_source
+        and "previousPoint = appendNodeGraphScope2dSegment(points, previousPoint, point, spacingPx);" in scope2d_helper_source
         and "let pathPoints = drawStartIndex < count" in scope2d_burn_source
         and "let previousPoint = null" in scope2d_helper_source
         and "scope2dLastPoints" not in node_graph_source
