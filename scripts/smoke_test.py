@@ -13010,6 +13010,11 @@ def require_node_graph_mvp_contract() -> None:
         and "function nodeGraphScope2dDrawStartIndex(state, buffer, count)" in node_graph_source
         and "state?._nodeGraphScope2dLastDrawnFrame" in node_graph_source
         and "function copyNodeGraphScope2dBurnSurface(renderer, sourceSurface, targetSurface, width, height)" in node_graph_source
+        and "function nodeGraphScope2dBurnTextureFormats(gl)" in node_graph_source
+        and 'gl.getExtension("OES_texture_half_float")' in node_graph_source
+        and 'gl.getExtension("EXT_color_buffer_half_float")' in node_graph_source
+        and 'label: "rgba16f"' in node_graph_source
+        and "gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE" in node_graph_source
         and "const previousReadSurface = renderer.readSurface" in scope2d_resize_source
         and "copyNodeGraphScope2dBurnSurface(renderer, previousReadSurface, nextReadSurface, safeWidth, safeHeight)" in scope2d_resize_source
         and "renderer.lastPoint = null;" in scope2d_resize_source
@@ -13033,6 +13038,7 @@ def require_node_graph_mvp_contract() -> None:
         and "buildNodeGraphScope2dBurnVertices(points)" in scope2d_burn_source
         and "if (distance < 0.01) {" in scope2d_burn_source
         and "end.x = from.x + 0.01;" in scope2d_burn_source
+        and "float sigma = max(uRadius * mix(0.34, 1.0, blur), 0.55);" in node_graph_source
         and "gl.blendFunc(gl.ONE, gl.ONE)" in scope2d_burn_source
         and "function nodeGraphScope2dSampleHasVisibleOffset" not in scope2d_helper_source
         and "function nodeGraphScope2dSampleIsFinite(x, y)" in scope2d_helper_source

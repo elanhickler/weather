@@ -8657,11 +8657,37 @@ function syncNodeGraphScope2dBurnCanvas(canvas, screenElement, pixelRatio) {
   return { resized, synced: true };
 }
 
-function createNodeGraphScope2dBurnTexture(gl, width, height) {
+function nodeGraphScope2dBurnTextureFormats(gl) {
+  if (!gl) {
+    return [];
+  }
+  if (!gl._nodeGraphScope2dBurnTextureFormats) {
+    const halfFloat = gl.getExtension("OES_texture_half_float");
+    const halfFloatLinear = gl.getExtension("OES_texture_half_float_linear");
+    const colorBufferHalfFloat = gl.getExtension("EXT_color_buffer_half_float");
+    const formats = [];
+    if (halfFloat && colorBufferHalfFloat) {
+      formats.push({
+        filter: halfFloatLinear ? gl.LINEAR : gl.NEAREST,
+        label: "rgba16f",
+        type: halfFloat.HALF_FLOAT_OES,
+      });
+    }
+    formats.push({
+      filter: gl.LINEAR,
+      label: "rgba8",
+      type: gl.UNSIGNED_BYTE,
+    });
+    gl._nodeGraphScope2dBurnTextureFormats = formats;
+  }
+  return gl._nodeGraphScope2dBurnTextureFormats;
+}
+
+function createNodeGraphScope2dBurnTexture(gl, width, height, format = {}) {
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, format.filter || gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, format.filter || gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texImage2D(
@@ -8672,7 +8698,7 @@ function createNodeGraphScope2dBurnTexture(gl, width, height) {
     Math.max(1, height),
     0,
     gl.RGBA,
-    gl.UNSIGNED_BYTE,
+    format.type || gl.UNSIGNED_BYTE,
     null,
   );
   return texture;
@@ -8686,8 +8712,23 @@ function createNodeGraphScope2dBurnFramebuffer(gl, texture) {
 }
 
 function createNodeGraphScope2dBurnSurface(gl, width, height) {
+  for (const format of nodeGraphScope2dBurnTextureFormats(gl)) {
+    const texture = createNodeGraphScope2dBurnTexture(gl, width, height, format);
+    const framebuffer = createNodeGraphScope2dBurnFramebuffer(gl, texture);
+    const complete = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    if (complete) {
+      return {
+        format: format.label,
+        framebuffer,
+        texture,
+      };
+    }
+    gl.deleteFramebuffer(framebuffer);
+    gl.deleteTexture(texture);
+  }
   const texture = createNodeGraphScope2dBurnTexture(gl, width, height);
   return {
+    format: "rgba8",
     framebuffer: createNodeGraphScope2dBurnFramebuffer(gl, texture),
     texture,
   };
@@ -8808,7 +8849,7 @@ function createNodeGraphScope2dBurnRenderer(canvas) {
     void main() {
       vec2 segment = vEnd - vStart;
       float blur = clamp(uBlur, 0.0, 1.0);
-      float sigma = max(uRadius * mix(0.34, 1.0, blur), 0.35);
+      float sigma = max(uRadius * mix(0.34, 1.0, blur), 0.55);
       float segmentLengthSquared = dot(segment, segment);
       float t = segmentLengthSquared > 0.000001
         ? clamp(dot(vPosition - vStart, segment) / segmentLengthSquared, 0.0, 1.0)
