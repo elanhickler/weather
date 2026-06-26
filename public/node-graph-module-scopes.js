@@ -9017,15 +9017,23 @@ function appendNodeGraphScope2dBurnSegment(vertices, from, to) {
   if (!from || !to) {
     return;
   }
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-  if (!Number.isFinite(distance) || distance < 0.01) {
+  let dx = to.x - from.x;
+  let dy = to.y - from.y;
+  let distance = Math.sqrt(dx * dx + dy * dy);
+  if (!Number.isFinite(distance)) {
     return;
+  }
+  const end = { x: to.x, y: to.y };
+  if (distance < 0.01) {
+    end.x = from.x + 0.01;
+    end.y = from.y;
+    dx = end.x - from.x;
+    dy = end.y - from.y;
+    distance = 0.01;
   }
   const corners = [0, 1, 2, 1, 3, 2];
   for (const corner of corners) {
-    vertices.push(from.x, from.y, to.x, to.y, corner);
+    vertices.push(from.x, from.y, end.x, end.y, corner);
   }
 }
 
@@ -9524,6 +9532,7 @@ function appendNodeGraphScope2dInterpolatedPoint(points, point, spacingPx = 0.5)
   }
   const safeSpacing = Math.max(0.25, Number(spacingPx) || 0.5);
   if (distance < safeSpacing) {
+    points.push(point);
     return;
   }
   const steps = Math.max(1, Math.ceil(distance / safeSpacing));

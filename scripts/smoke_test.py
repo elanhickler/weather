@@ -13031,6 +13031,8 @@ def require_node_graph_mvp_contract() -> None:
         and "drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings" in scope2d_burn_source
         and "function drawNodeGraphRetainedBurnPath(item, pixelRatio, pathPoints, settings, options = {})" in scope2d_burn_source
         and "buildNodeGraphScope2dBurnVertices(points)" in scope2d_burn_source
+        and "if (distance < 0.01) {" in scope2d_burn_source
+        and "end.x = from.x + 0.01;" in scope2d_burn_source
         and "gl.blendFunc(gl.ONE, gl.ONE)" in scope2d_burn_source
         and "function nodeGraphScope2dSampleHasVisibleOffset" not in scope2d_helper_source
         and "function nodeGraphScope2dSampleIsFinite(x, y)" in scope2d_helper_source
@@ -13048,6 +13050,7 @@ def require_node_graph_mvp_contract() -> None:
         and "scrubNodeGraphScope2dCanvasCenter" not in scope2d_helper_source
         and "if (!nodeGraphScope2dSampleIsFinite(buffer.x[index], buffer.y[index])) {" in scope2d_helper_source
         and "previousPoint = null;" in scope2d_helper_source
+        and "if (distance < safeSpacing) {\n    points.push(point);\n    return;\n  }" in scope2d_helper_source
         and "appendNodeGraphScope2dSegment(pathPoints, previousPoint, point, interpolationSpacingPx)" in scope2d_helper_source
         and "const spacingPx = nodeGraphScope2dContinuitySpacingPx(" in scope2d_helper_source
         and "previousPoint = appendNodeGraphScope2dSegment(points, previousPoint, point, spacingPx);" in scope2d_helper_source
