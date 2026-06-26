@@ -131,7 +131,7 @@
     "moduleOscilloscopesVisible": true,
     "moduleSlidersVisible": true,
     "moduleScopeBackgroundColor": "#000000",
-    "globalSmoothingSeconds": 0.8784946239507296,
+    "globalSmoothingSeconds": 0.3347648532356554,
     "globalSmoothingManual": false,
     "moduleScopeDotCore1Enabled": true,
     "moduleScopeDotCore1Size": 1.94,
@@ -605,7 +605,7 @@
       }
     },
     "sceneContextWindowSize": {
-      "width": 136
+      "width": 140
     },
     "moduleActionWindowSize": {
       "width": 208,
@@ -632,8 +632,8 @@
       "patchExplorer": {
         "open": false,
         "position": {
-          "left": 553,
-          "top": 266
+          "left": 233,
+          "top": 216
         }
       },
       "moduleBrowser": {
@@ -645,8 +645,7 @@
         "size": {
           "width": 179,
           "height": 716
-        },
-        "locked": true
+        }
       },
       "visibilityMenu": {
         "open": false,
@@ -671,17 +670,17 @@
       "traceDisplaySettings": {
         "open": false,
         "locked": true,
-        "targetNode": "dotOscilloscope-1"
+        "targetNode": "scope2d-1"
       }
     },
     "sharedInspectorActive": "",
     "sharedInspectorWindowState": {},
     "workspaceView": {
       "pan": {
-        "x": -23.39285714285714,
-        "y": -268.5267857142857
+        "x": -96.53316326530614,
+        "y": -74.92984693877543
       },
-      "zoom": 0.6018206982084958
+      "zoom": 0.7549238838327371
     },
     "moduleStoreDepartment": "",
     "savedPatchBankIndex": 0,

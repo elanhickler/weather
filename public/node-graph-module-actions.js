@@ -235,9 +235,6 @@ function beginNodeGraphModuleStorePointerPlacement(event) {
   nodeGraphMvp.modulePlacement.sourceElement = addButton;
   addButton.classList.add("placing-module");
   addButton.setPointerCapture?.(event.pointerId);
-  if (typeof closeNodeGraphModuleShop === "function") {
-    closeNodeGraphModuleShop();
-  }
   event.preventDefault();
   event.stopPropagation();
   return true;

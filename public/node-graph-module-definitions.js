@@ -1730,6 +1730,8 @@ const nodeGraphModuleDefinitions = Object.freeze({
     visualSink: true,
   },
   led: {
+    bufferedInputs: ["In"],
+    displayType: "dot",
     inputs: ["In"],
     layout: "led",
     outputs: ["Out"],

@@ -12582,6 +12582,10 @@ def require_node_graph_mvp_contract() -> None:
         'setNodeGraphViewMode("modular")' not in shop_add_source,
         "module browser add should not close the module browser",
     )
+    require(
+        "closeNodeGraphModuleShop()" not in module_actions_source,
+        "dragging a module out of the module browser should keep the browser window open",
+    )
     module_store_source = script_sources["./public/node-graph-module-store.js"]
     module_definitions_source = script_sources["./public/node-graph-module-definitions.js"]
     execution_plan_source = script_sources["./public/node-graph-execution-plan.js"]
@@ -12668,7 +12672,7 @@ def require_node_graph_mvp_contract() -> None:
     require("function drawNodeGraphDotOscilloscopeItem" in node_graph_source, "Dot oscilloscope should have a renderer")
     require(
         "function nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer = null)" in node_graph_source
-        and 'slot?.type === "dotOscilloscope"' in node_graph_source
+        and 'nodeGraphModuleDisplayTypeForSlot(slot) === "dot"' in node_graph_source
         and "capturedBuffer.nodeGraphScopeLightTarget =" in node_graph_source
         and "capturedBuffer.nodeGraphScopeBipolarLightTarget =" in node_graph_source
         and "nodeGraphModuleScopeCapturedFramePositiveLightTarget(capturedBuffer) ??" in node_graph_source
@@ -13591,6 +13595,14 @@ def require_node_graph_mvp_contract() -> None:
         and '"bipolarBrightness", "dot1Enabled", "dot2Enabled"' in node_graph_source
         and "const activeToggles = nodeGraphTraceDisplayActiveControlSet(\"toggles\", formType)" in node_graph_source
         and "normalizeNodeGraphTraceDisplaySettingValueForKey(key, value)" in node_graph_source
+        and "function nodeGraphTraceDisplaySizeControlField(key)" in node_graph_source
+        and "[\"dot1Size\", \"dot2Size\", \"capSize\"].includes(key)" in node_graph_source
+        and "function nodeGraphTraceDisplaySizeToControlValue(value)" in node_graph_source
+        and "return Math.sqrt(clampNodeSliderValue(Number(value) || 0, 0, 1));" in node_graph_source
+        and "function nodeGraphTraceDisplayControlToSizeValue(value)" in node_graph_source
+        and "return control * control;" in node_graph_source
+        and "adjustNodeGraphTraceDisplaySettingByControlDelta(drag.key, startValue, controlDelta)" in node_graph_source
+        and "adjustNodeGraphTraceDisplaySettingByControlDelta(key, baseValue, direction * quantum)" in node_graph_source
         and "for (const key of activeColors)" in node_graph_source
         and "0D Burn brightness mode. Off: only 0..1 lights up. On: -1 and +1 are equally bright." in tooltip_source
         and "zeroDBurnSettings: normalizeNodeGraphZeroDBurnSettings(node.zeroDBurnSettings)" in node_graph_source,
@@ -13737,6 +13749,8 @@ def require_node_graph_mvp_contract() -> None:
     for snippet in [
         'led: "LED"',
         "led: {",
+        'bufferedInputs: ["In"]',
+        'displayType: "dot"',
         'layout: "led"',
         'outputs: ["Out"]',
         'visualInputs: [\n      { key: "led", label: "In", port: "In" },\n    ]',
@@ -13749,19 +13763,12 @@ def require_node_graph_mvp_contract() -> None:
         'led: "led-layout"',
         "viewDrag: false",
         "nodeGraphModuleDefinitions[type]?.layout === \"led\"",
-        "const nodeGraphLedDefaultColor = \"#ff0000\"",
-        "const nodeGraphLedCenterColor = \"#ffffff\"",
-        "function normalizeNodeGraphLedLayout(layout = {})",
         "node.led = normalizeNodeGraphLedLayout(options.led)",
         "? { led: normalizeNodeGraphLedLayout(node.led) }",
         "normalizedNode.led = normalizeNodeGraphLedLayout(node.led)",
-        "function nodeGraphModuleScopeOfflineLedBuffer(slot, capturedBuffer = null)",
-        "nodeGraphScopeLightBaseRatio: 0.78",
-        "nodeGraphScopeLightCenterColor: nodeGraphLedCenterColor",
-        "nodeGraphScopeLightOuterColor: led.color",
-        "nodeGraphScopeLightCenterMinRatio: 0.42",
-        "nodeGraphScopeLightOuterAlphaScale: 1",
         "function nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer)",
+        "nodeGraphModuleDisplayTypeForSlot(slot) === \"dot\"",
+        "nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer)",
         "function nodeGraphModuleScopeDefaultShaderSourceForNode(node)",
         "function nodeGraphModuleScopeShaderSourceForSlot(slot)",
         "function nodeGraphModuleScopeShaderBlurRatio(source, dotName, fallback = 0)",
@@ -13771,9 +13778,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphModuleScopeDefaultShaderSourceForNode(node)",
         "usesShader: Boolean(source)",
         "nodeGraphScopeLightInstant: true",
-        "nodeGraphScopeLightTarget: nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer) ?? 0",
         "for (const sink of runtime.visualSinks || [])",
-        "nodeGraphModuleScopeOfflineLedBuffer(slot, capturedBuffer)",
         "setNodeGraphLedColorFromContext",
         "nodeSceneLedControls",
         "nodeSceneLedColor",
@@ -13781,6 +13786,11 @@ def require_node_graph_mvp_contract() -> None:
         '"led input"',
     ]:
         require(snippet in node_graph_source, f"LED module contract missing {snippet}")
+    require(
+        "function nodeGraphModuleScopeOfflineLedBuffer" not in node_graph_source
+        and "nodeGraphModuleScopeOfflineLedBuffer(slot, capturedBuffer)" not in node_graph_source,
+        "LED should use 0D Burn/dot display routing instead of an LED-specific scope fallback",
+    )
 
     for snippet in [
         ".dsp-node.led-layout",

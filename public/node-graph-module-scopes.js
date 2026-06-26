@@ -3135,27 +3135,6 @@ function nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer = null
   };
 }
 
-function nodeGraphModuleScopeOfflineLedBuffer(slot, capturedBuffer = null) {
-  if (slot?.type !== "led") {
-    return null;
-  }
-  const node = nodeGraphModuleScopeNodeForSlot(slot);
-  const led = normalizeNodeGraphLedLayout(node?.led);
-  return {
-    length: 1,
-    nodeGraphScopeLightDisplay: true,
-    nodeGraphScopeLightBaseRatio: 0.78,
-    nodeGraphScopeLightCenterColor: nodeGraphLedCenterColor,
-    nodeGraphScopeLightCenterAlphaScale: 1,
-    nodeGraphScopeLightCenterMinRatio: 0.42,
-    nodeGraphScopeLightOuterAlphaScale: 1,
-    nodeGraphScopeLightOuterColor: led.color,
-    nodeGraphScopeLightInstant: true,
-    nodeGraphScopeLightShape: "circle",
-    nodeGraphScopeLightTarget: nodeGraphModuleScopeCapturedCurrentLightTarget(capturedBuffer) ?? 0,
-  };
-}
-
 function nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer = null) {
   if (!capturedBuffer?.length) {
     return null;
@@ -3539,7 +3518,7 @@ function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null) {
   } else if (slot?.type === "clock") {
     buffer = nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer) ||
       nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer);
-  } else if (slot?.type === "dotOscilloscope") {
+  } else if (nodeGraphModuleDisplayTypeForSlot(slot) === "dot") {
     buffer = nodeGraphModuleScopeDotOscilloscopeLightBuffer(capturedBuffer);
   } else if (slot?.type === "lineBurnOscilloscope") {
     buffer = prepareNodeGraphTraceDisplayBuffer(
@@ -3557,7 +3536,6 @@ function nodeGraphModuleScopeDisplayBuffer(slot, capturedBuffer = null) {
     buffer = nodeGraphModuleScopeOfflineOscillatorBuffer(slot) ||
       nodeGraphModuleScopeOfflineAdditiveOscillatorBuffer(slot) ||
       nodeGraphModuleScopeOfflineClockBlinkBuffer(slot, capturedBuffer) ||
-      nodeGraphModuleScopeOfflineLedBuffer(slot, capturedBuffer) ||
       nodeGraphModuleScopeOfflineGainAnalyzerBuffer(slot) ||
       capturedBuffer;
   }
@@ -4339,6 +4317,28 @@ function nodeGraphTraceDisplayStepperQuantum(input) {
   return 0.1;
 }
 
+function nodeGraphTraceDisplaySizeControlField(key) {
+  return ["dot1Size", "dot2Size", "capSize"].includes(key);
+}
+
+function nodeGraphTraceDisplaySizeToControlValue(value) {
+  return Math.sqrt(clampNodeSliderValue(Number(value) || 0, 0, 1));
+}
+
+function nodeGraphTraceDisplayControlToSizeValue(value) {
+  const control = clampNodeSliderValue(Number(value) || 0, 0, 1);
+  return control * control;
+}
+
+function adjustNodeGraphTraceDisplaySettingByControlDelta(key, startValue, delta) {
+  if (!nodeGraphTraceDisplaySizeControlField(key)) {
+    return startValue + delta;
+  }
+  return nodeGraphTraceDisplayControlToSizeValue(
+    nodeGraphTraceDisplaySizeToControlValue(startValue) + delta,
+  );
+}
+
 function nodeGraphTraceDisplayNumberDragMultiplier(event) {
   return typeof nodeGraphNumericDragMultiplier === "function"
     ? nodeGraphNumericDragMultiplier(event)
@@ -4509,7 +4509,8 @@ function dragNodeGraphTraceDisplayField(event) {
   const startValue = Number.isFinite(drag.startValue)
     ? drag.startValue
     : nodeGraphDisplaySettingsDefaultValue(drag.key);
-  const rawValue = startValue + ((horizontalDelta + verticalDelta) / 8) * drag.quantum * drag.multiplier;
+  const controlDelta = ((horizontalDelta + verticalDelta) / 8) * drag.quantum * drag.multiplier;
+  const rawValue = adjustNodeGraphTraceDisplaySettingByControlDelta(drag.key, startValue, controlDelta);
   const nextValue = normalizeNodeGraphTraceDisplaySettingValueForKey(drag.key, rawValue);
   drag.input.value = formatNodeGraphTraceDisplaySetting(nextValue);
   applyNodeGraphTraceDisplaySettingsForm({ persist: "debounce", record: false });
@@ -4570,9 +4571,10 @@ function stepNodeGraphTraceDisplaySetting(event) {
   const direction = Number(button.dataset.traceDisplayStepDirection) < 0 ? -1 : 1;
   const quantum = nodeGraphTraceDisplayStepperQuantum(input);
   const current = Number(input.value);
+  const baseValue = Number.isFinite(current) ? current : nodeGraphDisplaySettingsDefaultValue(key);
   const nextValue = normalizeNodeGraphTraceDisplaySettingValueForKey(
     key,
-    (Number.isFinite(current) ? current : nodeGraphDisplaySettingsDefaultValue(key)) + direction * quantum,
+    adjustNodeGraphTraceDisplaySettingByControlDelta(key, baseValue, direction * quantum),
   );
   input.value = formatNodeGraphTraceDisplaySetting(
     nextValue,
