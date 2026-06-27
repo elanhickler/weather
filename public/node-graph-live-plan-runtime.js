@@ -25,6 +25,7 @@ function nodeGraphBuildLivePlan() {
     order: [...compiled.order],
     outputNode: compiled.outputNode,
     patchFingerprint: nodeGraphPatchFingerprint(),
+    scopeCaptureNodeIds: [...(compiled.scopeCaptureNodeIds || [])],
     speakerOutputActive: Boolean(compiled.speakerOutputActive),
     sourceNodes: [...compiled.sourceNodes],
     visualSinks: (compiled.visualSinks || []).map((sink) => ({
@@ -59,6 +60,7 @@ function nodeGraphBuildLivePlanForPatch(patch) {
     order: [...compiled.order],
     outputNode: compiled.outputNode,
     patchFingerprint: nodeGraphPatchFingerprint(normalizedPatch),
+    scopeCaptureNodeIds: [...(compiled.scopeCaptureNodeIds || [])],
     speakerOutputActive: Boolean(compiled.speakerOutputActive),
     sourceNodes: [...compiled.sourceNodes],
     timing: normalizeNodeGraphPatchTiming(compiled.timing),
@@ -442,6 +444,7 @@ function createNodeGraphLiveRuntime(plan) {
     sampleHoldStates,
     samplePlaybackStates,
     samples,
+    scopeCaptureNodeIds: [...(plan.scopeCaptureNodeIds || [])],
     slewLimiterStates,
     smoothers,
     spiralStates,
@@ -473,6 +476,7 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   runtime.modulationConnections = nodeGraphLiveModulationConnectionMap(plan);
   runtime.order = [...(plan.order || [])];
   runtime.outputNode = plan.outputNode || "output";
+  runtime.scopeCaptureNodeIds = [...(plan.scopeCaptureNodeIds || [])];
   runtime.timing = normalizeNodeGraphPatchTiming(plan.timing);
   runtime.visualSinks = (plan.visualSinks || []).map((sink) => ({
     ...sink,

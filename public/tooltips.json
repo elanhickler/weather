@@ -48,6 +48,7 @@
     "help": "Mouse: click to step patch history."
   },
   "timing": {
+    "globalSmoothing": "Global smoothing time in seconds. This controls how quickly smoothed module parameters glide toward new values. Drag the number to tune it, double-click to type, Ctrl-click to reset to one audio block.",
     "speedUnderConstruction": "Speed control is under construction. It is shown here as a future global timing multiplier, but it is not active yet."
   },
   "script": {

@@ -1098,6 +1098,12 @@ function nodeGraphVisibleModuleScopeSlots() {
   return nodeGraphModuleScopeSlots().filter(nodeGraphModuleScopeSlotIsDrawable);
 }
 
+function nodeGraphVisibleModuleScopeNodeIds() {
+  return new Set(nodeGraphVisibleModuleScopeSlots()
+    .map((slot) => String(slot?.nodeId || ""))
+    .filter(Boolean));
+}
+
 function nodeGraphModuleScopeHasDrawableSlots() {
   return nodeGraphVisibleModuleScopeSlots().length > 0;
 }
@@ -4995,7 +5001,10 @@ function captureNodeGraphLiveModuleScopeFrame(runtime, sampleRate) {
   }
   const interval = Math.max(1, Math.floor((Number(sampleRate) || nodeGraphMvp.sampleRate || 44100) / 30));
   runtime.scopeBuffers ||= new Map();
-  for (const nodeId of runtime.order || runtime.nodeOutputs.keys()) {
+  const visibleScopeNodeIds = Array.isArray(runtime.scopeCaptureNodeIds) && runtime.scopeCaptureNodeIds.length
+    ? new Set(runtime.scopeCaptureNodeIds.map((nodeId) => String(nodeId || "")).filter(Boolean))
+    : nodeGraphVisibleModuleScopeNodeIds();
+  for (const nodeId of visibleScopeNodeIds) {
     if (!runtime.nodeOutputs.has(nodeId)) {
       continue;
     }
@@ -5004,6 +5013,9 @@ function captureNodeGraphLiveModuleScopeFrame(runtime, sampleRate) {
   for (const sink of runtime.visualSinks || []) {
     const nodeId = String(sink?.nodeId || "");
     if (!nodeId) {
+      continue;
+    }
+    if (!visibleScopeNodeIds.has(nodeId)) {
       continue;
     }
     let value = 0;

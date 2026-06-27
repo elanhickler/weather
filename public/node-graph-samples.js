@@ -6,11 +6,11 @@ function normalizeNodeGraphSampleId(value = "") {
     .slice(0, 96);
 }
 
-const nodeGraphAssetKinds = Object.freeze(["text", "video", "image", "audio"]);
+const nodeGraphAssetKinds = Object.freeze(["image", "video", "audio", "text", "meta", "app", "misc"]);
 
-function normalizeNodeGraphAssetKind(kind = "audio") {
+function normalizeNodeGraphAssetKind(kind = "misc") {
   const value = String(kind || "").trim().toLowerCase();
-  return nodeGraphAssetKinds.includes(value) ? value : "audio";
+  return nodeGraphAssetKinds.includes(value) ? value : "misc";
 }
 
 function nodeGraphAssetFileNameFromPath(path = "") {
@@ -73,10 +73,11 @@ function normalizeNodeGraphAssetFile(file = {}, fallback = {}) {
 
 function normalizeNodeGraphSampleReference(sample = {}) {
   const source = sample && typeof sample === "object" ? sample : {};
-  const id = normalizeNodeGraphSampleId(source.id);
+  const pathId = String(source.path || source.sourcePath || source.file?.sourcePath || source.file?.path || "").trim();
+  const id = normalizeNodeGraphSampleId(source.id || source.resourceId || pathId);
   const name = String(source.name || id || "Sample").trim().slice(0, 128);
   const dataUrl = String(source.dataUrl || "").trim();
-  const resourceId = normalizeNodeGraphSampleId(source.resourceId || source.assetId);
+  const resourceId = normalizeNodeGraphSampleId(source.resourceId || source.assetId || pathId || id);
   const sourceName = String(source.sourceName || source.fileName || source.file?.name || name || "").trim().slice(0, 160);
   const sourcePath = String(source.sourcePath || source.path || source.file?.sourcePath || source.file?.path || "").trim().slice(0, 512);
   const file = normalizeNodeGraphAssetFile(source.file, { ...source, name, sourceName, sourcePath });
@@ -558,6 +559,96 @@ function syncNodeGraphSampleDisplayForNode(nodeId) {
   setNodeGraphSampleStatus(nodeId, nodeGraphSampleStatusForNode(nodeId));
 }
 
+function nodeGraphAudioPlayerTargetNodeId(options = {}) {
+  const explicit = String(options.nodeId || options.targetNodeId || options.audioPlayerNodeId || "").trim();
+  if (explicit && nodeGraphPatchNode(explicit)?.type === "audioPlayer") {
+    return explicit;
+  }
+  const selected = typeof nodeGraphSingleSelectedNodeId === "function"
+    ? nodeGraphSingleSelectedNodeId()
+    : "";
+  if (selected && nodeGraphPatchNode(selected)?.type === "audioPlayer") {
+    return selected;
+  }
+  const lastTarget = String(nodeGraphMvp.lastModuleActionTargetNode || "").trim();
+  if (lastTarget && nodeGraphPatchNode(lastTarget)?.type === "audioPlayer") {
+    return lastTarget;
+  }
+  return "";
+}
+
+function nodeGraphSampleReferenceFromFileGridResource(resource = {}) {
+  const normalized = typeof normalizeNodeGraphFileGridResourceRow === "function"
+    ? normalizeNodeGraphFileGridResourceRow(resource)
+    : null;
+  const entry = normalized || (typeof normalizeNodeGraphResourceEntry === "function"
+    ? normalizeNodeGraphResourceEntry(resource)
+    : null);
+  if (!entry || entry.kind !== "audio") {
+    return null;
+  }
+  return normalizeNodeGraphSampleReference({
+    dataUrl: entry.dataUrl,
+    file: entry.file,
+    id: entry.id,
+    kind: "audio",
+    metadata: {
+      ...normalizeNodeGraphAssetMetadata(entry.metadata),
+      ...(entry.metadataSummary && typeof entry.metadataSummary === "object"
+        ? normalizeNodeGraphAssetMetadata(entry.metadataSummary)
+        : {}),
+    },
+    name: entry.name,
+    resourceId: entry.id,
+    sourceName: entry.sourceName || entry.name,
+    sourcePath: entry.path,
+  });
+}
+
+function nodeGraphSetAudioPlayerResource(nodeId, resourceRow, options = {}) {
+  const targetId = String(nodeId || "").trim();
+  const targetNode = nodeGraphPatchNode(targetId);
+  if (!targetNode || targetNode.type !== "audioPlayer") {
+    return { ok: false, reason: "target is not a Music Player" };
+  }
+  const resources = typeof registerNodeGraphResources === "function"
+    ? registerNodeGraphResources([resourceRow])
+    : [];
+  const registered = resources.find((resource) =>
+    resource.id === normalizeNodeGraphSampleId(resourceRow?.id || resourceRow?.resourceId || resourceRow?.path || resourceRow?.sourcePath)) ||
+    (typeof normalizeNodeGraphFileGridResourceRow === "function" ? normalizeNodeGraphFileGridResourceRow(resourceRow) : null);
+  const sample = nodeGraphSampleReferenceFromFileGridResource(registered || resourceRow);
+  if (!sample?.id) {
+    const message = "File Grid selection is not an audio resource";
+    setNodeGraphSampleStatus(targetId, message);
+    return { ok: false, reason: message };
+  }
+  const patch = cloneNodeGraphPatch(nodeGraphMvp.patch);
+  const samples = new Map(normalizeNodeGraphPatchSamples(patch.samples).map((entry) => [entry.id, entry]));
+  samples.set(sample.id, sample);
+  patch.samples = [...samples.values()];
+  const node = patch.nodes.find((candidate) => candidate.id === targetId);
+  if (node) {
+    node.sample = { id: sample.id };
+    node.params = { ...(node.params || {}), sample: patch.samples.length };
+  }
+  nodeGraphMvp.sampleLoadErrors?.delete?.(targetId);
+  nodeGraphMvp.sampleRuntimeStatus?.delete?.(targetId);
+  commitNodeGraphPatch(patch, {
+    markPending: false,
+    record: options.record !== false,
+    status: `${sample.name} referenced`,
+  });
+  syncNodeGraphSampleDisplayForNode(targetId);
+  if (typeof renderNodeGraphMissingSampleAssetsDialog === "function") {
+    renderNodeGraphMissingSampleAssetsDialog(nodeGraphMvp.patch);
+  }
+  if (typeof scheduleNodeGraphLivePlanSync === "function") {
+    scheduleNodeGraphLivePlanSync("plan");
+  }
+  return { ok: true, nodeId: targetId, sample, resource: registered || resourceRow };
+}
+
 function stopNodeGraphSampleControlEvent(event) {
   event.stopPropagation();
 }
@@ -696,7 +787,8 @@ async function nodeGraphDataUrlForSampleReference(reference = {}) {
     return reference.dataUrl;
   }
   const resource = typeof nodeGraphResourceById === "function"
-    ? nodeGraphResourceById(reference.resourceId || reference.id)
+    ? nodeGraphResourceById(reference.resourceId || reference.id) ||
+      (typeof nodeGraphResourceByPath === "function" ? nodeGraphResourceByPath(reference.resourceId || reference.sourcePath || reference.id) : null)
     : null;
   if (resource?.path) {
     return nodeGraphDataUrlForResource(resource);
@@ -727,6 +819,10 @@ function nodeGraphBlobToDataUrl(blob) {
 }
 
 async function nodeGraphDataUrlForResource(resource = {}) {
+  const dataUrl = String(resource.dataUrl || "").trim();
+  if (dataUrl) {
+    return dataUrl;
+  }
   const path = String(resource.path || resource.sourcePath || "").trim();
   if (!path) {
     return "";

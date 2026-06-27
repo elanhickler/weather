@@ -11,6 +11,7 @@ const nodeGraphNodeLabels = Object.freeze({
   osc: "Osc",
   polyBlep: "PolyBLEP",
   fbPolyBlepOsc: "F/B PolyBLEP Osc",
+  sineWavetable: "SinCos",
   additiveOsc: "Additive Osc",
   gpuAdditiveOsc: "GPU Additive",
   ellipsoid: "Ellipsoid",
@@ -346,6 +347,59 @@ const nodeGraphModuleDefinitions = Object.freeze({
         defaultValue: "1",
         key: "level",
         label: "Amplitude",
+        max: "1",
+        mid: "0.5",
+        min: "0",
+        nonlinearSlider: false,
+        step: "any",
+      },
+    ],
+  },
+  sineWavetable: {
+    displayType: "trace",
+    inputs: ["0.1V/Oct", "Freq", "Amplitude"],
+    inputAliases: {
+      "0.1V": "0.1V/Oct",
+      "0.1v": "0.1V/Oct",
+      amplitude: "Amplitude",
+      freq: "Freq",
+    },
+    inputLabels: {
+      "0.1V/Oct": "0.1V",
+    },
+    outputAliases: {
+      Cos: "cos",
+      Sin: "sin",
+    },
+    outputs: ["sin", "cos"],
+    parameters: [
+      {
+        defaultValue: "0",
+        key: "phase",
+        kind: "phase",
+        label: "Phase",
+        max: "1",
+        mid: "0.5",
+        min: "0",
+        step: "0.01",
+        unit: "cycle",
+        wraparound: true,
+      },
+      {
+        defaultValue: "440",
+        key: "freq",
+        kind: "frequency",
+        label: "Freq",
+        max: "22050",
+        mid: "440",
+        min: "0",
+        step: "any",
+        unit: "Hz",
+      },
+      {
+        defaultValue: "1",
+        key: "amp",
+        label: "Amp",
         max: "1",
         mid: "0.5",
         min: "0",
@@ -1989,7 +2043,7 @@ function nodeGraphModuleIsGraphType(type) {
 }
 
 function nodeGraphModuleIsRealtimeOscillatorType(type) {
-  return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc";
+  return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc" || type === "sineWavetable";
 }
 
 function nodeGraphCanonicalInputPort(type, port) {

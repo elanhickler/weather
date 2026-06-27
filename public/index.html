@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=0096">
+  <link rel="stylesheet" href="./public/styles.css?v=0097">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -108,7 +108,8 @@
           <button
             id="nodeModularOnlyViewButton"
             type="button"
-            aria-pressed="false"><span>Modular</span><span>View</span></button>
+            aria-label="Modular view"
+            aria-pressed="false"><span class="node-modular-view-icon" aria-hidden="true">🎛️</span></button>
           <button
             id="nodeModuleShopButton"
             type="button"
@@ -169,10 +170,10 @@
           <span
             id="nodeBuildNumberReadout"
             class="node-build-number-readout"
-            aria-label="Build number 0145"
-            title="Build number 0145">
+            aria-label="Build number 0148"
+            title="Build number 0148">
             <span>B</span>
-            <span data-build-number-value>0145</span>
+            <span data-build-number-value>0148</span>
           </span>
           <button id="nodeVisibilityMenuButton" type="button" aria-pressed="false" aria-haspopup="menu">Visibility</button>
         </div>
@@ -1663,9 +1664,9 @@
                 <span class="scene-context-window-button-label">Redo</span>
               </button>
             </div>
-            <div id="nodeSceneGlobalSmoothingControl" class="scene-context-global-smoothing-control" role="group" aria-label="Global smoothing seconds">
-              <label class="scene-context-global-smoothing-label" for="nodeSceneGlobalSmoothingSeconds" aria-label="Smoothing">&#x1F39A;&#xFE0F;</label>
-              <input id="nodeSceneGlobalSmoothingSeconds" class="scene-context-global-smoothing-input" type="number" inputmode="decimal" step="0.001" min="0" autocomplete="off" title="Drag to tune smoothing seconds. Double-click to type. Ctrl-click resets to one audio block." readonly>
+            <div id="nodeSceneGlobalSmoothingControl" class="scene-context-global-smoothing-control" role="group" aria-label="Global smoothing seconds" data-tooltip-key="timing.globalSmoothing">
+              <label class="scene-context-global-smoothing-label" for="nodeSceneGlobalSmoothingSeconds" aria-label="Smoothing" data-tooltip-key="timing.globalSmoothing">&#x1F39A;&#xFE0F;</label>
+              <input id="nodeSceneGlobalSmoothingSeconds" class="scene-context-global-smoothing-input" type="number" inputmode="decimal" step="0.001" min="0" autocomplete="off" aria-label="Global smoothing time in seconds" data-tooltip-key="timing.globalSmoothing" title="Global smoothing time in seconds. Drag to tune; double-click to type. Ctrl-click resets to one audio block." readonly>
               <span class="scene-context-global-smoothing-unit">sec</span>
             </div>
             <div id="nodeSceneTimingControls" class="scene-context-timing-controls" role="group" aria-label="Patch timing"></div>
@@ -2957,8 +2958,8 @@
   <script src="./public/node-graph-default-buttons.js?v=patch-save-refresh-1"></script>
   <script src="./public/node-graph-cookbook-filter.js?v=filter-curve-zero-cutoffs-1780822200000"></script>
   <script src="./public/node-graph-color-standards.js?v=color-standards-1"></script>
-  <script src="./public/node-graph-module-definitions.js?v=0071"></script>
-  <script src="./public/node-graph-module-store.js?v=0071"></script>
+  <script src="./public/node-graph-module-definitions.js?v=0147"></script>
+  <script src="./public/node-graph-module-store.js?v=0147"></script>
   <script src="./public/node-graph-module-sizing.js?v=oscilloscope-default-display-height-1"></script>
   <script src="./public/node-graph-metadata-kinds.js?v=0051"></script>
   <script src="./public/node-graph-parameter-metadata.js?v=0051"></script>
@@ -2966,8 +2967,8 @@
   <script src="./public/node-graph-text-box-utils.js?v=text-box-size-1000-1"></script>
   <script src="./public/node-graph-image-utils.js?v=pre-formula-restore-1"></script>
   <script src="./public/node-graph-graph-utils.js?v=graph2-through-curves-1"></script>
-  <script src="./public/node-graph-samples.js?v=repo-resources-1"></script>
-  <script src="./public/node-graph-resources.js?v=repo-resources-1"></script>
+  <script src="./public/node-graph-samples.js?v=file-grid-resources-1"></script>
+  <script src="./public/node-graph-resources.js?v=file-grid-resources-1"></script>
   <script src="./public/node-graph-text-box-rendering.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-patch-normalizers.js?v=pre-formula-restore-1"></script>
   <script src="./public/node-graph-ui-view.js?v=ui-window-resize-limits-2"></script>
@@ -2981,7 +2982,7 @@
   <script src="./public/node-graph-settings-text-fit.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-default-preset.js?v=default-visible-nodes-1"></script>
   <script src="./public/node-graph-script-status.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-view-controls.js?v=0083"></script>
+  <script src="./public/node-graph-view-controls.js?v=startup-view-mode-1"></script>
   <script src="./public/node-graph-workspace-geometry.js?v=0020"></script>
   <script src="./public/node-graph-workspace-zoom.js?v=0019"></script>
   <script src="./public/node-graph-workspace-view.js?v=center-origin-view-1"></script>
@@ -2992,7 +2993,7 @@
   <script src="./public/node-graph-context-menu.js?v=window-reopen-1"></script>
   <script src="./public/node-graph-module-actions.js?v=0053"></script>
   <script src="./public/node-graph-code-screen.js?v=canvas-ratio-language-2"></script>
-  <script src="./public/node-graph-module-scopes.js?v=scope2d-display-pixel-backing-0143"></script>
+  <script src="./public/node-graph-module-scopes.js?v=visible-scope-capture-0146"></script>
   <script src="./public/node-graph-shader-script.js?v=dark-room-bloom-1"></script>
   <script src="./public/node-graph-canvas-script.js?v=floating-window-drag-area-1"></script>
   <script src="./public/node-graph-module-factories.js?v=0051"></script>
@@ -3018,7 +3019,7 @@
   <script src="./public/node-graph-rendered-visual-output.js?v=beta-polish-1"></script>
   <script src="./public/node-graph-rendered-output-canvases.js?v=beta-polish-1"></script>
   <script src="./public/node-graph-execution-wires.js?v=external-graph-inputs-1780816800000"></script>
-  <script src="./public/node-graph-execution-plan.js?v=0110"></script>
+  <script src="./public/node-graph-execution-plan.js?v=visible-scope-capture-0146"></script>
   <script src="./public/node-graph-execution-summary.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-wire-actions.js?v=wire-connect-1"></script>
   <script src="./public/node-graph-trace-router.js?v=no-self-burst-1780321400000"></script>
@@ -3027,7 +3028,7 @@
   <script src="./public/node-graph-debug-copy.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-execution-debug-api.js?v=slider-unit-color-1780307400000"></script>
   <script src="./public/node-graph-execution-debug-view.js?v=slider-unit-color-1780307400000"></script>
-  <script src="./public/node-graph-tooltips.js?v=0025"></script>
+  <script src="./public/node-graph-tooltips.js?v=0026"></script>
   <script src="./public/node-graph-interaction-help.js?v=0025"></script>
   <script src="./public/presets/useruisettings.js?v=reset-startup-clean-2"></script>
   <script src="./public/node-graph-ui-settings-definitions.js?v=floating-window-header-height-1"></script>
@@ -3045,16 +3046,16 @@
   <script src="./public/node-graph-live-control-rendering.js?v=ear-protection-reset-1"></script>
   <script src="./public/node-graph-default-patch.js?v=content-height-only-1"></script>
   <script src="./public/node-graph-state.js?v=shooting-star-placeholders-1"></script>
-  <script src="./public/node-graph-external-ui-events.js?v=game-trigger-pulses-0128"></script>
+  <script src="./public/node-graph-external-ui-events.js?v=file-grid-resources-1"></script>
   <script src="./public/node-graph-patch-core.js?v=0025"></script>
-  <script src="./public/node-graph-live-plan-runtime.js?v=window-reopen-1"></script>
+  <script src="./public/node-graph-live-plan-runtime.js?v=0147"></script>
   <script src="./public/node-graph-live-parameter-runtime.js?v=unbounded-speed-1"></script>
-  <script src="./public/node-graph-oscillator-runtime.js?v=0023"></script>
+  <script src="./public/node-graph-oscillator-runtime.js?v=0147"></script>
   <script src="./public/node-graph-gpu-additive-backend.js?v=external-graph-inputs-1780816800000"></script>
   <script src="./public/node-graph-jerobeam-spiral.js?v=node-graph-jerobeam-spiral-refactor-1780371000000"></script>
   <script src="./public/node-graph-lorenz-attractor.js?v=lorenz-unbounded-speed-1"></script>
-  <script src="./public/node-graph-live-frame-evaluator.js?v=window-reopen-1"></script>
-  <script src="./public/node-graph-live-runtime.js?v=0049"></script>
+  <script src="./public/node-graph-live-frame-evaluator.js?v=0147"></script>
+  <script src="./public/node-graph-live-runtime.js?v=0147"></script>
   <script src="./public/node-graph-wire-controller-bootstrap.js?v=wire-break-trigger-0129"></script>
   <script src="./public/node-graph-workspace-event-bindings.js?v=xy-origin-recenter-1"></script>
   <script src="./public/node-graph-render-live-event-bindings.js?v=beta-polish-1"></script>

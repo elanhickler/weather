@@ -4201,7 +4201,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=game-trigger-pulses-0128'],
+            ['node-live-audio-worklet.js?v=sine-wavetable-0147'],
         ),
     ]:
         for snippet in snippets:
@@ -6465,7 +6465,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeMissingSampleAssetsList",
         "nodeMissingSampleAssetsClose",
         "dismissNodeGraphMissingSampleAssetsDialog()",
-        "repo-resources-1",
+        "file-grid-resources-1",
         "share-link-1",
         "ui-window-resize-limits-2",
         "ui-window-resize-limits-2",
@@ -7042,6 +7042,7 @@ def require_node_graph_mvp_contract() -> None:
         "patch normalizers": script_sources["./public/node-graph-patch-normalizers.js"],
         "rendering": script_sources["./public/node-graph-module-rendering.js"],
         "resources": script_sources["./public/node-graph-resources.js"],
+        "external ui events": script_sources["./public/node-graph-external-ui-events.js"],
         "runtime": script_sources["./public/node-graph-live-frame-evaluator.js"],
         "samples": script_sources["./public/node-graph-samples.js"],
         "sizing": script_sources["./public/node-graph-module-sizing.js"],
@@ -7058,7 +7059,7 @@ def require_node_graph_mvp_contract() -> None:
         "resource manifest should exist as a simple versioned resources list",
     )
     require(
-        '<script src="./public/node-graph-resources.js?v=repo-resources-1"></script>' in index_source
+        '<script src="./public/node-graph-resources.js?v=file-grid-resources-1"></script>' in index_source
         and "await loadNodeGraphResourceManifest();" in script_sources["./public/node-graph-bootstrap.js"]
         and "resources: { resources: [], version: 1 }" in script_sources["./public/node-graph-state.js"]
         and "resourceMap: new Map()" in script_sources["./public/node-graph-state.js"],
@@ -7091,6 +7092,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "sample data",
             "\n".join([
+                audio_player_contract_sources["external ui events"],
                 audio_player_contract_sources["samples"],
                 audio_player_contract_sources["resources"],
                 audio_player_contract_sources["clone"],
@@ -7151,7 +7153,7 @@ def require_node_graph_mvp_contract() -> None:
                 "normalizedNode.sample = { id: normalizeNodeGraphSampleId(node.sample?.id) }",
                 "samples: typeof normalizeNodeGraphPatchSamples === \"function\"",
                 "requiredAssets: typeof nodeGraphRequiredAssetsForPatch === \"function\"",
-                'const nodeGraphAssetKinds = Object.freeze(["text", "video", "image", "audio"])',
+                'const nodeGraphAssetKinds = Object.freeze(["image", "video", "audio", "text", "meta", "app", "misc"])',
                 "function normalizeNodeGraphAssetKind",
                 "function normalizeNodeGraphAssetFile(file = {}, fallback = {})",
                 "function normalizeNodeGraphAssetMetadata(metadata = {}, depth = 0)",
@@ -7166,8 +7168,17 @@ def require_node_graph_mvp_contract() -> None:
                 "nodeGraphMissingAssetSearchNames",
                 "nodeGraphMissingAssetPrimaryNodeId",
                 "resourceId",
+                "function normalizeNodeGraphFileGridResourceRow",
+                "metadataSummary",
+                "thumbnailDataUrl",
+                "function registerNodeGraphResources",
                 "nodeGraphResourceById",
+                "nodeGraphResourceByPath",
+                "resourcePathMap",
                 "nodeGraphSampleReferenceFromResource",
+                "function nodeGraphSetAudioPlayerResource",
+                "function nodeGraphAcceptFileGridSelection",
+                "soemdsp-sandbox-file-grid-selection",
                 "nodeGraphDataUrlForResource",
                 "nodeGraphDataUrlForSampleReference(reference = {})",
                 "loadNodeGraphResourceManifest",
@@ -7207,7 +7218,7 @@ def require_node_graph_mvp_contract() -> None:
                 "for (const type of Object.keys(nodeGraphModuleDefinitions || {}))",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=game-trigger-pulses-0128',
+                'node-live-audio-worklet.js?v=sine-wavetable-0147',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
@@ -9207,6 +9218,9 @@ def require_node_graph_mvp_contract() -> None:
         "Anti-aliased PolyBLEP oscillator for clean saw, ramp, square, triangle, sine, and noise waveform outputs.",
         'notes: ["anti-aliasing", "polyblep", "realtime oscillator"]',
         "\"sineWavetable\"",
+        "Table-driven sine/cosine oscillator with pitch, frequency, amplitude, and Nyquist-edge fade.",
+        'label: "SinCos"',
+        'notes: ["implemented", "wavetable", "sin/cos"]',
         "\"jerobeamNyqistShannon\"",
         "\"drumMachine\"",
         "\"kickDrum\"",
@@ -9365,7 +9379,8 @@ def require_node_graph_mvp_contract() -> None:
         "window.soemdspSandboxTriggerWireConnectEvent = triggerNodeGraphWireConnectEvent",
         "window.soemdspSandboxTriggerWireDisconnectEvent = triggerNodeGraphWireDisconnectEvent",
         "window.soemdspSandboxTriggerWindowReopenEvent = triggerNodeGraphWindowReopenEvent",
-        'message.type !== "soemdsp-sandbox-button-event"',
+        'message.type === "soemdsp-sandbox-button-event"',
+        'message.type === "soemdsp-sandbox-file-grid-selection"',
         'type: "externalButtonEvent"',
         'type: "wireBreakEvent"',
         'type: "wireConnectEvent"',
@@ -9486,7 +9501,7 @@ def require_node_graph_mvp_contract() -> None:
         "Ellipsoid",
         "PolyBLEP",
         "GPU Additive",
-        "Sinewavetable",
+        "SinCos",
         "JerobeamNyqistShannon",
         "DrumMachine",
         "KickDrum",
@@ -9643,7 +9658,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphValidateRuntimeRoute(issues, {",
         'type !== "canvas"',
         "function nodeGraphModuleIsRealtimeOscillatorType(type)",
-        'return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc"',
+        'return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc" || type === "sineWavetable"',
         "!nodeGraphModuleIsRealtimeOscillatorType(type)",
         "nodeGraphModuleIsRealtimeOscillatorType(type) ||",
         "const nodeGraphMidiKeyboardMinOctave = -4",
@@ -10205,9 +10220,12 @@ def require_node_graph_mvp_contract() -> None:
         "function evaluateNodeGraphPlanFrame(",
         "function renderNodeGraphLiveScriptBlock(event)",
         "function nodeGraphPhaseRadians(value)",
+        "function nodeGraphSineCosWavetableSample(phaseRadians, frequency, amplitude, sampleRate)",
+        "function nodeGraphNyquistFadeAmplitude(frequency, sampleRate)",
         "function createNodeGraphOscResetState()",
         "function nodeGraphIsPolyBlepOscillatorType(type)",
-        'return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc"',
+        'return nodeGraphModuleIsRealtimeOscillatorType(type)',
+        'node?.type === "sineWavetable"',
         "function nodeGraphPolyBlep(phaseCycle, phaseIncrement)",
         "function nodeGraphPolyBlepSquare(phaseCycle, phaseIncrement)",
         "function currentNodeGraphNoiseSample(runtime, nodeId)",
@@ -10879,8 +10897,11 @@ def require_node_graph_mvp_contract() -> None:
         "visibleWidth: rect.width",
         "visibleHeight: rect.height",
         "function toggleNodeGraphVisibilityMenu()",
+        "function nodeGraphStartupViewModeFromUrl()",
+        "params.get(\"sandboxView\")",
+        "value === \"modular-only\"",
         "function resetNodeGraphStartupView()",
-        "setNodeGraphViewMode(\"modular\")",
+        "setNodeGraphViewMode(nodeGraphStartupViewModeFromUrl())",
         "function renderNodeGraphGridToggle()",
         "function renderNodeGraphModuleVisibilityToggles()",
         "function normalizeNodeGraphModuleScopeLineThickness(value)",
@@ -12495,6 +12516,11 @@ def require_node_graph_mvp_contract() -> None:
     require(
         "Modules selected" not in node_graph_source,
         "selection count should not be appended to tooltips; SEL header owns that display",
+    )
+    require(
+        'data-tooltip-key="timing.globalSmoothing"' in index_source
+        and "Global smoothing time in seconds. This controls how quickly smoothed module parameters glide toward new values." in tooltip_source,
+        "command center smoothing should have a specific tooltip instead of generic input help",
     )
     require(
         '"moduleOscilloscopesVisible"' in default_ui_settings_source,
@@ -16091,7 +16117,9 @@ def require_node_graph_mvp_contract() -> None:
         "const steps = Math.max(1, Math.ceil(dt / 0.0007));",
         "this.triangleStates = new Map()",
         "function nodeLiveIsPolyBlepOscillatorType(type)",
-        'return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc"',
+        'return type === "osc" || type === "polyBlep" || type === "fbPolyBlepOsc" || type === "sineWavetable"',
+        "nodeLiveSineCosWavetableSample",
+        'node?.type === "sineWavetable"',
         "polyBlep(phaseCycle, phaseIncrement)",
         "polyBlepSquare(phaseCycle, phaseIncrement)",
         "currentNoiseSample(nodeId)",

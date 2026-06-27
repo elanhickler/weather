@@ -340,9 +340,9 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   sineWavetable: {
     category: "Oscillator",
-    description: "Placeholder for a sine wavetable oscillator with table-driven phase playback.",
-    label: "Sinewavetable",
-    notes: ["placeholder", "wavetable", "future oscillator"],
+    description: "Table-driven sine/cosine oscillator with pitch, frequency, amplitude, and Nyquist-edge fade.",
+    label: "SinCos",
+    notes: ["implemented", "wavetable", "sin/cos"],
   },
   jerobeamNyqistShannon: {
     category: "Oscillator",

@@ -826,10 +826,18 @@ function toggleNodeGraphVisibilityMenu() {
   setNodeGraphVisibilityMenuOpen(!(menu && !menu.hidden));
 }
 
+function nodeGraphStartupViewModeFromUrl() {
+  const params = new URLSearchParams(window.location.search || "");
+  const value = String(params.get("sandboxView") || params.get("view") || "").trim().toLowerCase();
+  return value === "modular-only" || value === "modularonly" || value === "modular-only-view"
+    ? "modular-only"
+    : "modular";
+}
+
 function resetNodeGraphStartupView() {
   nodeGraphMvp.moduleStoreDepartment = "";
   nodeGraphMvp.sceneContextPoint = null;
-  setNodeGraphViewMode("modular");
+  setNodeGraphViewMode(nodeGraphStartupViewModeFromUrl());
 }
 
 function renderNodeGraphVideoViewToggle() {

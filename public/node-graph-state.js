@@ -153,6 +153,8 @@ var nodeGraphMvp = {
   sampleRuntimeStatus: new Map(),
   resources: { resources: [], version: 1 },
   resourceMap: new Map(),
+  resourcePathMap: new Map(),
+  pendingFileGridResources: [],
   resourceManifestError: "",
   modulations: nodeGraphDefaultPatch.modulations.map((modulation) => ({ ...modulation })),
   graphNodeDragging: null,

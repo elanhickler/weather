@@ -226,14 +226,68 @@ window.soemdspSandboxTriggerWireConnectEvent = triggerNodeGraphWireConnectEvent;
 window.soemdspSandboxTriggerWireDisconnectEvent = triggerNodeGraphWireDisconnectEvent;
 window.soemdspSandboxTriggerWindowReopenEvent = triggerNodeGraphWindowReopenEvent;
 
+function nodeGraphAcceptFileGridSelection(rows, options = {}) {
+  const list = Array.isArray(rows) ? rows : [rows].filter(Boolean);
+  const normalizedResources = list
+    .map((row) => typeof normalizeNodeGraphFileGridResourceRow === "function"
+      ? normalizeNodeGraphFileGridResourceRow(row)
+      : null)
+    .filter(Boolean);
+  if (typeof registerNodeGraphResources === "function") {
+    registerNodeGraphResources(normalizedResources);
+  }
+  nodeGraphMvp.pendingFileGridResources = normalizedResources;
+  const audioResource = normalizedResources.find((resource) => resource.kind === "audio") || null;
+  const targetNodeId = typeof nodeGraphAudioPlayerTargetNodeId === "function"
+    ? nodeGraphAudioPlayerTargetNodeId(options)
+    : "";
+  if (audioResource && targetNodeId && typeof nodeGraphSetAudioPlayerResource === "function") {
+    const result = nodeGraphSetAudioPlayerResource(targetNodeId, audioResource, {
+      record: options.record !== false,
+    });
+    if (result.ok) {
+      setNodeInteractionHelp(`File Grid audio assigned to ${targetNodeId}`);
+    } else {
+      setNodeInteractionHelp(result.reason || "File Grid audio could not be assigned");
+    }
+    return {
+      ...result,
+      resources: normalizedResources,
+      targetNodeId,
+    };
+  }
+  const message = audioResource
+    ? "File Grid audio registered; select a Music Player to bind it"
+    : `File Grid resources registered (${normalizedResources.length})`;
+  setNodeInteractionHelp(message);
+  return {
+    ok: true,
+    resources: normalizedResources,
+    targetNodeId,
+  };
+}
+
+window.nodeGraphAcceptFileGridSelection = nodeGraphAcceptFileGridSelection;
+window.soemdspSandboxAcceptFileGridSelection = nodeGraphAcceptFileGridSelection;
+
 window.addEventListener("message", (event) => {
   const message = event.data && typeof event.data === "object" ? event.data : null;
-  if (!message || message.type !== "soemdsp-sandbox-button-event") {
+  if (!message) {
     return;
   }
-  triggerNodeGraphExternalButtonEvent(message.name || message.event, {
-    buttonId: message.buttonId || "",
-    label: message.label || "",
-    source: message.source || "external-page",
-  });
+  if (message.type === "soemdsp-sandbox-button-event") {
+    triggerNodeGraphExternalButtonEvent(message.name || message.event, {
+      buttonId: message.buttonId || "",
+      label: message.label || "",
+      source: message.source || "external-page",
+    });
+  } else if (message.type === "soemdsp-sandbox-file-grid-selection") {
+    nodeGraphAcceptFileGridSelection(message.rows || message.resources || message.resource || message.row, {
+      audioPlayerNodeId: message.audioPlayerNodeId || "",
+      nodeId: message.nodeId || "",
+      record: message.record !== false,
+      source: message.source || "file-grid",
+      targetNodeId: message.targetNodeId || "",
+    });
+  }
 });

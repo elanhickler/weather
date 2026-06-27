@@ -2,6 +2,50 @@ function nodeGraphPhaseRadians(value) {
   return wrapNodeSliderValue(Number(value) || 0, 0, 1) * Math.PI * 2;
 }
 
+const nodeGraphSineWavetableSize = 2048;
+const nodeGraphSineWavetable = Object.freeze(Array.from({ length: nodeGraphSineWavetableSize + 1 }, (_, index) => {
+  const phase = (Math.min(index, nodeGraphSineWavetableSize) / nodeGraphSineWavetableSize) * Math.PI * 2;
+  return Math.sin(phase);
+}));
+
+function nodeGraphSmoothStep01(value) {
+  const t = clampNodeSliderValue(Number(value) || 0, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function nodeGraphNyquistFadeAmplitude(frequency, sampleRate) {
+  const safeRate = Math.max(1, Number(sampleRate) || nodeGraphMvp?.sampleRate || 44100);
+  const nyquist = safeRate * 0.5;
+  const safeFrequency = Math.max(0, Number(frequency) || 0);
+  const fadeStart = Math.min(20000, nyquist * 0.9);
+  if (safeFrequency <= fadeStart) {
+    return 1;
+  }
+  if (safeFrequency >= nyquist) {
+    return 0;
+  }
+  const fadeProgress = (safeFrequency - fadeStart) / Math.max(1, nyquist - fadeStart);
+  return 1 - nodeGraphSmoothStep01(fadeProgress);
+}
+
+function nodeGraphSineWavetableLookup(phaseRadians) {
+  const cycle = wrapNodeSliderValue((Number(phaseRadians) || 0) / (Math.PI * 2), 0, 1);
+  const position = cycle * nodeGraphSineWavetableSize;
+  const index = Math.floor(position);
+  const fraction = position - index;
+  const a = nodeGraphSineWavetable[index] || 0;
+  const b = nodeGraphSineWavetable[index + 1] || nodeGraphSineWavetable[0] || 0;
+  return a + (b - a) * fraction;
+}
+
+function nodeGraphSineCosWavetableSample(phaseRadians, frequency, amplitude, sampleRate) {
+  const level = Math.max(0, Number(amplitude) || 0) * nodeGraphNyquistFadeAmplitude(frequency, sampleRate);
+  return {
+    cos: nodeGraphSineWavetableLookup((Number(phaseRadians) || 0) + Math.PI * 0.5) * level,
+    sin: nodeGraphSineWavetableLookup(phaseRadians) * level,
+  };
+}
+
 function nextNodeGraphNoiseSample(runtime, nodeId) {
   const seed = (Math.imul(1664525, runtime.noiseSeeds.get(nodeId) || 0x12345678) + 1013904223) >>> 0;
   runtime.noiseSeeds.set(nodeId, seed);

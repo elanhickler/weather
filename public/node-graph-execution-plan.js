@@ -350,6 +350,10 @@ function nodeGraphVisualSinkDisplayVisible(node, options = {}) {
   if (!nodeGraphModuleDefinitions[node?.type]?.visualSink) {
     return false;
   }
+  return nodeGraphPatchNodeDisplayVisibleInPlan(node, options);
+}
+
+function nodeGraphPatchNodeDisplayVisibleInPlan(node, options = {}) {
   const bypassedNodes = options.bypassedNodes instanceof Set
     ? options.bypassedNodes
     : new Set(options.bypassedNodes || []);
@@ -421,6 +425,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     }
   }
   const visualSinks = nodeGraphCompiledVisualSinks(graph, reachableNodes);
+  const scopeCaptureNodeIds = nodeGraphCompiledScopeCaptureNodeIds(graph, reachableNodes);
   const hasActiveVisualSink = nodeGraphActiveVisualSinkExists(visualSinks);
   const hasOutputSpeakerInput = nodeGraphOutputInputPorts.some(
     (port) => (graph.inputConnections.get(nodeGraphInputKey(outputNode, port)) || []).length > 0,
@@ -604,6 +609,7 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     outputNode,
     reachableNodes: [...reachableNodes],
     speakerOutputActive: hasOutputNode && hasOutputSpeakerInput,
+    scopeCaptureNodeIds,
     sourceNodes,
     timing: normalizeNodeGraphPatchTiming(patch.timing),
     valid: uniqueIssues.length === 0,
@@ -637,6 +643,18 @@ function nodeGraphCompiledVisualSinks(graph, reachableNodes) {
         type: node.type,
       };
     });
+}
+
+function nodeGraphCompiledScopeCaptureNodeIds(graph, reachableNodes) {
+  const bypassedNodes = new Set(graph.bypassedNodes || []);
+  return graph.nodes
+    .filter((node) =>
+      reachableNodes.has(node.id) &&
+      !bypassedNodes.has(node.id) &&
+      nodeGraphModuleDefinitions[node?.type]?.displayType &&
+      nodeGraphPatchNodeDisplayVisibleInPlan(node, { bypassedNodes })
+    )
+    .map((node) => node.id);
 }
 
 const nodeGraphVisualSinkHistorySeconds = 10;
