@@ -8,6 +8,21 @@ Working name:
 Soundemote WebUI CLAP Host
 ```
 
+Cleanup pass (2026-06-28, branch `void/sandbox-bugfixes`):
+
+- CLAP feedback now surfaces at plan time (`compileNodeGraphExecutionPlan`),
+  not only at render time.
+- CLAP latency/tail errors log via `console.warn` instead of silently
+  degrading to zero.
+- CLAP output buffer is padded by one process chunk to absorb latency
+  compensation shift.
+- The `/shutdown` route on the host tool is documented in its README.
+- The disconnect error message mentions the under-construction state and
+  the local `.cmd` launcher path.
+- The connection UI is intentionally disabled via
+  `nodeGraphClapHostUnderConstruction = true`. See Phase 2 for the
+  re-enablement checklist.
+
 ## Purpose
 
 Add CLAP plugin support to the browser sandbox through a local native companion app.
@@ -129,6 +144,34 @@ http://127.0.0.1:47991
 ```
 
 The browser Host field can override the localhost URL. The native prototype supports `--host` and `--port`.
+
+### Current state (2026-06-28)
+
+The connection UI is intentionally disabled via
+`nodeGraphClapHostUnderConstruction = true` in
+`public/node-graph-clap-host.js`. `bindNodeGraphClapHostControls` early-returns
+so the Connect/Plugins/Diagnostics buttons have no listeners.
+
+The render path (`nodeGraphRenderExternalClapOutputs` in
+`public/node-graph-render-output.js`) still requires a connected host for any
+patch containing a `clapPlugin` node. The disconnect error now mentions the
+under-construction state and points at the local `.cmd` launcher.
+
+To re-enable the UI when ready:
+
+1. Set `nodeGraphClapHostUnderConstruction = false`.
+2. Verify `bindNodeGraphClapHostControls` wires Connect/Plugins/Diagnostics
+   correctly against a running local host.
+3. Surface CLAP feedback at plan time (done —
+   `compileNodeGraphExecutionPlan` now pushes an issue for CLAP-involved
+   feedback).
+4. Surface CLAP latency/tail errors in debug status (done —
+   `nodeGraphClapReportedLatencyFrames`/`nodeGraphClapReportedTailState` now
+   log via `console.warn`).
+5. Audit render-tail/latency compensation (partial — output buffer is padded
+   by one process chunk to absorb latency shift, but trailing `latencyFrames`
+   of output remain zero. Proper fix: pre-query latency from host before
+   render, add to `engineFrames`, trim output).
 
 ## Phase 3: Plugin Discovery
 

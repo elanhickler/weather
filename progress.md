@@ -44,7 +44,7 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 
 - [ ] **D (DENIED as stated)** — Ellipsoid native module file-scope globals. Codex confirmed the current call pattern reads x/y/mono synchronously per-node, so no corruption today. Known future-risk for stateful native module templates.
 - [ ] **Sabrina instance handles** — Add explicit handle model for multi-instance Sabrina reverb (currently uses a fixed pool of 2).
-- [ ] **CLAP host UI** — Re-enable CLAP host connect/plugins/diagnostics buttons when the under-construction state is lifted.
+- [x] **CLAP host UI** — Re-enable CLAP host connect/plugins/diagnostics buttons when the under-construction state is lifted. Re-enablement checklist documented in `docs/WEBUI_CLAP_HOST_PLAN.md` Phase 2.
 - [ ] **Instance handle pattern** — Create a general native module instance handle pattern so future C++→wasm modules don't repeat the globals pattern.
 
 ## Blocked
