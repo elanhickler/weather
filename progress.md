@@ -48,4 +48,9 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 - [ ] **Instance handle pattern** — Create a general native module instance handle pattern so future C++→wasm modules don't repeat the globals pattern.
 
 ## Blocked
-- **Merge with Codex** — Waiting on Architect's signal to merge `void/sandbox-bugfixes` into `codex/restore-before-formula-visual`.
+- **Merge with Codex** — Mailbox message sent to Codex
+  (`CODEGUIDE/agents/CODEX/inbox/20260628-204407-void-to-codex-branch-ready-sabrina-checklist.md`).
+  Waiting on merge signal + Sabrina checklist response.
+- **Module pattern documentation** — Blocked on Sabrina completion
+  checklist from Codex. Cannot document the canonical native module
+  pattern until the export shape is final.
