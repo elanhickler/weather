@@ -6,8 +6,12 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
       audio: normalizeNodeGraphPatchAudio(patch.audio),
       bypassedNodes: patch.bypassedNodes || [],
       cameras: cameraState.cameras,
+      codeScreen: typeof normalizeNodeGraphCodeScreen === "function"
+        ? normalizeNodeGraphCodeScreen(patch.codeScreen)
+        : patch.codeScreen,
       connections: patch.connections,
       format: { ...nodeGraphPatchFormat },
+      graphConnections: patch.graphConnections || [],
       grid: patch.grid,
       info: normalizeNodeGraphPatchInfo(patch.info),
       modulations: patch.modulations || [],
@@ -23,6 +27,9 @@ function serializeNodeGraphPatch(patch = nodeGraphMvp.patch) {
       uiItems: normalizeNodeGraphPatchUiItems(patch.uiItems),
       view: normalizeNodeGraphPatchView(patch.view),
       visual: normalizeNodeGraphPatchVisual(patch.visual),
+      windows: typeof normalizeNodeGraphPatchWindows === "function"
+        ? normalizeNodeGraphPatchWindows(patch.windows)
+        : patch.windows,
     },
     null,
     2,
