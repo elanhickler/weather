@@ -36,9 +36,9 @@ Base: commit `ed2533f Add Sabrina reverb WIP module`
 
 - [x] **Push branch** — `git push origin void/sandbox-bugfixes` so Codex can merge.
 
-- [ ] **E audit** — Full render-tail/latency audit for CLAP latency compensation. Finding: buffer padding fix prevents writes beyond bounds but trailing `latencyFrames` of output are still zero. `durationSeconds` includes this silence. Proper fix: pre-query latency from host before render, add to engineFrames, trim output. Do this during CLAP host re-enablement.
+- [x] **E audit** — Full render-tail/latency audit for CLAP latency compensation. Finding: buffer padding fix prevents writes beyond bounds but trailing `latencyFrames` of output are still zero. `durationSeconds` includes this silence. Proper fix: pre-query latency from host before render, add to engineFrames, trim output. Do this during CLAP host re-enablement.
 
-- [ ] **L** — Double normalization on `commitNodeGraphPatch` (known/intentional per Codex). Revisit if profiling shows cost.
+- [x] **L** — Double normalization on `commitNodeGraphPatch`. Audited: `cloneNodeGraphPatch` is called from ~100 sites, some with unvalidated input, so normalization cannot be removed from the clone itself. The redundant work in `commitNodeGraphPatch` is O(n) on patch size — microseconds for typical patches. Codex marked this intentional/defensive. No action without profiling data showing real cost.
 
 ## Backlog Ideas
 
