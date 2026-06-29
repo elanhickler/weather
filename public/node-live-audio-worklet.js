@@ -127,6 +127,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nativeEllipsoidReady = false;
     this.nativeSabrinaReverb = null;
     this.nativeSabrinaReverbReady = false;
+    this.sabrinaReverbDspEnabled = false;
     this.fractalBrownianNoiseStates = new Map();
     this.graphInputConnections = new Map();
     this.gpuAdditiveQueues = new Map();
@@ -4304,6 +4305,18 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   sabrinaReverbSample(state, leftInput, rightInput, params, rateHz = sampleRate) {
+    const dryLeft = this.safeFilterNumber(leftInput, null);
+    const dryRight = this.safeFilterNumber(rightInput, null);
+    const dryMono = (dryLeft + dryRight) * 0.5;
+    if (!this.sabrinaReverbDspEnabled) {
+      return {
+        Left: dryLeft,
+        Mono: dryMono,
+        Out: dryMono,
+        Right: dryRight,
+        Wet: 0,
+      };
+    }
     const nativeOutput = this.nativeSabrinaReverbSample(state, leftInput, rightInput, params, rateHz);
     if (nativeOutput) {
       return nativeOutput;
@@ -4320,8 +4333,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       recycle: this.clampValue(this.safeFilterNumber(params.recycle, null), 0, 0.98),
     };
     this.sabrinaApplyParams(state, safeParams);
-    const dryLeft = this.safeFilterNumber(leftInput, null);
-    const dryRight = this.safeFilterNumber(rightInput, null);
     const delays = state.delays;
     const maxDelaySize = state.maxDelaySize;
     let left = dryLeft + this.sabrinaDelaySample(delays[12], state.ch1, maxDelaySize) * safeParams.recycle;

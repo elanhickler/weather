@@ -4202,7 +4202,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=sabrina-reverb-0168'],
+            ['node-live-audio-worklet.js?v=sabrina-reverb-0169'],
         ),
     ]:
         for snippet in snippets:
@@ -7248,7 +7248,7 @@ def require_node_graph_mvp_contract() -> None:
                 "for (const type of Object.keys(nodeGraphModuleDefinitions || {}))",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=sabrina-reverb-0168',
+                'node-live-audio-worklet.js?v=sabrina-reverb-0169',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),

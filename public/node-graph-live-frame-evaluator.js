@@ -474,6 +474,7 @@ function createNodeGraphFractalBrownianNoiseState() {
 
 const nodeGraphBadValueExplosionLimit = 999999999;
 const nodeGraphBadValueDenormalLimit = 1.1754943508222875e-38;
+const nodeGraphSabrinaReverbDspEnabled = false;
 
 function nodeGraphBadValueReason(value) {
   const number = Number(value);
@@ -1243,6 +1244,18 @@ function nodeGraphDelayEffectSample(state, input, params, sampleRate, runtime = 
 }
 
 function nodeGraphSabrinaReverbSample(state, leftInput, rightInput, params, sampleRate, runtime = null, nodeId = "") {
+  const dryLeft = nodeGraphSafeFilterNumber(leftInput, runtime, nodeId, null, "Sabrina left input");
+  const dryRight = nodeGraphSafeFilterNumber(rightInput, runtime, nodeId, null, "Sabrina right input");
+  const dryMono = (dryLeft + dryRight) * 0.5;
+  if (!nodeGraphSabrinaReverbDspEnabled) {
+    return {
+      Left: dryLeft,
+      Mono: dryMono,
+      Out: dryMono,
+      Right: dryRight,
+      Wet: 0,
+    };
+  }
   nodeGraphSabrinaEnsureState(state, sampleRate);
   const safeParams = {
     delaySize: Math.max(0, Math.min(1, nodeGraphSafeFilterNumber(params.delaySize, runtime, nodeId, null, "Sabrina delay size"))),
@@ -1255,8 +1268,6 @@ function nodeGraphSabrinaReverbSample(state, leftInput, rightInput, params, samp
     recycle: Math.max(0, Math.min(0.98, nodeGraphSafeFilterNumber(params.recycle, runtime, nodeId, null, "Sabrina recycle"))),
   };
   nodeGraphSabrinaApplyParams(state, safeParams);
-  const dryLeft = nodeGraphSafeFilterNumber(leftInput, runtime, nodeId, null, "Sabrina left input");
-  const dryRight = nodeGraphSafeFilterNumber(rightInput, runtime, nodeId, null, "Sabrina right input");
   const delays = state.delays;
   const maxDelaySize = state.maxDelaySize;
   let left = dryLeft + nodeGraphSabrinaDelaySample(delays[12], state.ch1, maxDelaySize) * safeParams.recycle;
