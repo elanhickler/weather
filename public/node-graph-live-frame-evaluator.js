@@ -1253,7 +1253,7 @@ function nodeGraphSabrinaReverbSample(state, leftInput, rightInput, params, samp
       Mono: dryMono,
       Out: dryMono,
       Right: dryRight,
-      Wet: 0,
+      Wet: dryMono,
     };
   }
   nodeGraphSabrinaEnsureState(state, sampleRate);

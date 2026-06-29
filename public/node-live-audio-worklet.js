@@ -4314,7 +4314,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         Mono: dryMono,
         Out: dryMono,
         Right: dryRight,
-        Wet: 0,
+        Wet: dryMono,
       };
     }
     const nativeOutput = this.nativeSabrinaReverbSample(state, leftInput, rightInput, params, rateHz);

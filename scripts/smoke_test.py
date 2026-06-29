@@ -4202,7 +4202,7 @@ def require_node_graph_mvp_contract() -> None:
         (
             "worklet cache",
             delay_contract_sources["live runtime"],
-            ['node-live-audio-worklet.js?v=sabrina-reverb-0169'],
+            ['node-live-audio-worklet.js?v=sabrina-reverb-0170'],
         ),
     ]:
         for snippet in snippets:
@@ -7248,7 +7248,7 @@ def require_node_graph_mvp_contract() -> None:
                 "for (const type of Object.keys(nodeGraphModuleDefinitions || {}))",
                 "sampleBuffers: new Map()",
                 "await nodeGraphEnsureLiveSamplesForPlan(plan, nodeGraphMvp.patch)",
-                'node-live-audio-worklet.js?v=sabrina-reverb-0169',
+                'node-live-audio-worklet.js?v=sabrina-reverb-0170',
                 "phase: Number(message.audioPlayerPhase) || 0",
             ],
         ),
@@ -13304,16 +13304,31 @@ def require_node_graph_mvp_contract() -> None:
     )
     require('"reverbEffect"' in execution_plan_source, "execution plan should treat Sabrina Reverb as a supported passthrough processor")
     require(
+        'const inputPorts = type === "reverbEffect" ? ["In", "Left", "Right"] : ["In"]' in execution_plan_source
+        and "count + (graph.inputConnections.get(nodeGraphInputKey(nodeId, port)) || []).length" in execution_plan_source,
+        "Sabrina Reverb schedule validation should accept stereo Left/Right inputs, not only In",
+    )
+    require(
         "nodeGraphSabrinaReverbSample(" in live_frame_source
         and "createNodeGraphSabrinaReverbState()" in live_frame_source
         and 'node?.type === "reverbEffect"' in live_frame_source,
         "browser fallback should evaluate Sabrina Reverb through the raw stateful DSP port",
     )
     require(
+        "const nodeGraphSabrinaReverbDspEnabled = false" in live_frame_source
+        and "Wet: dryMono" in live_frame_source,
+        "browser fallback should dry-through Sabrina Wet while the DSP core is disabled",
+    )
+    require(
         "sabrinaReverbSample(state, leftInput, rightInput, params" in worklet_source
         and 'node?.type === "reverbEffect"' in worklet_source
         and "this.sabrinaReverbSample(" in worklet_source,
         "AudioWorklet should evaluate Sabrina Reverb through the raw stateful DSP port",
+    )
+    require(
+        "this.sabrinaReverbDspEnabled = false" in worklet_source
+        and "Wet: dryMono" in worklet_source,
+        "AudioWorklet should dry-through Sabrina Wet while the DSP core is disabled",
     )
     require('id="nodeSceneTimingControls"' in index_source, "Command Center should host timing controls")
     require("function createNodeGraphCommandCenterTimingWidgets" in header_rendering_source, "Command Center timing widgets should reuse header timing inputs")

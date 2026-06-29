@@ -451,7 +451,11 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
   for (const nodeId of reachableNodes) {
     const type = graph.nodeMap.get(nodeId)?.type;
     if (passthroughTypes.has(type)) {
-      const inputCount = (graph.inputConnections.get(nodeGraphInputKey(nodeId, "In")) || []).length;
+      const inputPorts = type === "reverbEffect" ? ["In", "Left", "Right"] : ["In"];
+      const inputCount = inputPorts.reduce(
+        (count, port) => count + (graph.inputConnections.get(nodeGraphInputKey(nodeId, port)) || []).length,
+        0,
+      );
       if (!inputCount && nodeGraphNodeSignalOutputRequired(graph, nodeId)) {
         issues.push(`missing ${nodeGraphNodeDisplayName(nodeId)} input`);
       }
