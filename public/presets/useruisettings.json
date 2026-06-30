@@ -143,20 +143,20 @@
     "moduleScopeLineThickness": 1,
     "moduleScopeDiscontinuitySkipSamples": 1,
     "traceSettings": {
-      "brightness": 0.0384,
-      "color": "#ff0000",
+      "brightness": 0.92,
+      "color": "#75ebff",
       "dot1Enabled": true,
-      "dot1Size": 0.001,
-      "dot2Brightness": 0.18,
+      "dot1Size": 0.0175,
+      "dot2Brightness": 0.93,
       "dot2Color": "#184fff",
       "dot2Enabled": false,
-      "dot2Size": 0,
-      "dot2LineThickness": 0.48,
+      "dot2Size": 0.1,
+      "dot2LineThickness": 0,
       "cycles": 2,
       "lineThickness": 0.2,
       "padding": 0,
       "skipDiscontinuities": true,
-      "sourceSync": true,
+      "sourceSync": false,
       "zoomSeconds": 0.05
     },
     "sliderLayout": "text-inside",
@@ -601,23 +601,23 @@
       "width": 140
     },
     "moduleActionWindowSize": {
-      "width": 208,
-      "height": 616
+      "width": 185,
+      "height": 620
     },
     "workspaceWindowStatesVersion": 1,
     "workspaceWindowStates": {
       "commandCenter": {
         "open": true,
         "position": {
-          "left": 62,
-          "top": 123
+          "left": 137,
+          "top": 439
         }
       },
       "moduleActions": {
         "open": false
       },
       "metaparameters": {
-        "open": false
+        "open": true
       },
       "oscilloscopeSettings": {
         "open": false
@@ -625,23 +625,23 @@
       "patchExplorer": {
         "open": false,
         "position": {
-          "left": 233,
-          "top": 216
+          "left": 98,
+          "top": 69
         },
         "size": {
-          "width": 240,
-          "height": 617
+          "width": 171,
+          "height": 351
         }
       },
       "moduleBrowser": {
         "open": true,
         "position": {
-          "left": 1531,
-          "top": 122
+          "left": 340,
+          "top": 107
         },
         "size": {
-          "width": 179,
-          "height": 716
+          "width": 164,
+          "height": 720
         }
       },
       "visibilityMenu": {
@@ -667,26 +667,26 @@
       "traceDisplaySettings": {
         "open": false,
         "locked": true,
-        "targetNode": "bias-2"
+        "targetNode": "reverbEffect-1"
       }
     },
-    "sharedInspectorActive": "traceDisplaySettings",
+    "sharedInspectorActive": "metaparameters",
     "sharedInspectorWindowState": {
       "position": {
-        "left": 1418,
-        "top": 168
+        "left": 1493,
+        "top": 233
       },
       "size": {
-        "width": 208,
-        "height": 616
+        "width": 185,
+        "height": 620
       }
     },
     "workspaceView": {
       "pan": {
-        "x": -197.60000000000002,
-        "y": -62.33250000000004
+        "x": 123.03571428571425,
+        "y": 408.1160714285714
       },
-      "zoom": 1.0930910948563093
+      "zoom": 0.7549238838327402
     },
     "moduleStoreDepartment": "",
     "savedPatchBankIndex": 0,
@@ -723,15 +723,7 @@
         "slots": [],
         "ui": []
       },
-      "connections": [
-        {
-          "destinationNode": "output",
-          "destinationPort": "Mono",
-          "sourceNode": "polyBlep-1",
-          "sourcePort": "Saw",
-          "tracePoints": []
-        }
-      ],
+      "connections": [],
       "format": {
         "kind": "soemdsp-sandbox-node-patch",
         "version": 1
@@ -745,24 +737,24 @@
       "info": {
         "author": "",
         "bank": 0,
-        "bankName": "chaos",
+        "bankName": "basic",
         "description": "",
-        "name": "lorenz demonstration",
+        "name": "ellipsoid",
         "program": 0,
-        "tags": "chaos, lorenz, attractor, strange"
+        "tags": "circle"
       },
       "modulations": [],
       "monitors": [],
       "nodes": [
         {
-          "gx": 7,
-          "gy": 4,
+          "gx": -2,
+          "gy": -27,
           "id": "output",
           "paramMeta": {
             "volume": {
               "alias": "",
               "choices": [],
-              "curveAmount": 0,
+              "curveAmount": 0.5,
               "def": 0.1,
               "displayChoices": false,
               "divideChoicesVisibly": false,
@@ -784,137 +776,54 @@
             }
           },
           "params": {
-            "volume": 0.384137585847563
+            "volume": 0.411323377374953
           },
           "type": "output",
-          "ui": {
-            "buttonsHidden": false,
-            "displayHeightOffsetGu": 0,
-            "displayModeKey": "",
-            "ioHidden": false,
-            "interfaceControlsHidden": false,
-            "movementLocked": false,
-            "oscilloscopeHidden": true,
-            "slidersHidden": false,
-            "titleHidden": false
+          "traceDisplaySettings": {
+            "brightness": 0.92,
+            "color": "#75ebff",
+            "dot1Enabled": true,
+            "dot1Size": 0.08,
+            "dot2Brightness": 0.18,
+            "dot2Color": "#184fff",
+            "dot2Enabled": true,
+            "dot2Size": 0.24,
+            "dot2LineThickness": 0.48,
+            "cycles": 2,
+            "lineThickness": 0.2,
+            "padding": 0,
+            "skipDiscontinuities": true,
+            "sourceSync": true,
+            "zoomSeconds": 0.05
           }
-        },
-        {
-          "gx": -7,
-          "gy": -3,
-          "id": "polyBlep-1",
-          "paramMeta": {
-            "waveform": {
-              "alias": "",
-              "choices": [
-                "Saw",
-                "Ramp",
-                "Square",
-                "Triangle",
-                "Sine",
-                "Noise"
-              ],
-              "curveAmount": 0,
-              "def": 0,
-              "displayChoices": true,
-              "divideChoicesVisibly": true,
-              "kind": "waveform",
-              "linearSmoothing": false,
-              "max": 5,
-              "maxDigits": 3,
-              "mid": 2,
-              "min": 0,
-              "nonlinearSlider": true,
-              "sliderCurve": "skew",
-              "showSign": false,
-              "step": 1,
-              "tooltip": "",
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            },
-            "frequency": {
-              "alias": "",
-              "choices": [],
-              "curveAmount": 0,
-              "def": 440,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "frequency",
-              "linearSmoothing": true,
-              "max": 20000,
-              "maxDigits": 5,
-              "mid": 440,
-              "min": 0,
-              "nonlinearSlider": true,
-              "sliderCurve": "skew",
-              "showSign": false,
-              "step": 0,
-              "tooltip": "",
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "Hz",
-              "wraparound": false
-            },
-            "phase": {
-              "alias": "",
-              "choices": [],
-              "curveAmount": 0,
-              "def": 0,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "phase",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.5,
-              "min": 0,
-              "nonlinearSlider": false,
-              "sliderCurve": "linear",
-              "showSign": false,
-              "step": 0.01,
-              "tooltip": "",
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "cycle",
-              "wraparound": true
-            },
-            "level": {
-              "alias": "",
-              "choices": [],
-              "curveAmount": 0,
-              "def": 1,
-              "displayChoices": false,
-              "divideChoicesVisibly": false,
-              "kind": "decimal",
-              "linearSmoothing": true,
-              "max": 1,
-              "maxDigits": 3,
-              "mid": 0.5,
-              "min": 0,
-              "nonlinearSlider": false,
-              "sliderCurve": "linear",
-              "showSign": false,
-              "step": 0,
-              "tooltip": "",
-              "unboundedMax": false,
-              "unboundedMin": false,
-              "unit": "",
-              "wraparound": false
-            }
-          },
-          "params": {
-            "waveform": 1,
-            "frequency": 0,
-            "phase": 0,
-            "level": 1
-          },
-          "type": "polyBlep"
         }
       ],
       "requiredAssets": [],
-      "samples": [],
+      "samples": [
+        {
+          "acceptedTypes": [
+            "audio/*"
+          ],
+          "id": "chaosarp-lorenz-startup",
+          "kind": "audio",
+          "file": {
+            "extension": "mp3",
+            "mime": "audio/mpeg",
+            "name": "Elan Hickler - ChaosArp Lorenz.mp3",
+            "size": 10447933,
+            "sourcePath": "./public/resources/audio/Elan Hickler - ChaosArp Lorenz.mp3"
+          },
+          "metadata": {
+            "artist": "Elan Hickler",
+            "title": "ChaosArp Lorenz",
+            "startupMusic": true
+          },
+          "name": "Elan Hickler - ChaosArp Lorenz",
+          "resourceId": "chaosarp-lorenz-startup",
+          "sourceName": "Elan Hickler - ChaosArp Lorenz.mp3",
+          "sourcePath": "./public/resources/audio/Elan Hickler - ChaosArp Lorenz.mp3"
+        }
+      ],
       "timing": {
         "tempoBpm": 120,
         "timeSignatureDenominator": 4,
@@ -922,9 +831,9 @@
       },
       "uiItems": [],
       "view": {
-        "heightGu": 28,
-        "widthGu": 36,
-        "zoom": 1.0930910948563093
+        "heightGu": 23,
+        "widthGu": 26,
+        "zoom": 0.7549238838327402
       },
       "visual": {
         "background": {

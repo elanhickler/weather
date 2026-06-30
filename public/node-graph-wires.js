@@ -425,10 +425,6 @@
       );
     }
 
-    function dropTargetFromPoint(clientX, clientY) {
-      return patchPointTargetFromPoint(clientX, clientY);
-    }
-
     function endpointPoint(endpoint, fallbackElement = null) {
       if (!endpoint) {
         return null;
@@ -452,12 +448,9 @@
     return {
       connectEndpoints,
       createGradient,
-      dropTargetFromPoint,
       drawPath,
-      dragVisualElement: visualEndpointElement,
       endpointFromElement,
       endpointPoint,
-      endpointsAreParameterAudioMismatch,
       endpointsMatch,
       endpointsShouldBurst,
       patchPointTargetFromPoint,
