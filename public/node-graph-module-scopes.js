@@ -7184,7 +7184,10 @@ function buildNodeGraphTraceDisplayVertices(buffer, rect, canvas, pixelRatio, sl
     const y = midY - value * halfHeight;
     if (hasPrevious) {
       const segmentIndex = pointIndex - 1;
-      if (skipSamples > 0 && (sampleInfo.discontinuity || Math.abs(rawValue - previousRaw) > nodeGraphModuleScopeDiscontinuityThreshold)) {
+      if (skipSamples > 0 && sampleInfo.discontinuity) {
+        skipThroughSegment = Math.max(skipThroughSegment, segmentIndex + skipSamples);
+      }
+      if (skipSamples > 0 && Math.abs(rawValue - previousRaw) > nodeGraphModuleScopeDiscontinuityThreshold) {
         skipThroughSegment = Math.max(skipThroughSegment, segmentIndex + skipSamples - 1);
       }
       if (segmentIndex > skipThroughSegment) {
