@@ -4,3 +4,4 @@ __pycache__/
 sandbox-preview.png
 .python-version
 .DS_Store
+*.bak
