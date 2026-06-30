@@ -331,7 +331,7 @@ class SandboxServer(BaseHTTPRequestHandler):
 
     def serve_request(self, send_body: bool) -> None:
         parsed = urlparse(self.path)
-        if parsed.path == "/":
+        if parsed.path in ("/", "/index.html"):
             self.serve_index(send_body=send_body)
             return
 
@@ -1193,6 +1193,9 @@ class SandboxServer(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def serve_file(self, path: Path, send_body: bool = True) -> None:
+        if path.resolve() == (PUBLIC / "index.html").resolve():
+            self.serve_index(send_body=send_body)
+            return
         if not path.exists() or not path.is_file():
             self.send_error(404, "Not found")
             return
