@@ -6153,15 +6153,23 @@ function nodeGraphTraceDisplaySampleInfo(buffer, position, samplesPerPoint = 1) 
   const taps = Math.max(3, Math.min(33, Math.ceil((last - first) * 2)));
   let total = 0;
   let weightTotal = 0;
+  let spanDiscontinuity = center.discontinuity;
+  let prevTapValue = null;
   for (let tap = 0; tap < taps; tap += 1) {
     const t = taps <= 1 ? 0.5 : tap / (taps - 1);
     const samplePosition = first + (last - first) * t;
     const weight = 1 - Math.abs(t - 0.5) * 0.75;
-    total += nodeGraphModuleScopeInterpolatedSample(buffer, samplePosition) * weight;
+    const tapValue = nodeGraphModuleScopeInterpolatedSample(buffer, samplePosition);
+    total += tapValue * weight;
     weightTotal += weight;
+    if (prevTapValue !== null && Math.abs(tapValue - prevTapValue) > nodeGraphModuleScopeDiscontinuityThreshold) {
+      spanDiscontinuity = true;
+    }
+    prevTapValue = tapValue;
   }
   return {
     ...center,
+    discontinuity: spanDiscontinuity,
     value: weightTotal > 0 ? total / weightTotal : center.value,
   };
 }
