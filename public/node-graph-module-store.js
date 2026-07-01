@@ -534,9 +534,9 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   output: {
     category: "Portals",
-    description: "Stereo audio sink. Route Left and Right signals here to hear the patch.",
+    description: "Stereo audio sink. Route Left and Right signals here to hear the patch. Emits a Sync output equal to the Mono + Left + Right signal sum.",
     label: "Output",
-    notes: ["audio sink", "left right inputs", "render target"],
+    notes: ["audio sink", "left right inputs", "render target", "sync output"],
   },
   audioInput: {
     category: "Portals",

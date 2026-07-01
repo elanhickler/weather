@@ -3500,10 +3500,6 @@ audio {
   --node-mod-input-stroke: #b184ff;
   --node-param-output-fill: #66e0a3;
   --node-param-output-stroke: #66e0a3;
-  --node-output-node-left-fill: #f25d5d;
-  --node-output-node-left-stroke: #f25d5d;
-  --node-output-node-right-fill: #5d8ef2;
-  --node-output-node-right-stroke: #5d8ef2;
   --node-bypass-icon-size-ratio: 0.36;
   --node-bypass-icon-glow-spread-ratio: 0.4;
   --node-bypass-icon-glow-color: #f25d5d;
@@ -14764,43 +14760,6 @@ body.node-slider-dragging .node-param-port {
   --node-patch-point-x: 0%;
   --node-port-stroke-mask-color: color-mix(in srgb, var(--node-input-fill) 15%, transparent);
   border-color: color-mix(in srgb, var(--node-input-stroke) 56%, transparent);
-  background: var(--node-port-stroke-mask-color);
-}
-
-/* Output module: Left takes red, Right takes blue, so the two channel
-   dots are visually distinct at a glance instead of sharing the generic
-   input color. */
-.output-node .node-port.input[data-port="Left"] {
-  --node-port-hover-color: var(--node-output-node-left-fill);
-}
-
-.output-node .node-port.input[data-port="Left"]:not(.connected-port):hover {
-  --node-port-stroke-mask-color: color-mix(in srgb, var(--node-output-node-left-fill) 14%, transparent);
-  border-color: color-mix(in srgb, var(--node-output-node-left-stroke) 64%, transparent);
-  background: var(--node-port-stroke-mask-color);
-}
-
-.output-node .node-port.input[data-port="Left"].connected-port {
-  --node-patch-point-color: var(--node-output-node-left-fill);
-  --node-port-stroke-mask-color: color-mix(in srgb, var(--node-output-node-left-fill) 15%, transparent);
-  border-color: color-mix(in srgb, var(--node-output-node-left-stroke) 56%, transparent);
-  background: var(--node-port-stroke-mask-color);
-}
-
-.output-node .node-port.input[data-port="Right"] {
-  --node-port-hover-color: var(--node-output-node-right-fill);
-}
-
-.output-node .node-port.input[data-port="Right"]:not(.connected-port):hover {
-  --node-port-stroke-mask-color: color-mix(in srgb, var(--node-output-node-right-fill) 14%, transparent);
-  border-color: color-mix(in srgb, var(--node-output-node-right-stroke) 64%, transparent);
-  background: var(--node-port-stroke-mask-color);
-}
-
-.output-node .node-port.input[data-port="Right"].connected-port {
-  --node-patch-point-color: var(--node-output-node-right-fill);
-  --node-port-stroke-mask-color: color-mix(in srgb, var(--node-output-node-right-fill) 15%, transparent);
-  border-color: color-mix(in srgb, var(--node-output-node-right-stroke) 56%, transparent);
   background: var(--node-port-stroke-mask-color);
 }
 

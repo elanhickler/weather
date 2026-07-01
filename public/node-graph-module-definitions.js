@@ -2171,6 +2171,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     displayType: "trace",
     inputs: ["Mono", "Left", "Right"],
     output: true,
+    outputs: ["Sync"],
     parameters: [
       {
         defaultValue: "0.1",
