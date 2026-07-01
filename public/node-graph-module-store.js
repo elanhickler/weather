@@ -621,9 +621,9 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   shootingStarExplosion: {
     category: "Game Triggers",
-    description: "Website shooting-star collision event source. Emits a one-sample pulse when a star hits the sandbox frame, scaled 0 to 1 by the explosion's power.",
+    description: "Website shooting-star collision event source. Emits a one-sample pulse when a star hits the sandbox frame, scaled 0 to 1 by the incoming star's random speed mapped between Low Range and High Range.",
     label: "Shooting Star Explosion",
-    notes: ["game trigger", "shooting star", "website bridge", "power scaled pulse"],
+    notes: ["game trigger", "shooting star", "website bridge", "power scaled pulse", "low/high range"],
   },
   nextPatch: {
     category: "Controllers",

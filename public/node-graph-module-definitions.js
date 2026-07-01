@@ -984,7 +984,10 @@ const nodeGraphModuleDefinitions = Object.freeze({
   shootingStarExplosion: {
     inputs: [],
     outputs: ["Pulse"],
-    parameters: [],
+    parameters: [
+      { defaultValue: "6", key: "lowRange", label: "Low Range", max: "20", mid: "10", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "10", key: "highRange", label: "High Range", max: "20", mid: "10", min: "0", nonlinearSlider: false, step: "any" },
+    ],
   },
   nextPatch: {
     layout: "patchCommand",

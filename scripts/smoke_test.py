@@ -13701,8 +13701,8 @@ def require_node_graph_mvp_contract() -> None:
         'this.setWindowReopenEvent()',
         'value = this.windowReopenEventSample();',
         'windowReopenGateSamples()',
-        'this.setShootingStarExplosionEvent(message.power)',
-        'value = this.shootingStarExplosionEventSample();',
+        'this.setShootingStarExplosionEvent(message.speed)',
+        'value = this.shootingStarExplosionEventSample(',
     ]:
         require(snippet in worklet_source, f"worklet source missing {snippet}")
 

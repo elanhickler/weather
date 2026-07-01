@@ -370,7 +370,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       return;
     }
     if (message.type === "shootingStarExplosionEvent") {
-      this.setShootingStarExplosionEvent(message.power);
+      this.setShootingStarExplosionEvent(message.speed);
       return;
     }
   }
@@ -1391,22 +1391,28 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return { Pulse: pulseSamples > 0 ? 1 : 0 };
   }
 
-  setShootingStarExplosionEvent(power = 1) {
+  setShootingStarExplosionEvent(speed = null) {
     const event = this.shootingStarExplosionEvent && typeof this.shootingStarExplosionEvent === "object"
       ? this.shootingStarExplosionEvent
-      : { pulseSamples: 0, power: 1 };
+      : { pulseSamples: 0, speed: null };
     event.pulseSamples = Math.max(0, Number(event.pulseSamples) || 0) + 1;
-    const normalizedPower = Number(power);
-    event.power = Number.isFinite(normalizedPower) ? Math.max(0, Math.min(1, normalizedPower)) : 1;
+    const normalizedSpeed = Number(speed);
+    event.speed = Number.isFinite(normalizedSpeed) ? normalizedSpeed : null;
     this.shootingStarExplosionEvent = event;
   }
 
-  shootingStarExplosionEventSample() {
+  shootingStarExplosionEventSample(lowRange = 6, highRange = 10) {
     const event = this.shootingStarExplosionEvent && typeof this.shootingStarExplosionEvent === "object"
       ? this.shootingStarExplosionEvent
       : { pulseSamples: 0 };
     const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
-    const power = Math.max(0, Math.min(1, Number(event.power ?? 1) || 0));
+    const speed = Number(event.speed);
+    let power = 1;
+    if (Number.isFinite(speed)) {
+      const low = Number(lowRange) || 0;
+      const high = Number(highRange) || 0;
+      power = high > low ? Math.max(0, Math.min(1, (speed - low) / (high - low))) : 0;
+    }
     event.pulseSamples = Math.max(0, pulseSamples - 1);
     this.shootingStarExplosionEvent = event;
     return { Pulse: pulseSamples > 0 ? power : 0 };
@@ -6123,7 +6129,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       } else if (node?.type === "windowReopen") {
         value = this.windowReopenEventSample();
       } else if (node?.type === "shootingStarExplosion") {
-        value = this.shootingStarExplosionEventSample();
+        value = this.shootingStarExplosionEventSample(
+          this.readEffectiveParameter(node, "lowRange", 6, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "highRange", 10, frame, frames, frameValues),
+        );
       } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
         const state = this.patchCommandStates.get(nodeId) || this.createPatchCommandState();
         this.patchCommandStates.set(nodeId, state);
