@@ -34,6 +34,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "torus",
   "wirdoSpiral",
   "lorenzAttractor",
+  "logisticMap",
   "rosslerAttractor",
   "chuaAttractor",
   "aizawaAttractor",
@@ -441,6 +442,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "Classic butterfly attractor motion for turbulent curls and folding trajectories.",
     label: "Lorenz Attractor",
     notes: ["butterfly attractor", "3D chaos", "X/Y/Z motion"],
+  },
+  logisticMap: {
+    category: "Chaos",
+    description: "Simplest possible chaotic system: x = R * x * (1 - x), repeated at a clocked Rate. Sweep R from steady to periodic to fully chaotic.",
+    label: "Logistic Map",
+    notes: ["chaos", "bifurcation", "one parameter chaos", "discrete map"],
   },
   rosslerAttractor: {
     category: "Chaos",

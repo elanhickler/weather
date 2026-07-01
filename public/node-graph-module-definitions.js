@@ -32,6 +32,7 @@ const nodeGraphNodeLabels = Object.freeze({
   stepSequencer: "Step Sequencer",
   spiral: "Spiral",
   lorenzAttractor: "Lorenz Attractor",
+  logisticMap: "Logistic Map",
   noiseGenerator: "Noise Generator",
   randomWalk: "Random Walk",
   fractalBrownianNoise: "Fractal Brownian Noise",
@@ -618,6 +619,24 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { key: "scale", label: "Scale", defaultValue: "1", min: "0", mid: "1", max: "4", step: "0.01" },
       { key: "rotate", label: "Rotate", defaultValue: "0", min: "0", mid: "0.5", max: "1", step: "0.01", kind: "phase", unit: "cycle", wraparound: true },
       { key: "zDepth", label: "Z Depth", defaultValue: "0.4", min: "0", mid: "0.4", max: "1", step: "0.01" },
+      { key: "level", label: "Level", defaultValue: "1", min: "0", mid: "0.5", max: "1", step: "0.01" },
+    ],
+  },
+  logisticMap: {
+    displayType: "trace",
+    displaySignals: [
+      { key: "Out", kind: "scalar" },
+    ],
+    displayModes: [
+      { key: "trace", label: "Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out" } },
+    ],
+    defaultDisplayMode: "trace",
+    inputs: ["Reset"],
+    outputs: ["Out"],
+    parameters: [
+      { key: "rate", label: "Rate", kind: "frequency", defaultValue: "8", min: "0", mid: "20", max: "2000", maxDigits: 5, step: "any" },
+      { key: "r", label: "R", defaultValue: "3.9", min: "0", mid: "2", max: "4", step: "0.0001" },
+      { key: "seed", label: "Seed", defaultValue: "0.5", min: "0.0001", mid: "0.5", max: "0.9999", step: "0.0001" },
       { key: "level", label: "Level", defaultValue: "1", min: "0", mid: "0.5", max: "1", step: "0.01" },
     ],
   },

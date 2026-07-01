@@ -242,3 +242,33 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export-memory" `
   -o "$root\native_modules\polyblep\polyblep.wasm" `
   "$root\native_modules\polyblep\polyblep.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_logistic_map_create" `
+  "-Wl,--export=soemdsp_logistic_map_destroy" `
+  "-Wl,--export=soemdsp_logistic_map_sample" `
+  "-Wl,--export=soemdsp_logistic_map_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\logistic_map\logistic_map.wasm" `
+  "$root\native_modules\logistic_map\logistic_map.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_pitch_quantizer_create" `
+  "-Wl,--export=soemdsp_pitch_quantizer_destroy" `
+  "-Wl,--export=soemdsp_pitch_quantizer_sample" `
+  "-Wl,--export=soemdsp_pitch_quantizer_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\pitch_quantizer\pitch_quantizer.wasm" `
+  "$root\native_modules\pitch_quantizer\pitch_quantizer.cpp"

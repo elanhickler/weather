@@ -2829,6 +2829,21 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         Y: lorenz.y * level,
         Z: lorenz.z * level,
       };
+    } else if (node?.type === "logisticMap") {
+      const state = runtime.logisticMapStates.get(nodeId) || createNodeGraphLogisticMapState();
+      runtime.logisticMapStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      value = {
+        Out: nodeGraphLogisticMapSample({
+          level: read("level", 1),
+          r: read("r", 3.9),
+          rate: read("rate", 8),
+          reset: mixInput(nodeId, "Reset"),
+          sampleRate,
+          seed: read("seed", 0.5),
+          state,
+        }),
+      };
     } else if (node?.type === "midiOut") {
       const midiInputKey = `${nodeId}.MIDI Number`;
       const hasMidiInput = runtime.inputConnections.has(midiInputKey);

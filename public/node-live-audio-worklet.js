@@ -160,6 +160,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.tb303FilterStates = new Map();
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
+    this.logisticMapStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.oscResetStates = new Map();
     this.graphLfoStates = new Map();
@@ -565,6 +566,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "logistic_map" || targetType === "logisticMap") {
+        for (const state of this.logisticMapStates.values()) {
+          this.destroyLogisticMapNativeState(state);
+        }
+        this.nativeLogisticMap = exports;
+        this.nativeLogisticMapReady = Boolean(
+          this.nativeLogisticMap?.soemdsp_logistic_map_create &&
+          this.nativeLogisticMap?.soemdsp_logistic_map_sample,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "logistic_map",
+          status: this.nativeLogisticMapReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       if (name === "shooting_star_explosion" || targetType === "shootingStarExplosion") {
         this.nativeShootingStarExplosion = exports;
         this.nativeShootingStarExplosionReady = Boolean(
@@ -673,6 +690,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.tb303FilterStates = new Map();
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
+    this.logisticMapStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.oscResetStates = new Map();
     this.graphLfoStates = new Map();
@@ -898,6 +916,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "lorenzAttractor" && !this.lorenzAttractorStates.has(id)) {
         this.lorenzAttractorStates.set(id, this.createLorenzAttractorState());
       }
+      if (node?.type === "logisticMap" && !this.logisticMapStates.has(id)) {
+        this.logisticMapStates.set(id, this.createLogisticMapState());
+      }
       if (node?.type === "passiveFilter" && !this.passiveFilterStates.has(id)) {
         this.passiveFilterStates.set(id, this.createPassiveFilterState());
       }
@@ -1059,6 +1080,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     for (const id of [...this.lorenzAttractorStates.keys()]) {
       if (!ids.has(id)) {
         this.lorenzAttractorStates.delete(id);
+      }
+    }
+    for (const id of [...this.logisticMapStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroyLogisticMapNativeState(this.logisticMapStates.get(id));
+        this.logisticMapStates.delete(id);
       }
     }
     for (const id of [...this.passiveFilterStates.keys()]) {
@@ -3510,6 +3537,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.smoothers = new Map();
     runtime.spiralStates = new Map();
     runtime.lorenzAttractorStates = new Map();
+    runtime.logisticMapStates = new Map();
     runtime.stepSequencerStates = new Map();
     runtime.triggerCounterStates = new Map();
     runtime.triggerDividerStates = new Map();
@@ -3552,6 +3580,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       }
       if (node?.type === "spiral") this.spiralStates.set(id, this.createSpiralState());
       if (node?.type === "lorenzAttractor") this.lorenzAttractorStates.set(id, this.createLorenzAttractorState());
+      if (node?.type === "logisticMap") this.logisticMapStates.set(id, this.createLogisticMapState());
       if (node?.type === "passiveFilter") this.passiveFilterStates.set(id, this.createPassiveFilterState());
       if (node?.type === "cookbookFilter") this.cookbookFilterStates.set(id, this.createCookbookFilterState());
       if (node?.type === "ladderFilter") this.ladderFilterStates.set(id, this.createLadderFilterState());
@@ -5407,6 +5436,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
   }
 
+  destroyLogisticMapNativeState(state) {
+    if (state?.nativeHandle && this.nativeLogisticMap?.soemdsp_logistic_map_destroy) {
+      this.nativeLogisticMap.soemdsp_logistic_map_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
   destroyPolyBlepNativeState(state) {
     if (state?.nativeHandle && this.nativePolyBlep?.soemdsp_polyblep_destroy) {
       this.nativePolyBlep.soemdsp_polyblep_destroy(state.nativeHandle);
@@ -5568,6 +5604,86 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       y: this.clampValue(y, -1, 1),
       z: this.clampValue(z, -1, 1),
     };
+  }
+
+  createLogisticMapState() {
+    return {
+      hasStarted: false,
+      phase: 0,
+      x: 0.5,
+      nativeHandle: 0,
+    };
+  }
+
+  resetLogisticMapState(state, seed) {
+    state.x = this.clampValue(Number(seed) || 0.5, 0.0001, 0.9999);
+    state.phase = 0;
+    state.hasStarted = true;
+  }
+
+  logisticMapSampleJs(state, options = {}) {
+    const resetActive = Number(options.reset) > 0;
+    const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+    const rate = Math.max(0, Number(options.rate) || 0);
+    const r = this.clampValue(Number(options.r) || 0, 0, 4);
+    const seed = this.clampValue(Number(options.seed) || 0.5, 0.0001, 0.9999);
+    if (resetActive || !state.hasStarted) {
+      this.resetLogisticMapState(state, seed);
+    }
+    if (!resetActive && rate > 0) {
+      state.phase += rate / sampleRateValue;
+      let iterations = 0;
+      while (state.phase >= 1 && iterations < 4096) {
+        state.phase -= 1;
+        state.x = this.clampValue(r * state.x * (1 - state.x), 0, 1);
+        iterations++;
+      }
+      if (state.phase >= 1) {
+        state.phase = 0;
+      }
+    }
+    return state.x * 2 - 1;
+  }
+
+  logisticMapSample(state, options = {}) {
+    const level = Number(options.level) || 0;
+    if (
+      this.nativeLogisticMapReady &&
+      this.nativeLogisticMap?.soemdsp_logistic_map_create &&
+      this.nativeLogisticMap?.soemdsp_logistic_map_sample
+    ) {
+      try {
+        if (!state.nativeHandle) {
+          state.nativeHandle = this.nativeLogisticMap.soemdsp_logistic_map_create();
+        }
+        if (state.nativeHandle) {
+          const resetActive = Number(options.reset) > 0 ? 1 : 0;
+          const rate = Math.max(0, Number(options.rate) || 0);
+          const r = this.clampValue(Number(options.r) || 0, 0, 4);
+          const seed = this.clampValue(Number(options.seed) || 0.5, 0.0001, 0.9999);
+          const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+          const scaled = this.nativeLogisticMap.soemdsp_logistic_map_sample(
+            state.nativeHandle,
+            resetActive,
+            rate,
+            r,
+            seed,
+            level,
+            sampleRateValue,
+          );
+          return this.safeFilterNumber(scaled, null);
+        }
+      } catch (error) {
+        this.nativeLogisticMapReady = false;
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "logistic_map",
+          status: "disabled",
+          message: String(error?.message || error || "native Logistic Map failed"),
+        });
+      }
+    }
+    return this.logisticMapSampleJs(state, options) * level;
   }
 
   spiralWrap01(value) {
@@ -6255,6 +6371,20 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           X: lorenz.x * level,
           Y: lorenz.y * level,
           Z: lorenz.z * level,
+        };
+      } else if (node?.type === "logisticMap") {
+        const state = this.logisticMapStates.get(nodeId) || this.createLogisticMapState();
+        this.logisticMapStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        value = {
+          Out: this.logisticMapSample(state, {
+            level: read("level", 1),
+            r: read("r", 3.9),
+            rate: read("rate", 8),
+            reset: mixInput(nodeId, "Reset"),
+            sampleRate: safeRate,
+            seed: read("seed", 0.5),
+          }),
         };
       } else if (node?.type === "midiOut") {
         const hasMidiInput = this.inputConnections.has(this.inputKey(nodeId, "MIDI Number"));

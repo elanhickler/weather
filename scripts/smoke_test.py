@@ -196,6 +196,7 @@ PUBLIC_SCRIPT_PATHS = (
     "./public/node-graph-oscillator-runtime.js",
     "./public/node-graph-jerobeam-spiral.js",
     "./public/node-graph-lorenz-attractor.js",
+    "./public/node-graph-logistic-map.js",
     "./public/node-graph-live-frame-evaluator.js",
     "./public/node-graph-live-runtime.js",
     "./public/node-graph-wire-controller-bootstrap.js",
@@ -2344,7 +2345,15 @@ def require_root_shell(base_url: str) -> None:
     server_source = (ROOT / "server.py").read_text(encoding="utf-8")
     build_number_match = re.search(r'BUILD_NUMBER = "([^"]+)"', server_source)
     build_number = build_number_match.group(1) if build_number_match else ""
-    expected = (PUBLIC / "index.html").read_text(encoding="utf-8").replace("{{BUILD_NUMBER}}", build_number).encode("utf-8")
+    version_file = ROOT / "VERSION"
+    sandbox_version = version_file.read_text(encoding="utf-8").strip() if version_file.exists() else "0.0.0"
+    expected = (
+        (PUBLIC / "index.html")
+        .read_text(encoding="utf-8")
+        .replace("{{BUILD_NUMBER}}", build_number)
+        .replace("{{SANDBOX_VERSION}}", sandbox_version)
+        .encode("utf-8")
+    )
     expected_size = str(len(expected))
     root_response: Response | None = None
     for path in ["/", "/public/index.html"]:
@@ -17276,7 +17285,7 @@ def require_native_module_contract(base_url: str) -> None:
     require("\"Native C++\"" in module_store_source, "native module browser badge missing")
     require("id=\"nodeSceneOpenNativeCode\"" in index_html, "native module code action markup missing")
     require("nodeSceneOpenNativeCode" in context_menu_source, "native module code action menu state missing")
-    require("nodeGraphNativeModulesForType(targetNode.type)" in context_menu_source, "native code action should use scanned module catalog")
+    require("nodeGraphCodeEntryForType(targetNode.type)" in context_menu_source, "native code action should use scanned module catalog")
     require("function openNodeGraphNativeModuleCodeFromContext()" in module_actions_source, "native module code opener missing")
     require(
         "a.href = entry.sourceUrl" in module_actions_source

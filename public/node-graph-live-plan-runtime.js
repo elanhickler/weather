@@ -247,6 +247,7 @@ function createNodeGraphLiveRuntime(plan) {
   const ladderFilterStates = new Map();
   const tb303FilterStates = new Map();
   const linearEnvelopeStates = new Map();
+  const logisticMapStates = new Map();
   const lorenzAttractorStates = new Map();
   const moduleGroupRuntimes = new Map();
   const noiseGeneratorStates = new Map();
@@ -285,6 +286,9 @@ function createNodeGraphLiveRuntime(plan) {
     }
     if (node.type === "lorenzAttractor") {
       lorenzAttractorStates.set(node.id, createNodeGraphLorenzAttractorState());
+    }
+    if (node.type === "logisticMap") {
+      logisticMapStates.set(node.id, createNodeGraphLogisticMapState());
     }
     if (node.type === "passiveFilter") {
       passiveFilterStates.set(node.id, createNodeGraphPassiveFilterState());
@@ -405,6 +409,7 @@ function createNodeGraphLiveRuntime(plan) {
     ladderFilterStates,
     tb303FilterStates,
     linearEnvelopeStates,
+    logisticMapStates,
     lorenzAttractorStates,
     meterCounter: 0,
     meterClipCount: 0,
@@ -531,6 +536,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   if (!runtime.lorenzAttractorStates) {
     runtime.lorenzAttractorStates = new Map();
   }
+  if (!runtime.logisticMapStates) {
+    runtime.logisticMapStates = new Map();
+  }
   if (!runtime.clockStates) {
     runtime.clockStates = new Map();
   }
@@ -628,6 +636,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     }
     if (node.type === "lorenzAttractor" && !runtime.lorenzAttractorStates.has(node.id)) {
       runtime.lorenzAttractorStates.set(node.id, createNodeGraphLorenzAttractorState());
+    }
+    if (node.type === "logisticMap" && !runtime.logisticMapStates.has(node.id)) {
+      runtime.logisticMapStates.set(node.id, createNodeGraphLogisticMapState());
     }
     if (node.type === "passiveFilter" && !runtime.passiveFilterStates.has(node.id)) {
       runtime.passiveFilterStates.set(node.id, createNodeGraphPassiveFilterState());
@@ -790,6 +801,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.lorenzAttractorStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.lorenzAttractorStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.logisticMapStates.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.logisticMapStates.delete(id);
     }
   }
   for (const id of [...runtime.passiveFilterStates.keys()]) {

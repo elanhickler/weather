@@ -193,6 +193,7 @@ var nodeGraphMvp = {
     image: 0,
     ladderFilter: 0,
     linearEnvelope: 0,
+    logisticMap: 0,
     lorenzAttractor: 0,
     lowpass: 0,
     macroKnob: 0,
