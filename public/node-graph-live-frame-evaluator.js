@@ -1734,7 +1734,7 @@ function nodeGraphFractalBrownianNoiseAxisState(state, axis) {
   return state.axes[key];
 }
 
-function nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime = null, nodeId = "", axis = "x") {
+function nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime = null, nodeId = "", axis = "x", options = {}) {
   const axisState = nodeGraphFractalBrownianNoiseAxisState(state, axis);
   const rate = Math.max(1, Number(sampleRate) || nodeGraphMvp.sampleRate || 44100);
   const seed = Math.max(0, Math.round(nodeGraphSafeFilterNumber(params.seed, runtime, nodeId, null, "fbm seed")));
@@ -1761,14 +1761,21 @@ function nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime 
   }
   axisState.time += frequency / rate;
   const normalized = maxValue > 0 ? total / maxValue : 0;
-  return nodeGraphSafeFilterNumber(normalized * level, runtime, nodeId, null, "fbm output");
+  return nodeGraphSafeFilterNumber(options.raw ? normalized : normalized * level, runtime, nodeId, null, "fbm output");
 }
 
 function nodeGraphFractalBrownianNoiseVector(state, params, sampleRate, runtime = null, nodeId = "") {
+  const rawX = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "x", { raw: true });
+  const rawY = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "y", { raw: true });
+  const rawZ = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "z", { raw: true });
+  const level = nodeGraphSafeFilterNumber(params.level, runtime, nodeId, null, "fbm level");
   return {
-    "Out X": nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "x"),
-    "Out Y": nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "y"),
-    "Out Z": nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, "z"),
+    "Out X": nodeGraphSafeFilterNumber(rawX * level, runtime, nodeId, null, "fbm output"),
+    "Out Y": nodeGraphSafeFilterNumber(rawY * level, runtime, nodeId, null, "fbm output"),
+    "Out Z": nodeGraphSafeFilterNumber(rawZ * level, runtime, nodeId, null, "fbm output"),
+    "Out X Raw": rawX,
+    "Out Y Raw": rawY,
+    "Out Z Raw": rawZ,
   };
 }
 

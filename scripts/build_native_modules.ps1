@@ -130,6 +130,9 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export=soemdsp_fbm_x" `
   "-Wl,--export=soemdsp_fbm_y" `
   "-Wl,--export=soemdsp_fbm_z" `
+  "-Wl,--export=soemdsp_fbm_x_raw" `
+  "-Wl,--export=soemdsp_fbm_y_raw" `
+  "-Wl,--export=soemdsp_fbm_z_raw" `
   "-Wl,--export=soemdsp_fbm_version" `
   "-Wl,--export-memory" `
   -o "$root\native_modules\fractal_brownian_noise\fractal_brownian_noise.wasm" `

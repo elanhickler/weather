@@ -10037,11 +10037,11 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphNoiseGeneratorSample(state, params, runtime = null, nodeId = \"\")",
         "function nodeGraphRandomWalkSample(state, params, sampleRate, runtime = null, nodeId = \"\")",
         "function nodeGraphFractalBrownianNoiseAxisState(state, axis)",
-        "function nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime = null, nodeId = \"\", axis = \"x\")",
+        "function nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime = null, nodeId = \"\", axis = \"x\", options = {})",
         "function nodeGraphFractalBrownianNoiseVector(state, params, sampleRate, runtime = null, nodeId = \"\")",
-        "\"Out X\": nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, \"x\")",
-        "\"Out Y\": nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, \"y\")",
-        "\"Out Z\": nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, \"z\")",
+        "const rawX = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, \"x\", { raw: true })",
+        "const rawY = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, \"y\", { raw: true })",
+        "const rawZ = nodeGraphFractalBrownianNoiseSample(state, params, sampleRate, runtime, nodeId, \"z\", { raw: true })",
         "function nodeGraphRationalCurve(value, skew)",
         "function nodeGraphSmoothNoise1d(x, seed)",
         "function nodeGraphExpAdsrCalcCoef(rate, targetRatio)",
@@ -12920,11 +12920,12 @@ def require_node_graph_mvp_contract() -> None:
         "Wireless video discovery should not read values, create routes, or mutate audio/patch state",
     )
     require(
-        'fractalBrownianNoise: {\n    displaySignals:' in module_definitions_source
-        and 'key: "xyBurn", label: "X/Y Burn", renderer: "scope2d", settingsSchema: "scope2d", source: { x: "Out X", y: "Out Y" }' in module_definitions_source
-        and 'key: "xyTrace", label: "X/Y Trace", renderer: "scope2dTrace", settingsSchema: "scope2dTrace", source: { x: "Out X", y: "Out Y" }' in module_definitions_source
-        and 'key: "zTrace", label: "Z Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Z" }' in module_definitions_source,
-        "Fractal Brownian Noise should declare explicit display modes for Out X/Y/Z",
+        'fractalBrownianNoise: {' in module_definitions_source
+        and 'displaySignals:' in module_definitions_source
+        and 'key: "xyBurn", label: "X/Y Burn", renderer: "scope2d", settingsSchema: "scope2d", source: { x: "Out X Raw", y: "Out Y Raw" }' in module_definitions_source
+        and 'key: "xyTrace", label: "X/Y Trace", renderer: "scope2dTrace", settingsSchema: "scope2dTrace", source: { x: "Out X Raw", y: "Out Y Raw" }' in module_definitions_source
+        and 'key: "zTrace", label: "Z Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Z Raw" }' in module_definitions_source,
+        "Fractal Brownian Noise should declare explicit display modes for the pre-level Out X/Y/Z Raw signals",
     )
     require(
         'ellipsoid: {\n    displayType: "scope2d",\n    displaySignals:' in module_definitions_source
@@ -16619,11 +16620,11 @@ def require_node_graph_mvp_contract() -> None:
         "noiseGeneratorSample(state, params, nodeId)",
         "randomWalkSample(state, params, rate = sampleRate, nodeId = \"\")",
         "fractalBrownianNoiseAxisState(state, axis)",
-        "fractalBrownianNoiseSample(state, params, rate = sampleRate, nodeId = \"\", axis = \"x\")",
+        "fractalBrownianNoiseSample(state, params, rate = sampleRate, nodeId = \"\", axis = \"x\", options = {})",
         "fractalBrownianNoiseVector(state, params, rate = sampleRate, nodeId = \"\")",
-        "\"Out X\": this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, \"x\")",
-        "\"Out Y\": this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, \"y\")",
-        "\"Out Z\": this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, \"z\")",
+        "const rawX = this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, \"x\", { raw: true })",
+        "const rawY = this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, \"y\", { raw: true })",
+        "const rawZ = this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, \"z\", { raw: true })",
         "rationalCurve(value, skew)",
         "smoothNoise1d(x, seed)",
         "expAdsrCalcCoef(rate, targetRatio)",

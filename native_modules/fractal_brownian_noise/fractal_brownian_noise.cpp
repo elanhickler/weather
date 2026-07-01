@@ -14,6 +14,9 @@ struct FbmState {
   double lastX;
   double lastY;
   double lastZ;
+  double lastRawX;
+  double lastRawY;
+  double lastRawZ;
 };
 
 static FbmState gPool[kMaxInstances];
@@ -108,9 +111,12 @@ extern "C" void soemdsp_fbm_sample(
   const unsigned int baseY = seedHash(safeSeed, 1);
   const unsigned int baseZ = seedHash(safeSeed, 2);
 
-  s.lastX = fbmAxis(s.time, safeOctaves, safePers, safeScale, baseX) * level;
-  s.lastY = fbmAxis(s.time, safeOctaves, safePers, safeScale, baseY) * level;
-  s.lastZ = fbmAxis(s.time, safeOctaves, safePers, safeScale, baseZ) * level;
+  s.lastRawX = fbmAxis(s.time, safeOctaves, safePers, safeScale, baseX);
+  s.lastRawY = fbmAxis(s.time, safeOctaves, safePers, safeScale, baseY);
+  s.lastRawZ = fbmAxis(s.time, safeOctaves, safePers, safeScale, baseZ);
+  s.lastX = s.lastRawX * level;
+  s.lastY = s.lastRawY * level;
+  s.lastZ = s.lastRawZ * level;
 
   s.time += safeFreq / safeRate;
 }
@@ -128,6 +134,21 @@ extern "C" double soemdsp_fbm_y(int handle) {
 extern "C" double soemdsp_fbm_z(int handle) {
   if (handle < 1 || handle > kMaxInstances) return 0.0;
   return gPool[handle - 1].lastZ;
+}
+
+extern "C" double soemdsp_fbm_x_raw(int handle) {
+  if (handle < 1 || handle > kMaxInstances) return 0.0;
+  return gPool[handle - 1].lastRawX;
+}
+
+extern "C" double soemdsp_fbm_y_raw(int handle) {
+  if (handle < 1 || handle > kMaxInstances) return 0.0;
+  return gPool[handle - 1].lastRawY;
+}
+
+extern "C" double soemdsp_fbm_z_raw(int handle) {
+  if (handle < 1 || handle > kMaxInstances) return 0.0;
+  return gPool[handle - 1].lastRawZ;
 }
 
 extern "C" int soemdsp_fbm_version() {

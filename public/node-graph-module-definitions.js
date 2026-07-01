@@ -746,18 +746,21 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   fractalBrownianNoise: {
+    // Display sources reference the pre-level ("Out X Raw" etc.) signal so the
+    // scope always shows the fractal noise at full volume, regardless of the
+    // Level parameter -- the Level knob only affects the wired/audio output.
     displaySignals: [
-      { key: "Out X", kind: "scalar" },
-      { key: "Out Y", kind: "scalar" },
-      { key: "Out Z", kind: "scalar" },
+      { key: "Out X Raw", label: "Out X", kind: "scalar" },
+      { key: "Out Y Raw", label: "Out Y", kind: "scalar" },
+      { key: "Out Z Raw", label: "Out Z", kind: "scalar" },
       { key: "X/Y", kind: "xy" },
     ],
     displayModes: [
-      { key: "xyBurn", label: "X/Y Burn", renderer: "scope2d", settingsSchema: "scope2d", source: { x: "Out X", y: "Out Y" } },
-      { key: "xyTrace", label: "X/Y Trace", renderer: "scope2dTrace", settingsSchema: "scope2dTrace", source: { x: "Out X", y: "Out Y" } },
-      { key: "xTrace", label: "X Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out X" } },
-      { key: "yTrace", label: "Y Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Y" } },
-      { key: "zTrace", label: "Z Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Z" } },
+      { key: "xyBurn", label: "X/Y Burn", renderer: "scope2d", settingsSchema: "scope2d", source: { x: "Out X Raw", y: "Out Y Raw" } },
+      { key: "xyTrace", label: "X/Y Trace", renderer: "scope2dTrace", settingsSchema: "scope2dTrace", source: { x: "Out X Raw", y: "Out Y Raw" } },
+      { key: "xTrace", label: "X Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out X Raw" } },
+      { key: "yTrace", label: "Y Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Y Raw" } },
+      { key: "zTrace", label: "Z Trace", renderer: "trace", settingsSchema: "trace", source: { value: "Out Z Raw" } },
     ],
     defaultDisplayMode: "xyBurn",
     outputs: ["Out X", "Out Y", "Out Z"],

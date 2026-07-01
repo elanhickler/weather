@@ -5054,7 +5054,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return state.axes[key];
   }
 
-  fractalBrownianNoiseSample(state, params, rate = sampleRate, nodeId = "", axis = "x") {
+  fractalBrownianNoiseSample(state, params, rate = sampleRate, nodeId = "", axis = "x", options = {}) {
     const axisState = this.fractalBrownianNoiseAxisState(state, axis);
     const safeRate = Math.max(1, Number(rate) || sampleRate || 44100);
     const seed = Math.max(0, Math.round(this.safeFilterNumber(params.seed, null)));
@@ -5081,7 +5081,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     axisState.time += frequency / safeRate;
     const normalized = maxValue > 0 ? total / maxValue : 0;
-    return this.safeFilterNumber(normalized * level, null);
+    return this.safeFilterNumber(options.raw ? normalized : normalized * level, null);
   }
 
   fractalBrownianNoiseVector(state, params, rate = sampleRate, nodeId = "") {
@@ -5098,17 +5098,30 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         const frequency = Math.max(0, this.safeFilterNumber(params.frequency, null));
         const level = this.safeFilterNumber(params.level, null);
         this.nativeFbm.soemdsp_fbm_sample(state.nativeHandle, seed, octaves, persistence, scale, frequency, level, safeRate);
+        const rawX = this.nativeFbm.soemdsp_fbm_x_raw?.(state.nativeHandle);
+        const rawY = this.nativeFbm.soemdsp_fbm_y_raw?.(state.nativeHandle);
+        const rawZ = this.nativeFbm.soemdsp_fbm_z_raw?.(state.nativeHandle);
         return {
           "Out X": this.safeFilterNumber(this.nativeFbm.soemdsp_fbm_x(state.nativeHandle), null),
           "Out Y": this.safeFilterNumber(this.nativeFbm.soemdsp_fbm_y(state.nativeHandle), null),
           "Out Z": this.safeFilterNumber(this.nativeFbm.soemdsp_fbm_z(state.nativeHandle), null),
+          "Out X Raw": this.safeFilterNumber(rawX ?? this.nativeFbm.soemdsp_fbm_x(state.nativeHandle), null),
+          "Out Y Raw": this.safeFilterNumber(rawY ?? this.nativeFbm.soemdsp_fbm_y(state.nativeHandle), null),
+          "Out Z Raw": this.safeFilterNumber(rawZ ?? this.nativeFbm.soemdsp_fbm_z(state.nativeHandle), null),
         };
       }
     }
+    const rawX = this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, "x", { raw: true });
+    const rawY = this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, "y", { raw: true });
+    const rawZ = this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, "z", { raw: true });
+    const level = this.safeFilterNumber(params.level, null);
     return {
-      "Out X": this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, "x"),
-      "Out Y": this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, "y"),
-      "Out Z": this.fractalBrownianNoiseSample(state, params, safeRate, nodeId, "z"),
+      "Out X": this.safeFilterNumber(rawX * level, null),
+      "Out Y": this.safeFilterNumber(rawY * level, null),
+      "Out Z": this.safeFilterNumber(rawZ * level, null),
+      "Out X Raw": rawX,
+      "Out Y Raw": rawY,
+      "Out Z Raw": rawZ,
     };
   }
 
