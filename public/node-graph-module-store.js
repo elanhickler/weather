@@ -51,6 +51,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "softClipper",
   "rotate3dTo2d",
   "output",
+  "audioInput",
   "macroKnob",
   "bipolarKnob",
   "valueSlider",
@@ -531,10 +532,16 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["3D rotation", "2D projection", "signal transform"],
   },
   output: {
-    category: "Audio",
+    category: "Portals",
     description: "Stereo audio sink. Route Left and Right signals here to hear the patch.",
     label: "Output",
     notes: ["audio sink", "left right inputs", "render target"],
+  },
+  audioInput: {
+    category: "Portals",
+    description: "Stereo audio source. Emits Left and Right signals from the live microphone/audio input device.",
+    label: "Input",
+    notes: ["audio source", "left right outputs", "live input"],
   },
   macroKnob: {
     category: "Controllers",
