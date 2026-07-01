@@ -9562,7 +9562,7 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphModuleStoreVisualGroups",
         "Generate",
         'spiral: {\n    category: "Jerobeam"',
-        'label: "Spiral Generator"',
+        'label: "Jerobeam Spiral"',
         "Process",
         'rotate3dTo2d: {\n    category: "Dynamics"',
         'label: "Rotation 3D to 2D"',
