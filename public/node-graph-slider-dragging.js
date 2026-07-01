@@ -433,8 +433,8 @@ function dragNodeSlider(event) {
     return;
   }
 
-  const horizontalDelta = event.clientX - drag.startX;
-  const verticalDelta = drag.startY - event.clientY;
+  let horizontalDelta = event.clientX - drag.startX;
+  let verticalDelta = drag.startY - event.clientY;
   if (Math.abs(horizontalDelta) > 1 || Math.abs(verticalDelta) > 1) {
     drag.moved = true;
   }
@@ -445,6 +445,19 @@ function dragNodeSlider(event) {
     updateNodeSliderDotCursor(event);
     event.preventDefault();
     return;
+  }
+  // Fine/coarse scale is read live from the current event on every move (not
+  // just at mouse-down), so pressing/releasing Shift or Ctrl mid-drag changes
+  // sensitivity immediately. Re-anchor on a scale change (and recompute the
+  // delta from that fresh anchor) so the value doesn't jump -- only the
+  // sensitivity of further movement changes, matching RDraggableNumber::
+  // mouseDrag's isShiftDown() check in RS-MET.
+  const currentFineScale = nodeSliderFineTuneScale(event);
+  if (currentFineScale !== drag.fineScale) {
+    reanchorNodeSliderDragAtPointer(drag, event);
+    drag.fineScale = currentFineScale;
+    horizontalDelta = event.clientX - drag.startX;
+    verticalDelta = drag.startY - event.clientY;
   }
   const visualTravelWidth = Math.max(1, drag.width * (Number(drag.visualScale) || 1));
   const travelDelta = ((horizontalDelta + verticalDelta) / visualTravelWidth) * drag.fineScale;
