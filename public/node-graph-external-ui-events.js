@@ -291,6 +291,36 @@ window.soemdspSandboxTriggerWindowReopenEvent = triggerNodeGraphWindowReopenEven
 window.soemdspSandboxTriggerGameEvent = triggerNodeGraphGameEvent;
 window.soemdspSandboxTriggerShootingStarExplosionEvent = triggerNodeGraphShootingStarExplosionEvent;
 
+const soemdspHeroEventNames = Object.freeze(new Set(["spawnShootingStar", "setRate"]));
+
+function soemdspSandboxEmitHeroEvent(event, payload = {}) {
+  const eventName = String(event || "").trim();
+  if (!soemdspHeroEventNames.has(eventName)) return false;
+  const parentWindow = window.parent;
+  if (!parentWindow || parentWindow === window) return false;
+  try {
+    parentWindow.postMessage(
+      { type: "soundemote:hero-event", event: eventName, payload: payload || {} },
+      window.location.origin,
+    );
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function soemdspSandboxSpawnShootingStar(payload = {}) {
+  return soemdspSandboxEmitHeroEvent("spawnShootingStar", payload);
+}
+
+function soemdspSandboxSetShootingStarRate(intervalSeconds, payload = {}) {
+  return soemdspSandboxEmitHeroEvent("setRate", { ...payload, intervalSeconds });
+}
+
+window.soemdspSandboxEmitHeroEvent = soemdspSandboxEmitHeroEvent;
+window.soemdspSandboxSpawnShootingStar = soemdspSandboxSpawnShootingStar;
+window.soemdspSandboxSetShootingStarRate = soemdspSandboxSetShootingStarRate;
+
 function nodeGraphAcceptFileGridSelection(rows, options = {}) {
   const list = Array.isArray(rows) ? rows : [rows].filter(Boolean);
   const normalizedResources = list
