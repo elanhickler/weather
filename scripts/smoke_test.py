@@ -6882,9 +6882,9 @@ def require_node_graph_mvp_contract() -> None:
         index_source.index('class="scene-context-scope-fields"')
     ]
     require(
-        'id="nodePatchCopyButton" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>' in index_source
-        and 'id="nodePatchPasteButton" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>' in index_source,
-        "patch copy/paste controls should live in the patch save controls row",
+        'id="nodePatchCopyButton" class="node-patch-explorer-action-button" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>' in index_source
+        and 'id="nodePatchPasteButton" class="node-patch-explorer-action-button" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>' in index_source,
+        "patch copy/paste controls should live in the patch explorer toolbar row",
     )
     require(
         'data-patch-header-info-field="name"' in patch_control_source
@@ -15659,8 +15659,8 @@ def require_node_graph_mvp_contract() -> None:
         ".node-wiring-panel .audio-panel",
         ".node-current-saved-patch-button",
         ".node-current-saved-patch-button.unsaved",
-        ".node-patch-save-controls",
-        ".node-patch-save-controls button",
+        ".node-patch-explorer-toolbar",
+        ".node-patch-explorer-action-button",
         ".node-patch-header-fields",
         ".node-patch-community-control",
         ".node-patch-header-field",

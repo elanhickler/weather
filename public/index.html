@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>soemdsp-sandbox</title>
-  <link rel="stylesheet" href="./public/styles.css?v=io-label-text-20260630">
+  <link rel="stylesheet" href="./public/styles.css?v=patch-explorer-toolbar-20260701">
 </head>
 <body class="debug-collapsed node-boot-loading">
   <div class="node-boot-loading-screen" role="status" aria-live="polite" aria-label="loading">
@@ -234,17 +234,16 @@
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <div class="node-patch-step-controls" role="group" aria-label="Patch navigation">
-            <button id="nodePreviousSavedPatchButton" type="button" aria-label="Load previous saved patch">&larr;</button>
-            <button id="nodeNextSavedPatchButton" type="button" aria-label="Load next saved patch">&rarr;</button>
-          </div>
-          <div class="node-patch-save-controls" role="group" aria-label="Patch save controls">
-            <button id="nodePatchInitButton" type="button">Init</button>
-            <button id="nodePatchSaveButton" type="button">Save</button>
-            <button id="nodePatchShareLinkButton" type="button">Share</button>
-            <button id="nodePatchEditButton" type="button">Edit</button>
-            <button id="nodePatchCopyButton" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>
-            <button id="nodePatchPasteButton" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>
+          <div class="node-patch-explorer-toolbar" role="group" aria-label="Patch navigation and actions">
+            <button id="nodePreviousSavedPatchButton" class="node-patch-explorer-nav-button" type="button" aria-label="Load previous saved patch">&larr;</button>
+            <button id="nodeNextSavedPatchButton" class="node-patch-explorer-nav-button" type="button" aria-label="Load next saved patch">&rarr;</button>
+            <span class="node-patch-explorer-toolbar-divider" aria-hidden="true"></span>
+            <button id="nodePatchInitButton" class="node-patch-explorer-action-button" type="button">Init</button>
+            <button id="nodePatchSaveButton" class="node-patch-explorer-action-button" type="button">Save</button>
+            <button id="nodePatchShareLinkButton" class="node-patch-explorer-action-button" type="button">Share</button>
+            <button id="nodePatchEditButton" class="node-patch-explorer-action-button" type="button">Edit</button>
+            <button id="nodePatchCopyButton" class="node-patch-explorer-action-button" type="button" aria-label="Copy patch" title="Copy patch">Copy</button>
+            <button id="nodePatchPasteButton" class="node-patch-explorer-action-button" type="button" aria-label="Paste patch" title="Paste patch">Paste</button>
           </div>
           <div class="node-patch-header-fields">
             <label for="nodePatchNameHeader">Name</label>

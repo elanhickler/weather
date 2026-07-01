@@ -2029,33 +2029,49 @@ audio {
   background: rgba(17, 20, 24, 0.62);
 }
 
-.node-patch-step-controls {
-  display: inline-grid;
-  grid-template-columns: repeat(2, minmax(34px, 1fr));
-  align-self: stretch;
-  min-width: 74px;
-  overflow: hidden;
-  border: 1px solid rgba(127, 199, 217, 0.16);
-  border-radius: 4px;
+.node-patch-explorer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+  min-height: 0;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(127, 199, 217, 0.12);
 }
 
-.node-patch-step-controls button {
+.node-patch-explorer-toolbar-divider {
+  align-self: stretch;
+  width: 1px;
+  min-height: 0;
+  margin: 2px 2px;
+  background: rgba(127, 199, 217, 0.16);
+}
+
+.node-patch-explorer-nav-button,
+.node-patch-explorer-action-button {
+  flex: 0 0 auto;
   min-width: 0;
   min-height: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
+  padding: 3px 9px;
+  border: 1px solid rgba(127, 199, 217, 0.16);
+  border-radius: 4px;
   background: rgba(9, 13, 16, 0.78);
+  color: rgba(243, 241, 236, 0.9);
+  font: 750 0.72rem/1.4 var(--mono);
+  white-space: nowrap;
+}
+
+.node-patch-explorer-nav-button {
+  padding: 3px 8px;
   color: rgba(127, 199, 217, 0.92);
-  font: 800 1.1rem/1 var(--mono);
+  font-weight: 800;
+  font-size: 0.86rem;
 }
 
-.node-patch-step-controls button + button {
-  border-left: 1px solid rgba(127, 199, 217, 0.16);
-}
-
-.node-patch-step-controls button:hover,
-.node-patch-step-controls button:focus-visible {
+.node-patch-explorer-nav-button:hover,
+.node-patch-explorer-nav-button:focus-visible,
+.node-patch-explorer-action-button:hover,
+.node-patch-explorer-action-button:focus-visible {
   background: rgba(127, 199, 217, 0.16);
   color: var(--text);
 }
@@ -2091,41 +2107,6 @@ audio {
 
 .node-patch-clipboard-controls button:hover,
 .node-patch-clipboard-controls button:focus-visible {
-  background: rgba(127, 199, 217, 0.16);
-  color: var(--text);
-}
-
-.node-patch-save-controls {
-  display: inline-grid;
-  grid-template-columns: repeat(2, minmax(42px, 1fr));
-  align-self: stretch;
-  min-width: 88px;
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid rgba(127, 199, 217, 0.16);
-  border-radius: 4px;
-}
-
-.node-patch-save-controls button {
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: rgba(9, 13, 16, 0.78);
-  color: rgba(243, 241, 236, 0.9);
-  font: 750 0.72rem/1 var(--mono);
-  overflow: hidden;
-  text-overflow: clip;
-  white-space: nowrap;
-}
-
-.node-patch-save-controls button + button {
-  border-left: 1px solid rgba(127, 199, 217, 0.16);
-}
-
-.node-patch-save-controls button:hover,
-.node-patch-save-controls button:focus-visible {
   background: rgba(127, 199, 217, 0.16);
   color: var(--text);
 }
@@ -6234,7 +6215,7 @@ audio {
   position: fixed;
   z-index: 78;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 0;
   width: clamp(
     var(--node-saved-patches-min-width, 80px),
