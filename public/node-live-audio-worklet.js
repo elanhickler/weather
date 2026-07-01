@@ -142,6 +142,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nativeTb303FilterReady = false;
     this.nativePassiveFilter = null;
     this.nativePassiveFilterReady = false;
+    this.nativeVactrolEnvelope = null;
+    this.nativeVactrolEnvelopeReady = false;
     this.nativeSoftClipper = null;
     this.nativeSoftClipperReady = false;
     this.pllStates = new Map();
@@ -541,6 +543,34 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           type: "nativeModuleStatus",
           name: "passive_filter",
           status: this.nativePassiveFilterReady ? "ready" : "missing exports",
+        });
+        return;
+      }
+      if (name === "vactrol_envelope" || targetType === "vactrolEnvelope" || targetType === "vactrolEnvelopeC4") {
+        for (const state of this.vactrolEnvelopeStates.values()) {
+          this.destroyVactrolEnvelopeNativeState(state);
+        }
+        this.nativeVactrolEnvelope = exports;
+        this.nativeVactrolEnvelopeReady = Boolean(
+          this.nativeVactrolEnvelope?.soemdsp_vactrol_envelope_create &&
+          this.nativeVactrolEnvelope?.soemdsp_vactrol_envelope_sample,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "vactrol_envelope",
+          status: this.nativeVactrolEnvelopeReady ? "ready" : "missing exports",
+        });
+        return;
+      }
+      if (name === "shooting_star_explosion" || targetType === "shootingStarExplosion") {
+        this.nativeShootingStarExplosion = exports;
+        this.nativeShootingStarExplosionReady = Boolean(
+          this.nativeShootingStarExplosion?.soemdsp_shooting_star_explosion_power,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "shooting_star_explosion",
+          status: this.nativeShootingStarExplosionReady ? "ready" : "missing exports",
         });
         return;
       }
@@ -1152,6 +1182,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     for (const id of [...this.vactrolEnvelopeStates.keys()]) {
       if (!ids.has(id)) {
+        this.destroyVactrolEnvelopeNativeState(this.vactrolEnvelopeStates.get(id));
         this.vactrolEnvelopeStates.delete(id);
       }
     }
@@ -1401,18 +1432,44 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.shootingStarExplosionEvent = event;
   }
 
+  nativeShootingStarExplosionPower(speed, lowRange = 6, highRange = 10) {
+    const low = Number(lowRange) || 0;
+    const high = Number(highRange) || 0;
+    const fallback = () => {
+      if (!Number.isFinite(speed)) return 1;
+      return high > low ? Math.max(0, Math.min(1, (speed - low) / (high - low))) : 0;
+    };
+    if (!this.nativeShootingStarExplosionReady || !this.nativeShootingStarExplosion?.soemdsp_shooting_star_explosion_power) {
+      return fallback();
+    }
+    try {
+      return this.safeFilterNumber(
+        this.nativeShootingStarExplosion.soemdsp_shooting_star_explosion_power(
+          Number.isFinite(speed) ? speed : -1,
+          low,
+          high,
+        ),
+        null,
+      );
+    } catch (error) {
+      this.nativeShootingStarExplosionReady = false;
+      this.port.postMessage({
+        type: "nativeModuleStatus",
+        name: "shooting_star_explosion",
+        status: "disabled",
+        message: String(error?.message || error || "native Shooting Star Explosion failed"),
+      });
+      return fallback();
+    }
+  }
+
   shootingStarExplosionEventSample(lowRange = 6, highRange = 10) {
     const event = this.shootingStarExplosionEvent && typeof this.shootingStarExplosionEvent === "object"
       ? this.shootingStarExplosionEvent
       : { pulseSamples: 0 };
     const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
     const speed = Number(event.speed);
-    let power = 1;
-    if (Number.isFinite(speed)) {
-      const low = Number(lowRange) || 0;
-      const high = Number(highRange) || 0;
-      power = high > low ? Math.max(0, Math.min(1, (speed - low) / (high - low))) : 0;
-    }
+    const power = this.nativeShootingStarExplosionPower(speed, lowRange, highRange);
     event.pulseSamples = Math.max(0, pulseSamples - 1);
     this.shootingStarExplosionEvent = event;
     return { Pulse: pulseSamples > 0 ? power : 0 };
@@ -2959,6 +3016,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   createVactrolEnvelopeState() {
     return {
+      nativeHandle: 0,
       out: 0,
       raw: 0,
     };
@@ -5250,7 +5308,50 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return 1 - Math.exp(-1 / samples);
   }
 
+  destroyVactrolEnvelopeNativeState(state) {
+    if (state?.nativeHandle && this.nativeVactrolEnvelope?.soemdsp_vactrol_envelope_destroy) {
+      this.nativeVactrolEnvelope.soemdsp_vactrol_envelope_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
   vactrolEnvelopeSample(state, light, params, rate = sampleRate) {
+    const safeRate = Math.max(1, rate || sampleRate || 44100);
+    if (this.nativeVactrolEnvelopeReady) {
+      try {
+        if (!state.nativeHandle) {
+          state.nativeHandle = this.nativeVactrolEnvelope.soemdsp_vactrol_envelope_create();
+        }
+        if (state.nativeHandle) {
+          const out = this.nativeVactrolEnvelope.soemdsp_vactrol_envelope_sample(
+            state.nativeHandle,
+            this.safeFilterNumber(light, null),
+            Math.max(0, this.safeFilterNumber(params.attack, null)),
+            Math.max(0, this.safeFilterNumber(params.release, null)),
+            Math.max(0.001, this.safeFilterNumber(params.curve, null)),
+            Math.max(0, this.safeFilterNumber(params.sensitivity, null)),
+            this.clampValue(this.safeFilterNumber(params.lightOffset, null), 0, 1),
+            this.clampValue(this.safeFilterNumber(params.darkCurrent, null), 0, 1),
+            safeRate,
+          );
+          state.out = this.safeFilterNumber(out, null);
+          return state.out;
+        }
+      } catch (error) {
+        this.nativeVactrolEnvelopeReady = false;
+        state.nativeHandle = 0;
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "vactrol_envelope",
+          status: "disabled",
+          message: String(error?.message || error || "native Vactrol Envelope failed"),
+        });
+      }
+    }
+    return this.vactrolEnvelopeSampleJs(state, light, params, safeRate);
+  }
+
+  vactrolEnvelopeSampleJs(state, light, params, rate = sampleRate) {
     const safeLight = this.safeFilterNumber(light, null);
     const attack = Math.max(0, this.safeFilterNumber(params.attack, null));
     const release = Math.max(0, this.safeFilterNumber(params.release, null));

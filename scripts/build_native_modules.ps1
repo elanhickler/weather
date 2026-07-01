@@ -185,3 +185,18 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export-memory" `
   -o "$root\native_modules\passive_filter\passive_filter.wasm" `
   "$root\native_modules\passive_filter\passive_filter.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_shooting_star_explosion_power" `
+  "-Wl,--export=soemdsp_shooting_star_explosion_version" `
+  "-Wl,--export=soemdsp_shooting_star_explosion_metadata_json" `
+  "-Wl,--export=soemdsp_shooting_star_explosion_metadata_json_size" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\shooting_star_explosion\shooting_star_explosion.wasm" `
+  "$root\native_modules\shooting_star_explosion\shooting_star_explosion.cpp"

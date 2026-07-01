@@ -17152,12 +17152,19 @@ def require_native_module_contract(base_url: str) -> None:
         ],
         "pll": ["soemdsp_pll_create", "soemdsp_pll_destroy", "soemdsp_pll_process"],
         "sabrina_reverb": ["soemdsp_sabrina_reverb_create", "soemdsp_sabrina_reverb_destroy", "soemdsp_sabrina_reverb_process"],
+        "shooting_star_explosion": ["soemdsp_shooting_star_explosion_power", "soemdsp_shooting_star_explosion_metadata_json"],
         "soft_clipper": ["soemdsp_soft_clipper_sample"],
         "tb303_filter": [
             "soemdsp_tb303_filter_create",
             "soemdsp_tb303_filter_destroy",
             "soemdsp_tb303_filter_sample",
             "soemdsp_tb303_filter_metadata_json",
+        ],
+        "vactrol_envelope": [
+            "soemdsp_vactrol_envelope_create",
+            "soemdsp_vactrol_envelope_destroy",
+            "soemdsp_vactrol_envelope_sample",
+            "soemdsp_vactrol_envelope_metadata_json",
         ],
     }
     for source_path in native_sources:

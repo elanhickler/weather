@@ -90,6 +90,17 @@
       "wasmAvailable": true
     },
     {
+      "name": "shooting_star_explosion",
+      "label": "Shooting Star Explosion",
+      "targetType": "shootingStarExplosion",
+      "kind": "game trigger",
+      "source": "native_modules/shooting_star_explosion/shooting_star_explosion.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/shooting_star_explosion/shooting_star_explosion.cpp",
+      "wasm": "native_modules/shooting_star_explosion/shooting_star_explosion.wasm",
+      "wasmUrl": "native_modules/shooting_star_explosion/shooting_star_explosion.wasm",
+      "wasmAvailable": true
+    },
+    {
       "name": "soft_clipper",
       "label": "Soft Clipper",
       "targetType": "softClipper",
@@ -109,6 +120,17 @@
       "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/tb303_filter/tb303_filter.cpp",
       "wasm": "native_modules/tb303_filter/tb303_filter.wasm",
       "wasmUrl": "native_modules/tb303_filter/tb303_filter.wasm",
+      "wasmAvailable": true
+    },
+    {
+      "name": "vactrol_envelope",
+      "label": "Vactrol Envelope",
+      "targetType": "vactrolEnvelope",
+      "kind": "envelope",
+      "source": "native_modules/vactrol_envelope/vactrol_envelope.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/vactrol_envelope/vactrol_envelope.cpp",
+      "wasm": "native_modules/vactrol_envelope/vactrol_envelope.wasm",
+      "wasmUrl": "native_modules/vactrol_envelope/vactrol_envelope.wasm",
       "wasmAvailable": true
     }
   ]
