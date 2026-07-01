@@ -158,6 +158,14 @@ function nodeGraphCssColor(property, fallback) {
 function nodeGraphPortWireColor(node, port, io) {
   const canonicalPort = nodeGraphCanonicalPortForNode(node, port, io);
   if (io === "input") {
+    if (nodeGraphPatchNodeType(node) === "output") {
+      if (canonicalPort === "Left") {
+        return nodeGraphCssColor("--node-output-node-left-fill", "#f25d5d");
+      }
+      if (canonicalPort === "Right") {
+        return nodeGraphCssColor("--node-output-node-right-fill", "#5d8ef2");
+      }
+    }
     return nodeGraphCssColor("--node-input-fill", "#7fc7d9");
   }
   if (io === "modulation") {
