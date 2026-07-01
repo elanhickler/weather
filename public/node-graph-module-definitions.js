@@ -2246,6 +2246,7 @@ function nodeGraphModuleProducesOutputWithoutSignalInput(type) {
     "bipolarKnob",
     "additiveOsc",
     "gpuAdditiveOsc",
+    "helmholtzPitch",
     "pluckEnvelope",
     "polyBlep",
     "randomWalk",

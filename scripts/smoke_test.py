@@ -3520,6 +3520,17 @@ def require_node_graph_mvp_contract() -> None:
         "nodeGraphModuleDefinitions" in node_graph_module_definitions_source,
         "module capability helper should reference module definitions",
     )
+    passthrough_start = execution_plan_source.index("const passthroughTypes = new Set")
+    passthrough_end = execution_plan_source.index("function markReachable", passthrough_start)
+    passthrough_source = execution_plan_source[passthrough_start:passthrough_end]
+    output_without_input_start = node_graph_module_definitions_source.index("function nodeGraphModuleProducesOutputWithoutSignalInput(type)")
+    output_without_input_end = node_graph_module_definitions_source.index("function nodeGraphCanonicalInputPort", output_without_input_start)
+    output_without_input_source = node_graph_module_definitions_source[output_without_input_start:output_without_input_end]
+    require(
+        '"helmholtzPitch"' not in passthrough_source
+        and '"helmholtzPitch"' in output_without_input_source,
+        "Helmholtz Pitch should be classified as an analyzer/control output, not an audio passthrough route",
+    )
     require(
         "nodeGraphModuleIsRealtimeOscillatorType(type) ||" in execution_plan_source[source_nodes_start:source_nodes_end],
         "polyBlep oscillator types should be included in live execution-plan source nodes",
@@ -9670,7 +9681,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphModuleOutputPorts(type)",
         "function nodeGraphParameterOutputPort(typeOrNode, port)",
         "function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch)",
-        "const passthroughTypes = new Set([\"badvalMonitor\", \"bias\", \"cookbookFilter\", \"gain\", \"helmholtzPitch\", \"ladderFilter\", \"passiveFilter\", \"pll\", \"reverbEffect\", \"sampleHold\", \"slewLimiter\", \"softClipper\", \"speakerProtection\"])",
+        "const passthroughTypes = new Set([\"badvalMonitor\", \"bias\", \"cookbookFilter\", \"gain\", \"ladderFilter\", \"passiveFilter\", \"pll\", \"reverbEffect\", \"sampleHold\", \"slewLimiter\", \"softClipper\", \"speakerProtection\"])",
         "nodeGraphModuleDefinitions[node?.type]?.visualSink",
         "function nodeGraphVisualSinkActiveInPlan(node, options = {})",
         "return true;",

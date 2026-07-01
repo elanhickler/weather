@@ -474,7 +474,7 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["stereo output", "distribution choices", "seed control"],
   },
   randomWalk: {
-    category: "Noise",
+    category: "Modulators",
     description: "Flexible soemdsp-style random walk with white, filtered, random-step, and fixed-step motion modes.",
     notes: ["bounded walk", "jitter curve", "one-pole smoothing"],
   },
@@ -789,7 +789,7 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     notes: ["placeholder", "drive", "saturation"],
   },
   sampleHold: {
-    category: "Noise",
+    category: "Modulators",
     description: "Captures an input value when a trigger rises and holds it until the next trigger.",
     notes: ["triggered capture", "held output", "stepped motion"],
   },
