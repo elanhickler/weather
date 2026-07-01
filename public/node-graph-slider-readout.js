@@ -311,8 +311,34 @@ function syncNodeSliderReadout(slider) {
     ? Number(slider.dataset.unboundedValue)
     : Number(slider.value);
   const position = nodeSliderTravelFromValue(slider, Number(slider.value)) * 100;
-  const unit = (slider.dataset.unit || "").trim();
+  let unit = (slider.dataset.unit || "").trim();
+  let formattedValue = displayValue;
+  let formattedKind = slider.dataset.kind;
+  let formattedMaxDigits = slider.dataset.maxDigits;
   const choiceLabel = nodeSliderChoiceLabel(slider);
+  if (!choiceLabel && typeof slider.displayTransform === "function") {
+    let transformed = null;
+    try {
+      transformed = slider.displayTransform(displayValue, slider);
+    } catch (error) {
+      transformed = null;
+    }
+    if (transformed && typeof transformed === "object") {
+      if (Number.isFinite(Number(transformed.value))) {
+        formattedValue = Number(transformed.value);
+        formattedKind = "";
+      }
+      if (typeof transformed.unit === "string") {
+        unit = transformed.unit;
+      }
+      if (transformed.maxDigits != null) {
+        formattedMaxDigits = transformed.maxDigits;
+      }
+    } else if (Number.isFinite(Number(transformed))) {
+      formattedValue = Number(transformed);
+      formattedKind = "";
+    }
+  }
   const choices = parseNodeMetadataChoices(slider.dataset.choices || "");
   const usesChoices = nodeSliderShouldDisplayChoices(slider) && choices.length > 0;
   const dividesChoices = usesChoices && nodeSliderShouldDivideChoicesVisibly(slider);
@@ -321,9 +347,9 @@ function syncNodeSliderReadout(slider) {
   if (labelText) {
     labelText.textContent = readout.dataset.paramLabel || nodeSliderLabelText(slider);
   }
-  valueText.textContent = choiceLabel ? ` ${choiceLabel}` : formatNodeSliderNumber(displayValue, {
-    kind: slider.dataset.kind,
-    maxDigits: slider.dataset.maxDigits,
+  valueText.textContent = choiceLabel ? ` ${choiceLabel}` : formatNodeSliderNumber(formattedValue, {
+    kind: formattedKind,
+    maxDigits: formattedMaxDigits,
     reserveSignSpace: true,
     showSign: nodeSliderShouldShowSign(slider),
   });

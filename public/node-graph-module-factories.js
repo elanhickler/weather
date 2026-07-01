@@ -312,6 +312,7 @@ function createNodeGraphKnobWidgetBody(node, type) {
   input.dataset.kind = metadata?.kind ?? parameter?.kind ?? "";
   input.dataset.unit = metadata?.unit ?? parameter?.unit ?? "";
   input.dataset.tooltip = metadata?.tooltip ?? parameter?.tooltip ?? "";
+  input.displayTransform = typeof parameter?.displayTransform === "function" ? parameter.displayTransform : null;
   input.dataset.linearSmoothing = metadata?.linearSmoothing ? "true" : "false";
   input.dataset.sliderCurve = normalizeNodeSliderCurve(metadata?.sliderCurve, metadata?.nonlinearSlider);
   input.dataset.curveAmount = String(normalizeNodeSliderCurveAmount(metadata?.curveAmount));
@@ -668,6 +669,7 @@ function createNodeGraphParameter(node, type, parameter) {
   );
   input.dataset.unit = metadata?.unit ?? parameter.unit ?? "";
   input.dataset.tooltip = metadata?.tooltip ?? parameter.tooltip ?? "";
+  input.displayTransform = typeof parameter.displayTransform === "function" ? parameter.displayTransform : null;
   input.dataset.choices = formatNodeMetadataChoices(metadata?.choices || parameter.choices || []);
   input.dataset.displayChoices = metadata?.displayChoices ? "true" : "false";
   input.dataset.divideChoicesVisibly = metadata?.divideChoicesVisibly ? "true" : "false";
