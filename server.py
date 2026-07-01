@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
-BUILD_NUMBER = "20260740"
+BUILD_NUMBER = "20260741"
 VERSION_FILE = ROOT / "VERSION"
 SANDBOX_VERSION = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "0.0.0"
 DEFAULT_PRESET = PUBLIC / "presets" / "default.json"
@@ -242,6 +242,30 @@ for kind, template in NODE_METADATA_KIND_TEMPLATES.items():
     template.setdefault("maxDigits", 5 if kind == "frequency" else 3)
     template.setdefault("sliderCurve", "skew" if template.get("nonlinearSlider") else "linear")
     template.setdefault("curveAmount", 0)
+
+
+def sanitize_default_ui_settings_view(payload: dict) -> None:
+    """Strip live-authoring state before it can land in the shipped default.
+
+    A dev browser tab open against this server can POST here at any time
+    (Save UI Settings / Update Default), and whatever patch/window state
+    happens to be open in that tab rides along in the payload. Enforcing the
+    "clean default" invariant here -- once, at the single write path -- means
+    it can't recur no matter what a live session sends, instead of relying on
+    remembering to `git checkout --` these files after the fact.
+    """
+    view = payload.get("view")
+    if not isinstance(view, dict):
+        return
+    view["workingPatch"] = None
+    view["patchDirtyState"] = "untouched"
+    view["sharedInspectorActive"] = ""
+    view["sharedInspectorWindowState"] = {}
+    workspace_window_states = view.get("workspaceWindowStates")
+    if isinstance(workspace_window_states, dict):
+        for state in workspace_window_states.values():
+            if isinstance(state, dict):
+                state["open"] = False
 
 
 def ui_settings_script_text(payload: dict) -> str:
@@ -729,6 +753,8 @@ class SandboxServer(BaseHTTPRequestHandler):
                 status=400,
             )
             return
+
+        sanitize_default_ui_settings_view(payload)
 
         DEFAULT_UI_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
         DEFAULT_UI_SETTINGS.write_text(
