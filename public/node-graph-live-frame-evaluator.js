@@ -2844,6 +2844,65 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
           state,
         }),
       };
+    } else if (node?.type === "henonMap") {
+      const state = runtime.henonMapStates.get(nodeId) || createNodeGraphHenonMapState();
+      runtime.henonMapStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      const henon = nodeGraphHenonMapSample({
+        a: read("a", 1.4),
+        b: read("b", 0.3),
+        rate: read("rate", 8),
+        reset: mixInput(nodeId, "Reset"),
+        sampleRate,
+        seedX: read("seedX", 0.1),
+        seedY: read("seedY", 0.1),
+        state,
+      });
+      const henonLevel = read("level", 1);
+      value = {
+        X: henon.x * henonLevel,
+        Y: henon.y * henonLevel,
+      };
+    } else if (node?.type === "chuaAttractor") {
+      const state = runtime.chuaAttractorStates.get(nodeId) || createNodeGraphChuaAttractorState();
+      runtime.chuaAttractorStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      const chua = nodeGraphChuaAttractorSample({
+        alpha: read("alpha", 15.6),
+        beta: read("beta", 28),
+        m0: read("m0", -1.143),
+        m1: read("m1", -0.714),
+        reset: mixInput(nodeId, "Reset"),
+        sampleRate,
+        speed: read("speed", 1),
+        state,
+      });
+      const chuaLevel = read("level", 1);
+      value = {
+        X: chua.x * chuaLevel,
+        Y: chua.y * chuaLevel,
+        Z: chua.z * chuaLevel,
+      };
+    } else if (node?.type === "chordMemory") {
+      const state = runtime.chordMemoryStates.get(nodeId) || createNodeGraphChordMemoryState();
+      runtime.chordMemoryStates.set(nodeId, state);
+      value = nodeGraphChordMemorySample(state, {
+        advance: mixInput(nodeId, "Advance"),
+        clear: mixInput(nodeId, "Clear"),
+        latch: mixInput(nodeId, "Latch"),
+        pitch: mixInput(nodeId, "Pitch"),
+      });
+    } else if (node?.type === "turingMachine") {
+      const state = runtime.turingMachineStates.get(nodeId) || createNodeGraphTuringMachineState();
+      runtime.turingMachineStates.set(nodeId, state);
+      const read = (key, fallback) => readNodeGraphLiveEffectiveParam(runtime, node, key, fallback, frame, frames, frameValues);
+      value = nodeGraphTuringMachineSample(state, {
+        clock: mixInput(nodeId, "Clock"),
+        length: read("length", 8),
+        level: read("level", 1),
+        probability: read("probability", 0.25),
+        reset: mixInput(nodeId, "Reset"),
+      });
     } else if (node?.type === "midiOut") {
       const midiInputKey = `${nodeId}.MIDI Number`;
       const hasMidiInput = runtime.inputConnections.has(midiInputKey);

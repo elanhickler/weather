@@ -161,6 +161,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
     this.logisticMapStates = new Map();
+    this.henonMapStates = new Map();
+    this.chuaAttractorStates = new Map();
+    this.chordMemoryStates = new Map();
+    this.turingMachineStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.oscResetStates = new Map();
     this.graphLfoStates = new Map();
@@ -582,6 +586,43 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "henon_map" || targetType === "henonMap") {
+        for (const state of this.henonMapStates.values()) {
+          this.destroyHenonMapNativeState(state);
+        }
+        this.nativeHenonMap = exports;
+        this.nativeHenonMapReady = Boolean(
+          this.nativeHenonMap?.soemdsp_henon_map_create &&
+          this.nativeHenonMap?.soemdsp_henon_map_sample &&
+          this.nativeHenonMap?.soemdsp_henon_map_x &&
+          this.nativeHenonMap?.soemdsp_henon_map_y,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "henon_map",
+          status: this.nativeHenonMapReady ? "ready" : "missing exports",
+        });
+        return;
+      }
+      if (name === "chua_attractor" || targetType === "chuaAttractor") {
+        for (const state of this.chuaAttractorStates.values()) {
+          this.destroyChuaAttractorNativeState(state);
+        }
+        this.nativeChuaAttractor = exports;
+        this.nativeChuaAttractorReady = Boolean(
+          this.nativeChuaAttractor?.soemdsp_chua_attractor_create &&
+          this.nativeChuaAttractor?.soemdsp_chua_attractor_sample &&
+          this.nativeChuaAttractor?.soemdsp_chua_attractor_x &&
+          this.nativeChuaAttractor?.soemdsp_chua_attractor_y &&
+          this.nativeChuaAttractor?.soemdsp_chua_attractor_z,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "chua_attractor",
+          status: this.nativeChuaAttractorReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       if (name === "shooting_star_explosion" || targetType === "shootingStarExplosion") {
         this.nativeShootingStarExplosion = exports;
         this.nativeShootingStarExplosionReady = Boolean(
@@ -691,6 +732,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.linearEnvelopeStates = new Map();
     this.lorenzAttractorStates = new Map();
     this.logisticMapStates = new Map();
+    this.henonMapStates = new Map();
+    this.chuaAttractorStates = new Map();
+    this.chordMemoryStates = new Map();
+    this.turingMachineStates = new Map();
     this.noiseGeneratorStates = new Map();
     this.oscResetStates = new Map();
     this.graphLfoStates = new Map();
@@ -919,6 +964,18 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "logisticMap" && !this.logisticMapStates.has(id)) {
         this.logisticMapStates.set(id, this.createLogisticMapState());
       }
+      if (node?.type === "henonMap" && !this.henonMapStates.has(id)) {
+        this.henonMapStates.set(id, this.createHenonMapState());
+      }
+      if (node?.type === "chuaAttractor" && !this.chuaAttractorStates.has(id)) {
+        this.chuaAttractorStates.set(id, this.createChuaAttractorState());
+      }
+      if (node?.type === "chordMemory" && !this.chordMemoryStates.has(id)) {
+        this.chordMemoryStates.set(id, this.createChordMemoryState());
+      }
+      if (node?.type === "turingMachine" && !this.turingMachineStates.has(id)) {
+        this.turingMachineStates.set(id, this.createTuringMachineState());
+      }
       if (node?.type === "passiveFilter" && !this.passiveFilterStates.has(id)) {
         this.passiveFilterStates.set(id, this.createPassiveFilterState());
       }
@@ -1086,6 +1143,28 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (!ids.has(id)) {
         this.destroyLogisticMapNativeState(this.logisticMapStates.get(id));
         this.logisticMapStates.delete(id);
+      }
+    }
+    for (const id of [...this.henonMapStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroyHenonMapNativeState(this.henonMapStates.get(id));
+        this.henonMapStates.delete(id);
+      }
+    }
+    for (const id of [...this.chuaAttractorStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroyChuaAttractorNativeState(this.chuaAttractorStates.get(id));
+        this.chuaAttractorStates.delete(id);
+      }
+    }
+    for (const id of [...this.chordMemoryStates.keys()]) {
+      if (!ids.has(id)) {
+        this.chordMemoryStates.delete(id);
+      }
+    }
+    for (const id of [...this.turingMachineStates.keys()]) {
+      if (!ids.has(id)) {
+        this.turingMachineStates.delete(id);
       }
     }
     for (const id of [...this.passiveFilterStates.keys()]) {
@@ -3538,6 +3617,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.spiralStates = new Map();
     runtime.lorenzAttractorStates = new Map();
     runtime.logisticMapStates = new Map();
+    runtime.henonMapStates = new Map();
+    runtime.chuaAttractorStates = new Map();
+    runtime.chordMemoryStates = new Map();
+    runtime.turingMachineStates = new Map();
     runtime.stepSequencerStates = new Map();
     runtime.triggerCounterStates = new Map();
     runtime.triggerDividerStates = new Map();
@@ -3581,6 +3664,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "spiral") this.spiralStates.set(id, this.createSpiralState());
       if (node?.type === "lorenzAttractor") this.lorenzAttractorStates.set(id, this.createLorenzAttractorState());
       if (node?.type === "logisticMap") this.logisticMapStates.set(id, this.createLogisticMapState());
+      if (node?.type === "henonMap") this.henonMapStates.set(id, this.createHenonMapState());
+      if (node?.type === "chuaAttractor") this.chuaAttractorStates.set(id, this.createChuaAttractorState());
+      if (node?.type === "chordMemory") this.chordMemoryStates.set(id, this.createChordMemoryState());
+      if (node?.type === "turingMachine") this.turingMachineStates.set(id, this.createTuringMachineState());
       if (node?.type === "passiveFilter") this.passiveFilterStates.set(id, this.createPassiveFilterState());
       if (node?.type === "cookbookFilter") this.cookbookFilterStates.set(id, this.createCookbookFilterState());
       if (node?.type === "ladderFilter") this.ladderFilterStates.set(id, this.createLadderFilterState());
@@ -5686,6 +5773,291 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return this.logisticMapSampleJs(state, options) * level;
   }
 
+  createHenonMapState() {
+    return { hasStarted: false, phase: 0, x: 0, y: 0, nativeHandle: 0 };
+  }
+
+  resetHenonMapState(state, seedX, seedY) {
+    state.x = this.clampValue(Number(seedX) || 0, -1, 1);
+    state.y = this.clampValue(Number(seedY) || 0, -1, 1);
+    state.phase = 0;
+    state.hasStarted = true;
+  }
+
+  destroyHenonMapNativeState(state) {
+    if (state?.nativeHandle && this.nativeHenonMap?.soemdsp_henon_map_destroy) {
+      this.nativeHenonMap.soemdsp_henon_map_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
+  henonMapSampleJs(state, options = {}) {
+    const resetActive = Number(options.reset) > 0;
+    const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+    const rate = Math.max(0, Number(options.rate) || 0);
+    const a = this.clampValue(Number(options.a) || 0, 0, 2);
+    const b = this.clampValue(Number(options.b) || 0, -1, 1);
+    if (resetActive || !state.hasStarted) {
+      this.resetHenonMapState(state, options.seedX, options.seedY);
+    }
+    if (!resetActive && rate > 0) {
+      state.phase += rate / sampleRateValue;
+      let iterations = 0;
+      while (state.phase >= 1 && iterations < 4096) {
+        state.phase -= 1;
+        const nextX = 1 - a * state.x * state.x + state.y;
+        const nextY = b * state.x;
+        state.x = this.clampValue(nextX, -4, 4);
+        state.y = this.clampValue(nextY, -4, 4);
+        iterations++;
+      }
+      if (state.phase >= 1) {
+        state.phase = 0;
+      }
+    }
+    return {
+      x: this.clampValue(state.x / 1.5, -1, 1),
+      y: this.clampValue(state.y / 0.45, -1, 1),
+    };
+  }
+
+  henonMapSample(state, options = {}) {
+    if (
+      this.nativeHenonMapReady &&
+      this.nativeHenonMap?.soemdsp_henon_map_create &&
+      this.nativeHenonMap?.soemdsp_henon_map_sample
+    ) {
+      try {
+        if (!state.nativeHandle) {
+          state.nativeHandle = this.nativeHenonMap.soemdsp_henon_map_create();
+        }
+        if (state.nativeHandle) {
+          const resetActive = Number(options.reset) > 0 ? 1 : 0;
+          const rate = Math.max(0, Number(options.rate) || 0);
+          const a = this.clampValue(Number(options.a) || 0, 0, 2);
+          const b = this.clampValue(Number(options.b) || 0, -1, 1);
+          const seedX = Number(options.seedX) || 0;
+          const seedY = Number(options.seedY) || 0;
+          const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+          this.nativeHenonMap.soemdsp_henon_map_sample(
+            state.nativeHandle,
+            resetActive,
+            rate,
+            a,
+            b,
+            seedX,
+            seedY,
+            sampleRateValue,
+          );
+          return {
+            x: this.safeFilterNumber(this.nativeHenonMap.soemdsp_henon_map_x(state.nativeHandle), null),
+            y: this.safeFilterNumber(this.nativeHenonMap.soemdsp_henon_map_y(state.nativeHandle), null),
+          };
+        }
+      } catch (error) {
+        this.nativeHenonMapReady = false;
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "henon_map",
+          status: "disabled",
+          message: String(error?.message || error || "native Henon Map failed"),
+        });
+      }
+    }
+    return this.henonMapSampleJs(state, options);
+  }
+
+  createChuaAttractorState() {
+    return { resetWasHigh: false, x: 0.1, y: 0, z: 0, nativeHandle: 0 };
+  }
+
+  resetChuaAttractorState(state) {
+    state.x = 0.1;
+    state.y = 0;
+    state.z = 0;
+  }
+
+  destroyChuaAttractorNativeState(state) {
+    if (state?.nativeHandle && this.nativeChuaAttractor?.soemdsp_chua_attractor_destroy) {
+      this.nativeChuaAttractor.soemdsp_chua_attractor_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
+  chuaDiode(x, m0, m1) {
+    return m1 * x + 0.5 * (m0 - m1) * (Math.abs(x + 1) - Math.abs(x - 1));
+  }
+
+  chuaAttractorSampleJs(state, options = {}) {
+    const resetHigh = Number(options.reset) > 0.5;
+    if (resetHigh && !state.resetWasHigh) {
+      this.resetChuaAttractorState(state);
+    }
+    state.resetWasHigh = resetHigh;
+    const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+    const speed = Math.max(0, Number(options.speed) || 0);
+    const alpha = Number(options.alpha) || 0;
+    const beta = Number(options.beta) || 0;
+    const m0 = Number(options.m0) || 0;
+    const m1 = Number(options.m1) || 0;
+    const dt = (0.6 * speed) / sampleRateValue;
+    const steps = Math.max(1, Math.ceil(dt / 0.0004));
+    const stepDt = steps > 0 ? dt / steps : 0;
+    for (let i = 0; i < steps; i += 1) {
+      const fx = this.chuaDiode(state.x, m0, m1);
+      const dx = alpha * (state.y - state.x - fx);
+      const dy = state.x - state.y + state.z;
+      const dz = -beta * state.y;
+      state.x += dx * stepDt;
+      state.y += dy * stepDt;
+      state.z += dz * stepDt;
+      if (!Number.isFinite(state.x) || !Number.isFinite(state.y) || !Number.isFinite(state.z)) {
+        this.resetChuaAttractorState(state);
+        break;
+      }
+    }
+    state.x = this.clampValue(state.x, -20, 20);
+    state.y = this.clampValue(state.y, -20, 20);
+    state.z = this.clampValue(state.z, -20, 20);
+    return {
+      x: this.clampValue(state.x / 2.0, -1, 1),
+      y: this.clampValue(state.y / 0.5, -1, 1),
+      z: this.clampValue(state.z / 3.5, -1, 1),
+    };
+  }
+
+  chuaAttractorSample(state, options = {}) {
+    if (
+      this.nativeChuaAttractorReady &&
+      this.nativeChuaAttractor?.soemdsp_chua_attractor_create &&
+      this.nativeChuaAttractor?.soemdsp_chua_attractor_sample
+    ) {
+      try {
+        if (!state.nativeHandle) {
+          state.nativeHandle = this.nativeChuaAttractor.soemdsp_chua_attractor_create();
+        }
+        if (state.nativeHandle) {
+          const resetActive = Number(options.reset) > 0.5 ? 1 : 0;
+          const speed = Math.max(0, Number(options.speed) || 0);
+          const alpha = Number(options.alpha) || 0;
+          const beta = Number(options.beta) || 0;
+          const m0 = Number(options.m0) || 0;
+          const m1 = Number(options.m1) || 0;
+          const sampleRateValue = Math.max(1, Number(options.sampleRate) || sampleRate || 44100);
+          this.nativeChuaAttractor.soemdsp_chua_attractor_sample(
+            state.nativeHandle,
+            resetActive,
+            speed,
+            alpha,
+            beta,
+            m0,
+            m1,
+            sampleRateValue,
+          );
+          return {
+            x: this.safeFilterNumber(this.nativeChuaAttractor.soemdsp_chua_attractor_x(state.nativeHandle), null),
+            y: this.safeFilterNumber(this.nativeChuaAttractor.soemdsp_chua_attractor_y(state.nativeHandle), null),
+            z: this.safeFilterNumber(this.nativeChuaAttractor.soemdsp_chua_attractor_z(state.nativeHandle), null),
+          };
+        }
+      } catch (error) {
+        this.nativeChuaAttractorReady = false;
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "chua_attractor",
+          status: "disabled",
+          message: String(error?.message || error || "native Chua Attractor failed"),
+        });
+      }
+    }
+    return this.chuaAttractorSampleJs(state, options);
+  }
+
+  createChordMemoryState() {
+    return {
+      latchWasHigh: false,
+      clearWasHigh: false,
+      advanceWasHigh: false,
+      writeIndex: 0,
+      arpIndex: 0,
+      slots: [0, 0, 0, 0],
+      slotsActive: [false, false, false, false],
+    };
+  }
+
+  chordMemorySample(state, options = {}) {
+    const latchHigh = Number(options.latch) > 0;
+    const clearHigh = Number(options.clear) > 0;
+    const advanceHigh = Number(options.advance) > 0;
+    const pitch = Number(options.pitch) || 0;
+    if (clearHigh && !state.clearWasHigh) {
+      state.slots = [0, 0, 0, 0];
+      state.slotsActive = [false, false, false, false];
+      state.writeIndex = 0;
+      state.arpIndex = 0;
+    }
+    state.clearWasHigh = clearHigh;
+    if (latchHigh && !state.latchWasHigh) {
+      state.slots[state.writeIndex] = pitch;
+      state.slotsActive[state.writeIndex] = true;
+      state.writeIndex = (state.writeIndex + 1) % 4;
+    }
+    state.latchWasHigh = latchHigh;
+    const activeIndices = [];
+    for (let i = 0; i < 4; i += 1) {
+      if (state.slotsActive[i]) activeIndices.push(i);
+    }
+    if (advanceHigh && !state.advanceWasHigh && activeIndices.length > 0) {
+      const currentPos = activeIndices.indexOf(state.arpIndex);
+      const nextPos = currentPos === -1 ? 0 : (currentPos + 1) % activeIndices.length;
+      state.arpIndex = activeIndices[nextPos];
+    }
+    state.advanceWasHigh = advanceHigh;
+    const arp = activeIndices.length > 0 ? state.slots[state.arpIndex] : 0;
+    const gate = activeIndices.length > 0 ? 1 : 0;
+    return {
+      "Note 1": state.slots[0],
+      "Note 2": state.slots[1],
+      "Note 3": state.slots[2],
+      "Note 4": state.slots[3],
+      Arp: arp,
+      Gate: gate,
+    };
+  }
+
+  createTuringMachineState() {
+    return { clockWasHigh: false, resetWasHigh: false, register: 0 };
+  }
+
+  turingMachineSample(state, options = {}) {
+    const clockHigh = Number(options.clock) > 0;
+    const resetHigh = Number(options.reset) > 0;
+    const length = Math.max(1, Math.min(16, Math.round(Number(options.length) || 8)));
+    const probability = this.clampValue(Number(options.probability) || 0, 0, 1);
+    const level = Number(options.level) || 0;
+    if (resetHigh && !state.resetWasHigh) {
+      state.register = 0;
+    }
+    state.resetWasHigh = resetHigh;
+    if (clockHigh && !state.clockWasHigh) {
+      const mask = (1 << length) - 1;
+      const topBit = (state.register >> (length - 1)) & 1;
+      const newBit = Math.random() < probability ? 1 - topBit : topBit;
+      state.register = ((state.register << 1) | newBit) & mask;
+    }
+    state.clockWasHigh = clockHigh;
+    const mask = (1 << length) - 1;
+    const maxValue = mask > 0 ? mask : 1;
+    const cv = (state.register / maxValue) * 2 - 1;
+    const scaleMask = state.register & 0xFFF;
+    const gate = state.register & 1;
+    return {
+      CV: cv * level,
+      Scale: scaleMask,
+      Gate: gate * level,
+    };
+  }
+
   spiralWrap01(value) {
     return value - Math.floor(value);
   }
@@ -6386,6 +6758,63 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             seed: read("seed", 0.5),
           }),
         };
+      } else if (node?.type === "henonMap") {
+        const state = this.henonMapStates.get(nodeId) || this.createHenonMapState();
+        this.henonMapStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        const henon = this.henonMapSample(state, {
+          a: read("a", 1.4),
+          b: read("b", 0.3),
+          rate: read("rate", 8),
+          reset: mixInput(nodeId, "Reset"),
+          sampleRate: safeRate,
+          seedX: read("seedX", 0.1),
+          seedY: read("seedY", 0.1),
+        });
+        const henonLevel = read("level", 1);
+        value = {
+          X: henon.x * henonLevel,
+          Y: henon.y * henonLevel,
+        };
+      } else if (node?.type === "chuaAttractor") {
+        const state = this.chuaAttractorStates.get(nodeId) || this.createChuaAttractorState();
+        this.chuaAttractorStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        const chua = this.chuaAttractorSample(state, {
+          alpha: read("alpha", 15.6),
+          beta: read("beta", 28),
+          m0: read("m0", -1.143),
+          m1: read("m1", -0.714),
+          reset: mixInput(nodeId, "Reset"),
+          sampleRate: safeRate,
+          speed: read("speed", 1),
+        });
+        const chuaLevel = read("level", 1);
+        value = {
+          X: chua.x * chuaLevel,
+          Y: chua.y * chuaLevel,
+          Z: chua.z * chuaLevel,
+        };
+      } else if (node?.type === "chordMemory") {
+        const state = this.chordMemoryStates.get(nodeId) || this.createChordMemoryState();
+        this.chordMemoryStates.set(nodeId, state);
+        value = this.chordMemorySample(state, {
+          advance: mixInput(nodeId, "Advance"),
+          clear: mixInput(nodeId, "Clear"),
+          latch: mixInput(nodeId, "Latch"),
+          pitch: mixInput(nodeId, "Pitch"),
+        });
+      } else if (node?.type === "turingMachine") {
+        const state = this.turingMachineStates.get(nodeId) || this.createTuringMachineState();
+        this.turingMachineStates.set(nodeId, state);
+        const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        value = this.turingMachineSample(state, {
+          clock: mixInput(nodeId, "Clock"),
+          length: read("length", 8),
+          level: read("level", 1),
+          probability: read("probability", 0.25),
+          reset: mixInput(nodeId, "Reset"),
+        });
       } else if (node?.type === "midiOut") {
         const hasMidiInput = this.inputConnections.has(this.inputKey(nodeId, "MIDI Number"));
         const midiNumber = this.clampValue(Math.round(this.readEffectiveParameter(

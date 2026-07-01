@@ -23,6 +23,8 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "stepSequencer",
   "melodySequencer",
   "chordSequencer",
+  "chordMemory",
+  "turingMachine",
   "arpeggiator",
   "spiral",
   "blubb",
@@ -35,6 +37,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "wirdoSpiral",
   "lorenzAttractor",
   "logisticMap",
+  "henonMap",
   "rosslerAttractor",
   "chuaAttractor",
   "aizawaAttractor",
@@ -377,6 +380,18 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     label: "ChordSequencer",
     notes: ["placeholder", "progressions", "voicing"],
   },
+  chordMemory: {
+    category: "Sequence",
+    description: "Latches up to 4 notes from a mono Pitch input one at a time (Latch trigger), then outputs them as stacked simultaneous pitches or arpeggiated in sequence.",
+    label: "Chord Memory",
+    notes: ["latch", "mono to chord", "step record", "arpeggio output"],
+  },
+  turingMachine: {
+    category: "Sequence",
+    description: "Classic mutating shift-register sequencer: each Clock, the pattern shifts and the new bit is randomly flipped with a set Probability, giving evolving, semi-repeating loops. Also outputs a 12-bit Scale mask.",
+    label: "Turing Machine",
+    notes: ["generative", "shift register", "mutating pattern", "scale mask output"],
+  },
   arpeggiator: {
     category: "Sequence",
     description: "Placeholder for rhythmic note-pattern generation from held chords or chord sources.",
@@ -449,6 +464,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     label: "Logistic Map",
     notes: ["chaos", "bifurcation", "one parameter chaos", "discrete map"],
   },
+  henonMap: {
+    category: "Chaos",
+    description: "Discrete 2D chaotic map: (x, y) = (1 - a*x^2 + y, b*x), stepped at a clocked Rate. More angular/digital-feeling than the continuous attractors.",
+    label: "Henon Map",
+    notes: ["chaos", "discrete map", "2D attractor"],
+  },
   rosslerAttractor: {
     category: "Chaos",
     description: "Ribbon-like chaotic orbit with spiral rolls and folding motion.",
@@ -457,9 +478,9 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   chuaAttractor: {
     category: "Chaos",
-    description: "Double-scroll circuit attractor for electric, mirrored, hardware-chaos behavior.",
-    label: "ChuaAttractor",
-    notes: ["double scroll", "circuit chaos", "planned attractor"],
+    description: "Chua's Circuit double-scroll attractor: a classic chaotic circuit with a different lobe/scroll character than Lorenz.",
+    label: "Chua Attractor",
+    notes: ["double scroll", "circuit chaos", "3D attractor"],
   },
   aizawaAttractor: {
     category: "Chaos",

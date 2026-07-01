@@ -197,6 +197,10 @@ PUBLIC_SCRIPT_PATHS = (
     "./public/node-graph-jerobeam-spiral.js",
     "./public/node-graph-lorenz-attractor.js",
     "./public/node-graph-logistic-map.js",
+    "./public/node-graph-henon-map.js",
+    "./public/node-graph-chua-attractor.js",
+    "./public/node-graph-chord-memory.js",
+    "./public/node-graph-turing-machine.js",
     "./public/node-graph-live-frame-evaluator.js",
     "./public/node-graph-live-runtime.js",
     "./public/node-graph-wire-controller-bootstrap.js",
@@ -17151,8 +17155,10 @@ def require_native_module_contract(base_url: str) -> None:
     )
 
     expected_native_exports = {
+        "chua_attractor": ["soemdsp_chua_attractor_create", "soemdsp_chua_attractor_destroy", "soemdsp_chua_attractor_sample"],
         "ellipsoid": ["soemdsp_ellipsoid_sample", "soemdsp_ellipsoid_vector_sample"],
         "fractal_brownian_noise": ["soemdsp_fbm_create", "soemdsp_fbm_destroy", "soemdsp_fbm_sample"],
+        "henon_map": ["soemdsp_henon_map_create", "soemdsp_henon_map_destroy", "soemdsp_henon_map_sample"],
         "helmholtz": [
             "soemdsp_helmholtz_create",
             "soemdsp_helmholtz_destroy",

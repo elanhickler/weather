@@ -272,3 +272,38 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export-memory" `
   -o "$root\native_modules\pitch_quantizer\pitch_quantizer.wasm" `
   "$root\native_modules\pitch_quantizer\pitch_quantizer.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_henon_map_create" `
+  "-Wl,--export=soemdsp_henon_map_destroy" `
+  "-Wl,--export=soemdsp_henon_map_sample" `
+  "-Wl,--export=soemdsp_henon_map_x" `
+  "-Wl,--export=soemdsp_henon_map_y" `
+  "-Wl,--export=soemdsp_henon_map_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\henon_map\henon_map.wasm" `
+  "$root\native_modules\henon_map\henon_map.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_chua_attractor_create" `
+  "-Wl,--export=soemdsp_chua_attractor_destroy" `
+  "-Wl,--export=soemdsp_chua_attractor_sample" `
+  "-Wl,--export=soemdsp_chua_attractor_x" `
+  "-Wl,--export=soemdsp_chua_attractor_y" `
+  "-Wl,--export=soemdsp_chua_attractor_z" `
+  "-Wl,--export=soemdsp_chua_attractor_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\chua_attractor\chua_attractor.wasm" `
+  "$root\native_modules\chua_attractor\chua_attractor.cpp"
