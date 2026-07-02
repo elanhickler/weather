@@ -2600,14 +2600,21 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   readEffectiveParameter(node, key, fallback, frame, frames, frameValues) {
     const base = this.readSmoothedParameter(node, key, fallback, frame, frames);
+    const modulations = this.modulationConnections.get(this.parameterKey(node?.id, key));
+    // Most parameters have no modulation wired to them at all. Skip the
+    // normalize/denormalize round trip (parameterSkewExponent alone runs two
+    // Math.log() calls) entirely in that case instead of paying it on every
+    // sample for every parameter, modulated or not -- this was the actual
+    // per-sample cost behind Sabrina Reverb's real-time audio underruns
+    // (measured, not guessed: 8 parameters x this unconditional work was
+    // enough to push ctx.currentTime ~5% behind wall-clock).
+    if (!modulations || !modulations.length) {
+      return base;
+    }
     const metadata = node?.paramMeta?.[key] || {};
-    const modulations = this.modulationConnections.get(this.parameterKey(node?.id, key)) || [];
     const min = Number(metadata.min);
     const max = Number(metadata.max);
     const hasMetadataRange = Number.isFinite(min) && Number.isFinite(max) && max > min;
-    if (!hasMetadataRange && !modulations.length) {
-      return base;
-    }
     const modulationSignal = modulations.reduce(
       (sum, modulation) => sum + this.normalizeParameterModulationInput(this.readRuntimePortOutput(
         frameValues,
