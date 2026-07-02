@@ -18,6 +18,20 @@ async function bindNodeGraphMvpEvents() {
     document.addEventListener("keydown", handleNodeGraphFloatingWindowKeyboardNudge, true);
     document.addEventListener("keyup", handleNodeGraphFloatingWindowKeyboardRelease, true);
     document.addEventListener("keydown", handleNodeGraphKeydown);
+    // When embedded in an iframe (e.g. the soundemote-site sandbox page),
+    // clicking a module selects it via mouse events (hit-testing, no focus
+    // needed) but keyboard shortcuts -- Delete included -- only ever reach
+    // whichever document currently holds focus. A click alone doesn't
+    // guarantee that's us, so explicitly claim window focus on interaction.
+    document.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (!nodeGraphEventTargetIsEditable(event.target)) {
+          window.focus();
+        }
+      },
+      true,
+    );
   });
   await bindNodeGraphMvpEventGroup("scene-menu", bindNodeGraphSceneMenuEvents);
   await bindNodeGraphMvpEventGroup("header", bindNodeGraphHeaderControlEvents);
