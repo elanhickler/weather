@@ -29,6 +29,16 @@
 // have progressed had the reset happened at its true, sub-sample instant.
 // This is the same idea Surge and other analog-modeling synths use for
 // sync-aware oscillators, at a scope appropriate for a sandbox module.
+//
+// Built-in sync source: patching an external master oscillator into Sync
+// works, but most hard-sync sweeps just want "a second frequency knob" --
+// this module owns its own internal master oscillator (a plain sine, since
+// it's a control signal for edge detection, not audible output, so it
+// doesn't need PolyBLEP) with its own 0-20000 Hz range. When nothing is
+// patched into the Sync input, the internal oscillator's zero-crossings
+// drive the exact same sub-sample-interpolated reset path external Sync
+// audio would. Patching something into Sync still overrides it -- the
+// internal oscillator is a convenience default, not a second mandatory step.
 
 namespace {
 
@@ -105,15 +115,17 @@ struct SurgeOscillatorState {
   bool active;
   double phase;            // 0..1, this oscillator's own accumulator
   double phaseIncrement;   // last computed increment, for stopped-phase caching
-  double prevSyncIn;       // previous sample's raw sync input, for edge detection
+  double prevSyncIn;       // previous sample's *effective* sync input, for edge detection
   bool hasPrevSyncIn;
   bool syncedThisSample;
+  double masterPhase;      // 0..1, the built-in internal sync oscillator's own accumulator
   WaveformState taps[4];   // saw, square, tri, sine -- always-on outputs
   double out;
   double sawOut;
   double squareOut;
   double triOut;
   double sineOut;
+  double internalSyncOut;  // the built-in master oscillator's raw sine, for inspection
 };
 
 static SurgeOscillatorState gPool[kMaxInstances];
@@ -140,6 +152,7 @@ extern "C" void soemdsp_surge_oscillator_reset(int handle) {
   if (handle < 1 || handle > kMaxInstances) return;
   SurgeOscillatorState& s = gPool[handle - 1];
   s.phase = 0.0;
+  s.masterPhase = 0.0;
   s.hasPrevSyncIn = false;
   for (int i = 0; i < 4; i++) s.taps[i] = WaveformState{};
 }
@@ -149,14 +162,24 @@ extern "C" void soemdsp_surge_oscillator_reset(int handle) {
 //   increment; the oscillator owns its phase, unlike polyblep.cpp which is
 //   phase-driven from outside).
 // syncIn: an audio-rate signal (typically another oscillator's raw output).
-//   A rising zero-crossing (previous sample <= 0, current sample > 0) forces
-//   this oscillator's phase back toward 0, sub-sample-interpolated.
+//   Used only when hasExternalSync is nonzero.
+// hasExternalSync: nonzero when something is patched into the Sync input.
+//   When zero, the built-in internal master oscillator (syncFrequencyHz)
+//   drives sync instead -- a self-contained hard-sync sweep with no patching
+//   required.
+// syncFrequencyHz: the internal master oscillator's frequency (0-20000 Hz,
+//   same range as the audible frequency). Ignored when hasExternalSync is set.
+// A rising zero-crossing of whichever signal is effective (previous sample
+//   <= 0, current sample > 0) forces this oscillator's phase back toward 0,
+//   sub-sample-interpolated.
 // waveform: selects which of the 4 always-computed taps becomes `out`.
 extern "C" void soemdsp_surge_oscillator_sample(
   int handle,
   double frequencyHz,
   double sampleRate,
   double syncIn,
+  int hasExternalSync,
+  double syncFrequencyHz,
   int waveform,
   double level
 ) {
@@ -170,8 +193,14 @@ extern "C" void soemdsp_surge_oscillator_sample(
   s.phase = wrap01(s.phase + increment);
   s.syncedThisSample = false;
 
-  if (s.hasPrevSyncIn && s.prevSyncIn <= 0.0 && syncIn > 0.0) {
-    const double denom = syncIn - s.prevSyncIn;
+  const double masterIncrement = clampD(syncFrequencyHz / safeSampleRate, -0.5, 0.5);
+  s.masterPhase = wrap01(s.masterPhase + masterIncrement);
+  s.internalSyncOut = sinApprox(s.masterPhase * kTwoPi);
+
+  const double effectiveSyncIn = hasExternalSync ? syncIn : s.internalSyncOut;
+
+  if (s.hasPrevSyncIn && s.prevSyncIn <= 0.0 && effectiveSyncIn > 0.0) {
+    const double denom = effectiveSyncIn - s.prevSyncIn;
     const double frac = denom > 1.0e-9 ? clampD(-s.prevSyncIn / denom, 0.0, 1.0) : 0.0;
     // frac is "how far into this sample" the true zero-crossing happened;
     // (1 - frac) of the sample's phase increment has already elapsed since
@@ -179,7 +208,7 @@ extern "C" void soemdsp_surge_oscillator_sample(
     s.phase = wrap01((1.0 - frac) * increment);
     s.syncedThisSample = true;
   }
-  s.prevSyncIn = syncIn;
+  s.prevSyncIn = effectiveSyncIn;
   s.hasPrevSyncIn = true;
 
   const double phaseCycle = s.phase;
@@ -225,6 +254,11 @@ extern "C" double soemdsp_surge_oscillator_sine(int handle) {
 extern "C" double soemdsp_surge_oscillator_synced(int handle) {
   if (handle < 1 || handle > kMaxInstances) return 0.0;
   return gPool[handle - 1].syncedThisSample ? 1.0 : 0.0;
+}
+
+extern "C" double soemdsp_surge_oscillator_internal_sync(int handle) {
+  if (handle < 1 || handle > kMaxInstances) return 0.0;
+  return gPool[handle - 1].internalSyncOut;
 }
 
 extern "C" int soemdsp_surge_oscillator_version() {

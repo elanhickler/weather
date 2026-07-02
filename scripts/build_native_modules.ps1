@@ -291,6 +291,7 @@ if (!(Test-Path -LiteralPath $clang)) {
   "-Wl,--export=soemdsp_surge_oscillator_tri" `
   "-Wl,--export=soemdsp_surge_oscillator_sine" `
   "-Wl,--export=soemdsp_surge_oscillator_synced" `
+  "-Wl,--export=soemdsp_surge_oscillator_internal_sync" `
   "-Wl,--export=soemdsp_surge_oscillator_version" `
   "-Wl,--export-memory" `
   -o "$root\native_modules\surge_oscillator\surge_oscillator.wasm" `

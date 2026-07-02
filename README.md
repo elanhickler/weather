@@ -45,9 +45,21 @@ no-op).
 **Ports:** `0.1V/Oct` (pitch) and `Sync` (audio-rate signal; a rising
 zero-crossing triggers the reset) in; `Out` (the selected waveform), `Saw`,
 `Square`, `Tri`, `Sine` (always-on taps, like `polyblep.cpp`'s convention),
-and `Synced` (a one-sample-wide pulse on the sample where a sync reset fired,
-for chaining/visualizing) out. Native C++/WASM with a JS fallback, wired into
-both the offline evaluator and the realtime audio worklet.
+`Synced` (a one-sample-wide pulse on the sample where a sync reset fired,
+for chaining/visualizing), and `Internal Sync` (the built-in master
+oscillator's raw signal, for inspection) out. Native C++/WASM with a JS
+fallback, wired into both the offline evaluator and the realtime audio
+worklet.
+
+**Built-in sync source.** Patching a real oscillator into `Sync` still
+works, but most hard-sync sweeps don't need a second module just to get
+one — the oscillator owns its own internal master oscillator (`Sync Freq`,
+0–20000 Hz, same range as the audible `Frequency`). With nothing patched
+into `Sync`, the internal oscillator's zero-crossings drive the exact same
+sub-sample-interpolated reset path external audio would — a self-contained
+hard-sync sweep with two knobs and zero patch cables. Patch something into
+`Sync` and it takes over completely; the internal oscillator is a
+convenience default, not an extra mandatory step.
 
 ## License
 

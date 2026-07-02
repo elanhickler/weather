@@ -737,7 +737,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
   },
   surgeOscillator: {
     inputs: ["0.1V/Oct", "Sync"],
-    outputs: ["Out", "Saw", "Square", "Tri", "Sine", "Synced"],
+    outputs: ["Out", "Saw", "Square", "Tri", "Sine", "Synced", "Internal Sync"],
     parameters: [
       {
         choices: ["Saw", "Square", "Tri", "Sine"],
@@ -754,6 +754,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
         step: "1",
       },
       { key: "frequency", label: "Frequency", kind: "frequency", defaultValue: "220", min: "0", mid: "220", max: "20000", step: "any", unit: "Hz" },
+      { key: "syncFrequency", label: "Sync Freq", kind: "frequency", defaultValue: "50", min: "0", mid: "50", max: "20000", step: "any", unit: "Hz" },
       { key: "level", label: "Level", defaultValue: "1", min: "0", mid: "0.5", max: "1", step: "0.01" },
     ],
   },

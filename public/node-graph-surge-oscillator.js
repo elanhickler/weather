@@ -13,6 +13,8 @@ function createNodeGraphSurgeOscillatorState() {
     hasPrevSyncIn: false,
     syncedThisSample: false,
     triangleIntegrator: 0,
+    masterPhase: 0,
+    internalSyncOut: 0,
   };
 }
 
@@ -36,23 +38,32 @@ function nodeGraphSurgeOscillatorWaveformSample(state, phaseCycle, phaseIncremen
   }
 }
 
-// options: { frequencyHz, sampleRate, syncIn, waveform (0=saw,1=square,2=tri,3=sine), level }
+// options: { frequencyHz, sampleRate, syncIn, hasExternalSync, syncFrequencyHz,
+//            waveform (0=saw,1=square,2=tri,3=sine), level }
+// When hasExternalSync is falsy, the built-in internal master oscillator
+// (syncFrequencyHz) drives sync instead of syncIn -- a self-contained hard
+// sync sweep with no patching required.
 function nodeGraphSurgeOscillatorSample(state, options = {}) {
   const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
   const increment = clampNodeSliderValue((Number(options.frequencyHz) || 0) / sampleRate, -0.5, 0.5);
-  const syncIn = Number(options.syncIn) || 0;
   const level = Number(options.level) || 0;
 
   state.phase = wrapNodeSliderValue(state.phase + increment, 0, 1);
   state.syncedThisSample = false;
 
-  if (state.hasPrevSyncIn && state.prevSyncIn <= 0 && syncIn > 0) {
-    const denom = syncIn - state.prevSyncIn;
+  const masterIncrement = clampNodeSliderValue((Number(options.syncFrequencyHz) || 0) / sampleRate, -0.5, 0.5);
+  state.masterPhase = wrapNodeSliderValue(state.masterPhase + masterIncrement, 0, 1);
+  state.internalSyncOut = Math.sin(state.masterPhase * Math.PI * 2);
+
+  const effectiveSyncIn = options.hasExternalSync ? (Number(options.syncIn) || 0) : state.internalSyncOut;
+
+  if (state.hasPrevSyncIn && state.prevSyncIn <= 0 && effectiveSyncIn > 0) {
+    const denom = effectiveSyncIn - state.prevSyncIn;
     const frac = denom > 1e-9 ? clampNodeSliderValue(-state.prevSyncIn / denom, 0, 1) : 0;
     state.phase = wrapNodeSliderValue((1 - frac) * increment, 0, 1);
     state.syncedThisSample = true;
   }
-  state.prevSyncIn = syncIn;
+  state.prevSyncIn = effectiveSyncIn;
   state.hasPrevSyncIn = true;
 
   const phaseCycle = state.phase;
@@ -71,5 +82,6 @@ function nodeGraphSurgeOscillatorSample(state, options = {}) {
     Tri: tri,
     Sine: sine,
     Synced: state.syncedThisSample ? 1 : 0,
+    "Internal Sync": state.internalSyncOut,
   };
 }

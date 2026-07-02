@@ -6229,6 +6229,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       hasPrevSyncIn: false,
       syncedThisSample: false,
       triangleIntegrator: 0,
+      masterPhase: 0,
+      internalSyncOut: 0,
       nativeHandle: 0,
     };
   }
@@ -6263,19 +6265,24 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   surgeOscillatorSampleJs(state, options = {}) {
     const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
     const increment = this.clampValue((Number(options.frequencyHz) || 0) / sampleRate, -0.5, 0.5);
-    const syncIn = Number(options.syncIn) || 0;
     const level = Number(options.level) || 0;
 
     state.phase = this.wrapValue(state.phase + increment, 0, 1);
     state.syncedThisSample = false;
 
-    if (state.hasPrevSyncIn && state.prevSyncIn <= 0 && syncIn > 0) {
-      const denom = syncIn - state.prevSyncIn;
+    const masterIncrement = this.clampValue((Number(options.syncFrequencyHz) || 0) / sampleRate, -0.5, 0.5);
+    state.masterPhase = this.wrapValue(state.masterPhase + masterIncrement, 0, 1);
+    state.internalSyncOut = Math.sin(state.masterPhase * Math.PI * 2);
+
+    const effectiveSyncIn = options.hasExternalSync ? (Number(options.syncIn) || 0) : state.internalSyncOut;
+
+    if (state.hasPrevSyncIn && state.prevSyncIn <= 0 && effectiveSyncIn > 0) {
+      const denom = effectiveSyncIn - state.prevSyncIn;
       const frac = denom > 1e-9 ? this.clampValue(-state.prevSyncIn / denom, 0, 1) : 0;
       state.phase = this.wrapValue((1 - frac) * increment, 0, 1);
       state.syncedThisSample = true;
     }
-    state.prevSyncIn = syncIn;
+    state.prevSyncIn = effectiveSyncIn;
     state.hasPrevSyncIn = true;
 
     const phaseCycle = state.phase;
@@ -6294,6 +6301,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       Tri: tri,
       Sine: sine,
       Synced: state.syncedThisSample ? 1 : 0,
+      "Internal Sync": state.internalSyncOut,
     };
   }
 
@@ -6311,6 +6319,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
           const frequencyHz = Number(options.frequencyHz) || 0;
           const syncIn = Number(options.syncIn) || 0;
+          const hasExternalSync = options.hasExternalSync ? 1 : 0;
+          const syncFrequencyHz = Number(options.syncFrequencyHz) || 0;
           const waveform = Math.max(0, Math.min(3, Math.round(Number(options.waveform) || 0)));
           const level = Number(options.level) || 0;
           this.nativeSurgeOscillator.soemdsp_surge_oscillator_sample(
@@ -6318,6 +6328,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             frequencyHz,
             sampleRate,
             syncIn,
+            hasExternalSync,
+            syncFrequencyHz,
             waveform,
             level,
           );
@@ -6328,6 +6340,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             Tri: Number(this.nativeSurgeOscillator.soemdsp_surge_oscillator_tri(state.nativeHandle)) || 0,
             Sine: Number(this.nativeSurgeOscillator.soemdsp_surge_oscillator_sine(state.nativeHandle)) || 0,
             Synced: Number(this.nativeSurgeOscillator.soemdsp_surge_oscillator_synced(state.nativeHandle)) || 0,
+            "Internal Sync": Number(this.nativeSurgeOscillator.soemdsp_surge_oscillator_internal_sync(state.nativeHandle)) || 0,
           };
         }
       } catch (error) {
@@ -7128,6 +7141,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           frequencyHz,
           sampleRate: this.engineSampleRate || sampleRate,
           syncIn: mixInput(nodeId, "Sync"),
+          hasExternalSync: hasInput(nodeId, "Sync"),
+          syncFrequencyHz: read("syncFrequency", 50),
           waveform: read("waveform", 0),
           level: read("level", 1),
         });

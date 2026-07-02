@@ -2943,6 +2943,8 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frequencyHz,
         sampleRate,
         syncIn: mixInput(nodeId, "Sync"),
+        hasExternalSync: hasInput(nodeId, "Sync"),
+        syncFrequencyHz: read("syncFrequency", 50),
         waveform: read("waveform", 0),
         level: read("level", 1),
       });
