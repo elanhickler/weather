@@ -16857,6 +16857,7 @@ def require_readme_scheduler_contract() -> None:
         "Sallen-Key",
         "State-Variable Filter",
         "Twin-T Notch",
+        "Discrete Multimode Filter",
         "Zero-delay feedback",
         "Self-oscillating resonance",
     ]:
