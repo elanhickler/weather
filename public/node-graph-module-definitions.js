@@ -2470,6 +2470,7 @@ function nodeGraphModuleProducesOutputWithoutSignalInput(type) {
     "helmholtzPitch",
     "pluckEnvelope",
     "polyBlep",
+    "surgeOscillator",
     "randomWalk",
     "rgbaHsla",
     "sandboxVisuals",
