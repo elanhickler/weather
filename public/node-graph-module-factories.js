@@ -44,9 +44,9 @@ function createNodeGraphIoColumn(node, type, ports, io) {
       (type === "pitchQuantizer" && port === "Scale" && io === "input")
     ) {
       // The 12-bit pitch-class bitmask is this sandbox's "digital signal"
-      // type -- give its wire a black-to-white gradient with a yin-yang-style
-      // color-inverted tap at each end (colors only, no shape/animation
-      // change) so it reads as visually distinct from analog CV wires.
+      // type -- give its wire and port taps solid white (colors only, no
+      // shape/animation change) so it reads as visually distinct from
+      // analog CV wires.
       row.dataset.digitalSignal = io;
     }
     const portLabel = nodeGraphPatchNodePortDisplayLabel(node, type, port, io);

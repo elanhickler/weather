@@ -10661,18 +10661,17 @@ audio {
   right: 0;
 }
 
-/* Digital signal (12-bit bitmask) ports: the wire itself is a black-to-white
-   gradient (see nodeGraphPortWireColor); each port's own dot gets the
-   opposite color of the wire end nearest it, for a yin-yang-style
-   color-inverted tap. Colors only -- no shape, size, or animation change. */
+/* Digital signal (12-bit bitmask) ports: solid white wire and port taps
+   (see nodeGraphPortWireColor). Colors only -- no shape, dash, or animation
+   change; dashing stays reserved for the .node-wire-path.temp drag state. */
 .node-io-row[data-digital-signal="output"] {
   --node-output-fill: #ffffff;
   --node-output-stroke: #ffffff;
 }
 
 .node-io-row[data-digital-signal="input"] {
-  --node-input-fill: #000000;
-  --node-input-stroke: #000000;
+  --node-input-fill: #ffffff;
+  --node-input-stroke: #ffffff;
 }
 
 .node-io-label {
