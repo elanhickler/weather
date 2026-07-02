@@ -16858,6 +16858,7 @@ def require_readme_scheduler_contract() -> None:
         "State-Variable Filter",
         "Twin-T Notch",
         "Discrete Multimode Filter",
+        "Simultaneous LP/HP Filter",
         "Zero-delay feedback",
         "Self-oscillating resonance",
     ]:
