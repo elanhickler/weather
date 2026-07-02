@@ -11,6 +11,13 @@ This branch (`aliasing-wars`) is a dedicated workspace for anti-aliased
 oscillator work, starting with `native_modules/surge_oscillator` — a
 saw/square/tri/sine oscillator with hard sync.
 
+> 🎚️ The name is a play on the [**loudness war**](https://en.wikipedia.org/wiki/Loudness_war) —
+> the decades-long race among mastering engineers to make recordings louder
+> and louder, at the cost of dynamic range. This branch is the same kind of
+> arms race, fought over a different quantity: not loudness, but how much
+> unwanted high-frequency garbage a digital oscillator sneaks in above
+> Nyquist. Same shape of fight, aliasing instead of loudness.
+
 **The problem.** Hard sync forces a slave oscillator's phase back to 0 every
 time a master signal crosses zero going up. That forced reset is a
 discontinuity injected mid-waveform, and rendering it naively (just snapping
