@@ -8929,7 +8929,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeSliderTravelFromValue(slider, value)",
         "function wrapNodeSliderValue(value, min, max)",
         "function shortestNodeGraphWrapDelta(from, to, min, max)",
-        "const nodeGraphAutoSmoothingDefaultSeconds = 0.016",
+        "const nodeGraphAutoSmoothingDefaultSeconds = 0.5",
         "function clampNodeGraphAutoSmoothingSeconds(seconds)",
         "return Math.max(0, value);",
         "function nodeGraphSmoothingFrequencyFromSeconds(seconds)",

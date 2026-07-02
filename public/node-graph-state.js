@@ -92,7 +92,7 @@ var nodeGraphMvp = {
     outputGain: null,
     planEvidence: null,
     activeNodeIds: new Set(),
-    autoSmoothingSeconds: 0.016,
+    autoSmoothingSeconds: 0.5,
     autoSmoothingManual: false,
     lastParameterUpdateTime: 0,
     outputToggleSerial: 0,

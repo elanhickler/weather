@@ -922,7 +922,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.sessionId = message.sessionId || 0;
     this.gpuAdditiveQueues = new Map();
     this.gpuAdditiveUnderruns = 0;
-    this.autoSmoothingSeconds = 0.016;
+    this.autoSmoothingSeconds = 0.5;
     this.hostSampleRate = Math.max(1, Number(message.sampleRate) || sampleRate || 44100);
     const requestedRatio = Number(message.oversamplingRatio) ||
       ((Number(message.engineSampleRate) || this.hostSampleRate) / this.hostSampleRate);
@@ -2426,7 +2426,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   clampAutoSmoothingSeconds(seconds) {
     const value = Number(seconds);
     if (!Number.isFinite(value)) {
-      return 0.016;
+      return 0.5;
     }
     return Math.max(0, value);
   }

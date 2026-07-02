@@ -3,7 +3,7 @@ const nodeSliderHandleLeftWallClearancePx = 1;
 const nodeSliderHandleRightWallClearancePx = 3;
 const nodeSliderMinSkewExponent = 0.25;
 const nodeSliderMaxSkewExponent = 4;
-const nodeGraphAutoSmoothingDefaultSeconds = 0.016;
+const nodeGraphAutoSmoothingDefaultSeconds = 0.5;
 
 function clampNodeGraphAutoSmoothingSeconds(seconds) {
   const value = Number(seconds);
