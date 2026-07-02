@@ -16860,6 +16860,7 @@ def require_readme_scheduler_contract() -> None:
         "Discrete Multimode Filter",
         "Simultaneous LP/HP Filter",
         "Switchable Third-Order Filter",
+        "Diode-Controlled LP/HP Pair",
         "Zero-delay feedback",
         "Self-oscillating resonance",
     ]:
