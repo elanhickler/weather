@@ -1,145 +1,131 @@
-# soemdsp-sandbox
+<div align="center">
 
-## Live Demo: http://soundemote.io/sandbox
+# 🎚️ soemdsp-sandbox — Analog Filters
 
-Browser sandbox for trying `soemdsp` patching, generated artifacts, waveform
-views, Render Sample, and Live Audio.
+*A fork of [soemdsp-sandbox](https://github.com/soundemote/soemdsp-sandbox),*
+*chasing the sound of circuits that were never digital to begin with.*
 
-## License
+[![License: Noncommercial](https://img.shields.io/badge/license-noncommercial-blue.svg)](LICENSE)
+[![Language: C++/WASM](https://img.shields.io/badge/native-C%2B%2B%20%E2%86%92%20WASM-654ff0.svg)](native_modules)
+[![Runtime: Vanilla JS](https://img.shields.io/badge/runtime-vanilla%20JS-f7df1e.svg)](public)
+[![Status: Research](https://img.shields.io/badge/status-research-orange.svg)](#)
+[![Focus: Analog Filters](https://img.shields.io/badge/focus-analog%20filters-654ff0.svg)](#)
 
-This repository is source-available for noncommercial use only. Commercial use
-requires a separate written commercial license from Soundemote. See
-[`LICENSE`](LICENSE).
+</div>
+
+---
+
+## 📖 Contents
+
+- [Why analog filters](#-why-analog-filters)
+- [What makes them hard to get right in software](#-what-makes-them-hard-to-get-right-in-software)
+- [Filters on the list](#-filters-on-the-list)
+- [Listen & watch](#-listen--watch)
+- [Running it](#-running-it)
+- [License](#-license)
+
+---
+
+## 🎛️ Why analog filters
+
+Every classic analog filter is a physical accident wearing a transfer
+function. Resistors, capacitors, and transistors doing exactly what physics
+demands of them — and what physics demands turns out to sound *incredible*
+under stress: self-oscillating resonance, soft-clipping feedback loops,
+component drift, asymmetric distortion on the way into saturation. None of
+that is a bug. It's the entire reason a Moog ladder filter has a personality
+and a textbook biquad doesn't.
+
+This fork exists to chase that personality in `soemdsp`'s native C++/WASM
+modules — not by approximating the *sound* from the outside, but by modeling
+the *circuit* closely enough that the personality falls out on its own.
+
+---
+
+## 🧪 What makes them hard to get right in software
+
+A naive digital filter is linear, time-invariant, and stable by construction.
+A real analog filter is often none of those things, which is exactly what's
+being chased here:
+
+- **Nonlinearity.** Real transistor ladder stages saturate. A textbook
+  digital filter doesn't, unless you deliberately put a nonlinearity back in
+  — and where you put it changes the sound completely.
+- **Self-oscillating resonance.** Push feedback gain high enough on a real
+  Moog ladder and it turns into an oscillator, cleanly, on purpose. Getting
+  a digital model to do the same without exploding numerically is the whole
+  game.
+- **Zero-delay feedback.** Naive digital translations of analog feedback
+  loops introduce a one-sample delay that isn't in the real circuit, which
+  audibly changes the resonant behavior. Topology-preserving transform (TPT)
+  / zero-delay-feedback (ZDF) techniques exist specifically to close that gap.
+- **Frequency-dependent nonlinear behavior.** Saturating a signal *before*
+  filtering it sounds different from saturating *after* — and real circuits
+  often do both, in a loop, simultaneously. That interaction is where a lot
+  of the "expensive analog gear" character actually lives.
+- **Aliasing from the nonlinear stages.** Any saturation stage generates
+  harmonics; without oversampling, those harmonics fold back down as
+  aliasing. Getting the nonlinear modeling right and getting the aliasing
+  under control are two separate problems that have to be solved together.
+
+---
+
+## 🎚️ Filters on the list
+
+| Filter | Status |
+|---|---|
+| **Moog Ladder** (4-pole transistor ladder, self-oscillating resonance) | 🔲 not started |
+| **Diode Ladder** (TB-303-style, asymmetric diode nonlinearity) | 🔲 not started |
+| **Sallen-Key** (2-pole op-amp topology, gentler slope) | 🔲 not started |
+| **State-Variable Filter** (simultaneous LP/HP/BP/notch outputs) | 🔲 not started |
+| **Twin-T Notch** (passive notch, the basis of classic phaser/wah circuits) | 🔲 not started |
+
+This table is the honest state of things: a target list, not a changelog.
+Each filter gets the same treatment already proven out elsewhere in
+`soemdsp-sandbox` — native C++ compiled to WASM, verified against the real
+compiled artifact (not just a JS mirror) before it's wired into the graph.
+
+---
+
+## 🎧 Listen & watch
+
+*(Placeholder links below — real recordings and demo videos go here once
+they exist.)*
+
+| Filter | Audio example | Video demo |
+|---|---|---|
+| Moog Ladder | [Google Drive — TBD](https://drive.google.com/drive/folders/REPLACE_ME_MOOG_LADDER_AUDIO) | [YouTube — TBD](https://youtube.com/watch?v=REPLACE_ME_MOOG_LADDER_DEMO) |
+| Diode Ladder | [Google Drive — TBD](https://drive.google.com/drive/folders/REPLACE_ME_DIODE_LADDER_AUDIO) | [YouTube — TBD](https://youtube.com/watch?v=REPLACE_ME_DIODE_LADDER_DEMO) |
+| Sallen-Key | [Google Drive — TBD](https://drive.google.com/drive/folders/REPLACE_ME_SALLEN_KEY_AUDIO) | [YouTube — TBD](https://youtube.com/watch?v=REPLACE_ME_SALLEN_KEY_DEMO) |
+| State-Variable Filter | [Google Drive — TBD](https://drive.google.com/drive/folders/REPLACE_ME_SVF_AUDIO) | [YouTube — TBD](https://youtube.com/watch?v=REPLACE_ME_SVF_DEMO) |
+| Twin-T Notch | [Google Drive — TBD](https://drive.google.com/drive/folders/REPLACE_ME_TWIN_T_AUDIO) | [YouTube — TBD](https://youtube.com/watch?v=REPLACE_ME_TWIN_T_DEMO) |
+
+---
+
+## ▶️ Running it
 
 ```powershell
-# Requirements:
-# - Python 3
-# - A modern browser
-# No package install is required for the sandbox server.
+# Requirements: Python 3, a modern browser. No package install needed.
 
-# Download:
-git clone https://github.com/soundemote/soemdsp-sandbox.git
-cd soemdsp-sandbox
+git clone https://github.com/elanhickler/soemdsp-sandbox-analog-filters.git
+cd soemdsp-sandbox-analog-filters
 
-# Run:
 python server.py
+# open http://127.0.0.1:8765
 
-# Open:
-# http://127.0.0.1:8765
-
-# Stop:
-# Ctrl+C
-
-# Test:
 python scripts\smoke_test.py
 ```
 
-Optional artifact packet:
+---
 
-```powershell
-# Use this only if the sibling soemdsp repo is built locally.
-C:\Users\argit\Documents\_PROGRAMMING\soemdsp\build-moved\examples\Debug\runtime_dsp_object_bound_wav_resync_demo.exe
-python server.py
-```
+## 📄 License
 
-Optional CLAP host prototype:
+Source-available for noncommercial use only, same as upstream. Commercial use
+requires a separate written commercial license from Soundemote. See
+[`LICENSE`](LICENSE).
 
-```powershell
-# Localhost companion prototype for CLAP catalog and instance probes.
-# Render Sample has a bounded CLAP bridge.
-# Feedback touching CLAP nodes and Live Audio CLAP plans are blocked for now.
-python tools\webui-clap-host\webui_clap_host.py
+<div align="center">
 
-# Windows launcher, metadata inspection on by default:
-tools\webui-clap-host\start_webui_clap_host.cmd
-tools\webui-clap-host\start_webui_clap_host.ps1
+*Chasing circuits that were never digital to begin with.*
 
-# Optional alternate bind port:
-python tools\webui-clap-host\webui_clap_host.py --port 48000
-tools\webui-clap-host\start_webui_clap_host.cmd -Port 48000
-tools\webui-clap-host\start_webui_clap_host.ps1 -Port 48000
-
-# Optional explicit catalog entry:
-python tools\webui-clap-host\webui_clap_host.py --plugin "C:\path\to\plugin.clap"
-
-# Optional native descriptor inspection:
-python tools\webui-clap-host\webui_clap_host.py --inspect-metadata
-
-# Optional create/init/destroy probe:
-python tools\webui-clap-host\webui_clap_host.py --test-instantiate
-
-# Optional JSON preflight report without starting the server:
-python tools\webui-clap-host\webui_clap_host.py --doctor --inspect-metadata
-
-# In the sandbox browser:
-# Edit the Host field if the companion is not using http://127.0.0.1:47991.
-# Click Copy Host Command if you need the Windows .cmd launcher command.
-# Click Connect Local Host.
-# Click Diagnostics to read setup counts from the running host.
-# Click Refresh Plugins to read the host catalog.
-# Add a CLAP Plugin module to store a selected catalog entry.
-
-# Prototype instance API:
-# GET /health reports host capabilities.
-# GET /health also reports hostConfig: bind host, port, Python executable, scan dirs, explicit plugins, and probe flags.
-# GET /diagnostics reports hostConfig, catalog counts, metadata errors, instantiation errors, and missing explicit plugin paths.
-# --doctor reports hostConfig, catalog counts, metadata errors, instantiation errors, and missing explicit plugin paths as JSON.
-# Capabilities include maxProcessFrames, processBatch, and offlineRenderSessions.
-# Current maxProcessFrames default is 48000.
-# POST /instances
-# GET /instances
-# GET /instances/<id>/params
-# POST /instances/<id>/param
-# POST /instances/<id>/params
-# GET /instances/<id>/editor
-# POST /instances/<id>/editor/open
-# POST /instances/<id>/editor/close
-# GET /instances/<id>/latency
-# GET /instances/<id>/tail
-# GET /instances/<id>/state
-# POST /instances/<id>/state
-# POST /instances/<id>/render/begin
-# POST /instances/<id>/process
-# POST /instances/<id>/render/end
-# POST /process-batch
-# /process can accept and return bounded planar-f32-base64 audio.
-# /process can apply a parameters array before processing the chunk.
-# CLAP_PROCESS_ERROR fails the process call instead of returning audio.
-# Direct /param and /params writes are blocked while a render session is active.
-# Abandoned render sessions are released by an idle timeout.
-# A second render/begin is rejected while a non-idle render session is active.
-# Render Sample opens one render session per CLAP instance, processes chunks, then closes the session.
-# Render Sample requires audioProcessing: true from the host.
-# Render Sample requires offlineRenderSessions: true from the host.
-# Render Sample uses maxProcessFrames for CLAP process chunk size.
-# WebUI CLAP audio lanes flatten every CLAP audio port in host port order.
-# CLAP editor status can be detected; supported Win32 clap.gui editors can open when the plugin accepts the GUI sequence.
-# CLAP latency is compensated when Render Sample injects returned CLAP output.
-# Finite CLAP tails can extend Render Sample up to the bounded tail limit; infinite tails remain metadata-only.
-# CLAP state can be saved into patch JSON and restored into a new host instance when the plugin exposes clap.state.
-# Reachable CLAP nodes are processed chunk-by-chunk in graph order.
-# Independent CLAP nodes in the same chunk can share one batch request.
-# POST /instances/<id>/safety/reset
-# DELETE /instances/<id>
-```
-
-Guides:
-
-```text
-docs/ADDING_HARDCODED_SANDBOX_MODULE.md
-docs/OSC_MODULE_NON_UI_REFERENCE.md
-docs/WEBUI_CLAP_HOST_PLAN.md
-tools/webui-clap-host/README.md
-```
-
-Boundaries:
-
-```text
-The server only writes through explicit save/settings/audio helper routes.
-Open Path is restricted to Downloads.
-The browser patch graph is demo-scoped state.
-The browser compiler is not the production soemdsp scheduler.
-The WebUI does not instantiate real C++ DSP objects yet.
-Patch files can save current module instances and settings.
-Patch files cannot define new module types by themselves.
-```
+</div>
