@@ -281,6 +281,28 @@ if (!(Test-Path -LiteralPath $clang)) {
   -fno-exceptions `
   -fno-rtti `
   "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_create" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_destroy" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_reset" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_sample" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_out" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_saw" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_square" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_tri" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_sine" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_synced" `
+  "-Wl,--export=soemdsp_hard_sync_oscillator_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\hard_sync_oscillator\hard_sync_oscillator.wasm" `
+  "$root\native_modules\hard_sync_oscillator\hard_sync_oscillator.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
   "-Wl,--export=soemdsp_henon_map_create" `
   "-Wl,--export=soemdsp_henon_map_destroy" `
   "-Wl,--export=soemdsp_henon_map_sample" `

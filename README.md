@@ -5,6 +5,50 @@
 Browser sandbox for trying `soemdsp` patching, generated artifacts, waveform
 views, Render Sample, and Live Audio.
 
+## Aliasing wars: the Hard Sync Oscillator
+
+This branch (`aliasing-wars`) is a dedicated workspace for anti-aliased
+oscillator work, starting with `native_modules/hard_sync_oscillator` — a
+saw/square/tri/sine oscillator with hard sync.
+
+**The problem.** Hard sync forces a slave oscillator's phase back to 0 every
+time a master signal crosses zero going up. That forced reset is a
+discontinuity injected mid-waveform, and rendering it naively (just snapping
+`phase = 0`, with no correction) aliases badly — the classic harsh, digital
+buzz under a sync sweep.
+
+**The fix, in two parts:**
+
+1. **PolyBLEP correction reused, not reinvented.** This sandbox's existing
+   `polyblep.cpp` module already band-limits ordinary cycle wraps with a
+   PolyBLEP correction. A sync-forced reset and a natural wrap are the same
+   kind of event from the waveform function's point of view — phase lands
+   near 0 — so `hard_sync_oscillator.cpp` reuses the identical
+   `polyBlep`/`polyBlepSquare`/triangle-integrator functions unchanged. Every
+   reset, sync-forced or natural, gets band-limited for free.
+2. **Sub-sample sync timing.** Sync input is read once per sample, but a real
+   zero-crossing can happen anywhere within that sample. Instead of always
+   resetting to exactly `phase = 0` (which quantizes sync timing to the
+   sample rate and adds its own jitter/aliasing at high sync ratios), the
+   module linearly interpolates the crossing time within the sample and
+   starts the new cycle already `frac` of the way in — the same idea Surge
+   and other analog-modeling synths use for sync-aware oscillators.
+
+**Verified, not assumed.** The compiled `.wasm` is tested against a
+Python + `wasmtime` harness exercising the real artifact directly (27
+assertions: pool exhaustion, waveform selection, level scaling, edge-triggered
+sync detection, and — the part that actually matters — proof that early vs.
+late sync crossings within the same sample produce measurably different
+output, confirming the sub-sample interpolation is doing real work and not a
+no-op).
+
+**Ports:** `0.1V/Oct` (pitch) and `Sync` (audio-rate signal; a rising
+zero-crossing triggers the reset) in; `Out` (the selected waveform), `Saw`,
+`Square`, `Tri`, `Sine` (always-on taps, like `polyblep.cpp`'s convention),
+and `Synced` (a one-sample-wide pulse on the sample where a sync reset fired,
+for chaining/visualizing) out. Native C++/WASM with a JS fallback, wired into
+both the offline evaluator and the realtime audio worklet.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use
