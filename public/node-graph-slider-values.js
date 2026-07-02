@@ -127,9 +127,25 @@ function denormalizeNodeGraphSmootherSignal(signal, metadata = {}) {
   return Number.isFinite(range) && range > 0 ? min + range * clampNodeSliderValue(signal, 0, 1) : signal;
 }
 
+// smoothingSeconds metadata is now interpreted as a SAMPLE COUNT, not
+// seconds: -1 bypasses smoothing entirely, 0 uses the current block size
+// as the smoothing window, and any N > 0 smooths over exactly N samples.
+// Unset/non-finite values fall back to the global auto-smoothing seconds.
 function nodeGraphParameterSmoothingSecondsFromMetadata(metadata = {}) {
   const value = Number(metadata.smoothingSeconds);
-  return Number.isFinite(value) && value >= 0 ? value : null;
+  return Number.isFinite(value) ? Math.round(value) : null;
+}
+
+function nodeGraphResolveSmoothingSecondsForSamples(smoothingSamples, frames, rate) {
+  if (smoothingSamples === null) {
+    return nodeGraphMvp?.live?.autoSmoothingSeconds;
+  }
+  if (smoothingSamples === -1) {
+    return -1;
+  }
+  const safeRate = Math.max(1, Number(rate) || nodeGraphMvp?.sampleRate || 44100);
+  const samples = smoothingSamples <= 0 ? Math.max(1, Number(frames) || 1) : smoothingSamples;
+  return samples / safeRate;
 }
 
 function createNodeGraphParameterSmoother(initialValue, metadata = {}) {
@@ -182,9 +198,14 @@ function readNodeGraphSmoothedParameter(smoother, frame, frames) {
     smoother.lastValue = smoother.target;
     return smoother.target;
   }
-  const smoothingSeconds = clampNodeGraphAutoSmoothingSeconds(
-    smoother.smoothingSeconds ?? nodeGraphMvp?.live?.autoSmoothingSeconds,
+  const resolvedSmoothingSeconds = nodeGraphResolveSmoothingSecondsForSamples(
+    smoother.smoothingSeconds ?? null,
+    frames,
+    nodeGraphMvp?.sampleRate || 44100,
   );
+  const smoothingSeconds = resolvedSmoothingSeconds === -1
+    ? -1
+    : clampNodeGraphAutoSmoothingSeconds(resolvedSmoothingSeconds);
   if (smoothingSeconds <= 0) {
     smoother.current = smoother.target;
     smoother.outputBuffer = smoother.targetSignal;

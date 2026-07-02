@@ -2369,9 +2369,24 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return delta;
   }
 
+  // smoothingSeconds metadata is now interpreted as a SAMPLE COUNT, not
+  // seconds: -1 bypasses smoothing entirely, 0 uses the current block size
+  // as the smoothing window, and any N > 0 smooths over exactly N samples.
+  // Unset/non-finite values fall back to the global autoSmoothingSeconds.
   smoothingSecondsFromMetadata(metadata = {}) {
     const value = Number(metadata?.smoothingSeconds);
-    return Number.isFinite(value) && value >= 0 ? value : null;
+    return Number.isFinite(value) ? Math.round(value) : null;
+  }
+
+  resolveSmoothingSecondsForSamples(smoothingSamples, frames, rate = sampleRate) {
+    if (smoothingSamples === null) {
+      return this.autoSmoothingSeconds;
+    }
+    if (smoothingSamples === -1) {
+      return -1;
+    }
+    const samples = smoothingSamples <= 0 ? Math.max(1, Number(frames) || 1) : smoothingSamples;
+    return samples / Math.max(1, Number(rate) || 44100);
   }
 
   createSmoother(initialValue, metadata = {}) {
@@ -2458,9 +2473,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       smoother.lastValue = smoother.target;
       return smoother.target;
     }
-    const smoothingSeconds = this.clampAutoSmoothingSeconds(
-      smoother.smoothingSeconds ?? this.autoSmoothingSeconds,
+    const resolvedSmoothingSeconds = this.resolveSmoothingSecondsForSamples(
+      smoother.smoothingSeconds ?? null,
+      frames,
+      sampleRate,
     );
+    const smoothingSeconds = resolvedSmoothingSeconds === -1
+      ? -1
+      : this.clampAutoSmoothingSeconds(resolvedSmoothingSeconds);
     if (smoothingSeconds <= 0) {
       smoother.current = smoother.target;
       smoother.outputBuffer = smoother.targetSignal;
