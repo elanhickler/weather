@@ -1595,12 +1595,18 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.shootingStarExplosionEvent = event;
   }
 
-  nativeShootingStarExplosionPower(speed, lowRange = 6, highRange = 10) {
+  nativeShootingStarExplosionPower(speed, lowRange = 0, highRange = 1) {
     const low = Number(lowRange) || 0;
     const high = Number(highRange) || 0;
+    const lo = Math.min(low, high);
+    const hi = Math.max(low, high);
     const fallback = () => {
-      if (!Number.isFinite(speed)) return 1;
-      return high > low ? Math.max(0, Math.min(1, (speed - low) / (high - low))) : 0;
+      // speed is expected 0-1 (the site's trigger intensity), interpolated
+      // linearly into [lowRange, highRange] to get the actual pulse amplitude.
+      // No speed data (not finite) keeps the pulse at max amplitude.
+      if (!Number.isFinite(speed)) return hi;
+      const normalizedSpeed = Math.max(0, Math.min(1, speed));
+      return lo + normalizedSpeed * (hi - lo);
     };
     if (!this.nativeShootingStarExplosionReady || !this.nativeShootingStarExplosion?.soemdsp_shooting_star_explosion_power) {
       return fallback();
@@ -1626,7 +1632,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
   }
 
-  shootingStarExplosionEventSample(lowRange = 6, highRange = 10) {
+  shootingStarExplosionEventSample(lowRange = 0, highRange = 1) {
     const event = this.shootingStarExplosionEvent && typeof this.shootingStarExplosionEvent === "object"
       ? this.shootingStarExplosionEvent
       : { pulseSamples: 0 };
@@ -7076,8 +7082,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         value = this.windowReopenEventSample();
       } else if (node?.type === "shootingStarExplosion") {
         value = this.shootingStarExplosionEventSample(
-          this.readEffectiveParameter(node, "lowRange", 6, frame, frames, frameValues),
-          this.readEffectiveParameter(node, "highRange", 10, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "lowRange", 0, frame, frames, frameValues),
+          this.readEffectiveParameter(node, "highRange", 1, frame, frames, frameValues),
         );
       } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
         const state = this.patchCommandStates.get(nodeId) || this.createPatchCommandState();

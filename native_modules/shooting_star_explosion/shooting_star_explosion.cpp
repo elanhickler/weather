@@ -17,22 +17,22 @@ static const char kMetadataJson[] =
       "{"
         "\"key\":\"lowRange\","
         "\"label\":\"Low Range\","
-        "\"defaultValue\":6,"
+        "\"defaultValue\":0,"
         "\"min\":0,"
-        "\"mid\":10,"
-        "\"max\":20,"
+        "\"mid\":0.5,"
+        "\"max\":1,"
         "\"step\":\"any\","
-        "\"tooltip\":\"Raw shooting-star speed that maps to zero explosion power.\""
+        "\"tooltip\":\"Minimum explosion pulse amplitude (0-1 speed sends this).\""
       "},"
       "{"
         "\"key\":\"highRange\","
         "\"label\":\"High Range\","
-        "\"defaultValue\":10,"
+        "\"defaultValue\":1,"
         "\"min\":0,"
-        "\"mid\":10,"
-        "\"max\":20,"
+        "\"mid\":0.5,"
+        "\"max\":1,"
         "\"step\":\"any\","
-        "\"tooltip\":\"Raw shooting-star speed that maps to full explosion power.\""
+        "\"tooltip\":\"Maximum explosion pulse amplitude (1 speed, or no speed data, sends this).\""
       "}"
     "]"
   "}";
@@ -44,19 +44,19 @@ extern "C" double soemdsp_shooting_star_explosion_power(
   double lowRange,
   double highRange
 ) {
+  const double lo = lowRange < highRange ? lowRange : highRange;
+  const double hi = lowRange < highRange ? highRange : lowRange;
   // Negative speed is the "no speed data" sentinel (site didn't send one) --
-  // keep the pulse at full power rather than guessing a range mapping.
+  // keep the pulse at max amplitude rather than guessing an intensity.
   if (speed < 0.0) {
-    return 1.0;
+    return hi;
   }
-  const double span = highRange - lowRange;
-  if (span <= 0.0) {
-    return 0.0;
-  }
-  double power = (speed - lowRange) / span;
-  if (power < 0.0) power = 0.0;
-  if (power > 1.0) power = 1.0;
-  return power;
+  // speed is expected 0-1 (the site's trigger intensity), interpolated
+  // linearly into [lowRange, highRange] to get the actual pulse amplitude.
+  double normalizedSpeed = speed;
+  if (normalizedSpeed < 0.0) normalizedSpeed = 0.0;
+  if (normalizedSpeed > 1.0) normalizedSpeed = 1.0;
+  return lo + normalizedSpeed * (hi - lo);
 }
 
 extern "C" int soemdsp_shooting_star_explosion_version() {

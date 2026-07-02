@@ -1106,8 +1106,8 @@ const nodeGraphModuleDefinitions = Object.freeze({
     inputs: [],
     outputs: ["Pulse"],
     parameters: [
-      { defaultValue: "6", key: "lowRange", label: "Low Range", max: "20", mid: "10", min: "0", nonlinearSlider: false, step: "any" },
-      { defaultValue: "10", key: "highRange", label: "High Range", max: "20", mid: "10", min: "0", nonlinearSlider: false, step: "any" },
+      { defaultValue: "0", key: "lowRange", label: "Low Range", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any", tooltip: "Minimum explosion pulse amplitude (0-1 speed sends this)." },
+      { defaultValue: "1", key: "highRange", label: "High Range", max: "1", mid: "0.5", min: "0", nonlinearSlider: false, step: "any", tooltip: "Maximum explosion pulse amplitude (1 speed, or no speed data, sends this)." },
     ],
   },
   nextPatch: {

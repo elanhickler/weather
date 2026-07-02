@@ -62,11 +62,17 @@ function nodeGraphShootingStarExplosionEventSample(runtime, lowRange, highRange)
   }
   const pulseSamples = Math.max(0, Number(event.pulseSamples) || 0);
   const speed = Number(event.speed);
-  let power = 1;
+  const low = Number(lowRange) || 0;
+  const high = Number(highRange) || 0;
+  const lo = Math.min(low, high);
+  const hi = Math.max(low, high);
+  // speed is expected 0-1 (the site's trigger intensity), interpolated
+  // linearly into [lowRange, highRange] to get the actual pulse amplitude.
+  // No speed data (not finite) keeps the pulse at max amplitude.
+  let power = hi;
   if (Number.isFinite(speed)) {
-    const low = Number(lowRange) || 0;
-    const high = Number(highRange) || 0;
-    power = high > low ? Math.max(0, Math.min(1, (speed - low) / (high - low))) : 0;
+    const normalizedSpeed = Math.max(0, Math.min(1, speed));
+    power = lo + normalizedSpeed * (hi - lo);
   }
   event.pulseSamples = Math.max(0, pulseSamples - 1);
   return { Pulse: pulseSamples > 0 ? power : 0 };
@@ -3031,8 +3037,8 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
     } else if (node?.type === "shootingStarExplosion") {
       value = nodeGraphShootingStarExplosionEventSample(
         runtime,
-        readNodeGraphLiveEffectiveParam(runtime, node, "lowRange", 6, frame, frames, frameValues),
-        readNodeGraphLiveEffectiveParam(runtime, node, "highRange", 10, frame, frames, frameValues),
+        readNodeGraphLiveEffectiveParam(runtime, node, "lowRange", 0, frame, frames, frameValues),
+        readNodeGraphLiveEffectiveParam(runtime, node, "highRange", 1, frame, frames, frameValues),
       );
     } else if (node?.type === "nextPatch" || node?.type === "previousPatch") {
       const state = runtime.patchCommandStates.get(nodeId) || createNodeGraphPatchCommandState();
