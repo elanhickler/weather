@@ -224,6 +224,25 @@ does suppress even harmonics by more than 5×, Morph really does add
 measurable harmonic energy as it increases, PWM really does change duty
 cycle, and the Fractal Stack really does put energy at its octave layers.
 
+**🐛 A second real bug: the Harmonics slider itself could alias.** "Alias-free
+by construction" only holds if the harmonic count actually stays under
+Nyquist — the studied `DSFOscillatorBase` recalculates `numPartials_ =
+halffreq_ / frequency_` every time frequency changes for exactly this
+reason. This module's first version left `Harmonics` as a free 1–64 slider
+with no such cap, so cranking it up at a moderately high pitch generated
+real content above Nyquist, which folded back down as audible aliasing —
+the exact thing this whole branch exists to fight. Measured directly: at
+2000 Hz with `Harmonics = 64`, the formula was generating content up to
+128 kHz against a 24 kHz Nyquist limit (48 kHz sample rate); only 99.46% of
+the resulting spectral energy sat on the 12 harmonics that actually fit
+under Nyquist before the fix. The fix: `Harmonics` is now a *ceiling*,
+silently capped to `⌊Nyquist / frequency⌋` — same idea as the studied
+file, just applied per-sample instead of only on frequency change. The
+Fractal Stack's three octave layers each get their **own** independent cap
+too (its `2f`/`4f` layers need a tighter cap than the base `f` layer, not
+the same one). Added as a permanent regression test, not just a one-off
+check: FFT-verified that Harmonics = 64 at 2000 Hz now stays alias-free.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use

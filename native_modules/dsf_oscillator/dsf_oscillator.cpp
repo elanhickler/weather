@@ -166,7 +166,18 @@ extern "C" void soemdsp_dsf_oscillator_sample(
   const double increment = clampD(frequencyHz / safeSampleRate, -0.5, 0.5);
   s.phase = wrap01(s.phase + increment);
 
-  const int n = harmonics < 1 ? 1 : (harmonics > kMaxHarmonics ? kMaxHarmonics : harmonics);
+  // The whole "alias-free by construction" claim depends on this: the
+  // Harmonics slider is a *ceiling*, not a fixed count. If N*frequency were
+  // allowed to exceed Nyquist, that excess content wouldn't get suppressed
+  // by the closed form -- it would alias, fold back into the audible range,
+  // same as any signal sampled too coarsely. This mirrors the studied
+  // DSFOscillatorBase's numPartials_ = halffreq_/frequency_, recalculated
+  // every time frequency changes, instead of a static slider value.
+  const double nyquist = safeSampleRate * 0.5;
+  const double safeFrequency = frequencyHz > 1.0 ? frequencyHz : 1.0;
+  const int nyquistCappedHarmonics = static_cast<int>(nyquist / safeFrequency);
+  const int requestedHarmonics = harmonics < 1 ? 1 : (harmonics > kMaxHarmonics ? kMaxHarmonics : harmonics);
+  const int n = requestedHarmonics < nyquistCappedHarmonics ? requestedHarmonics : (nyquistCappedHarmonics < 1 ? 1 : nyquistCappedHarmonics);
   const double a = clampD(0.02 + clampD(morph, 0.0, 1.0) * 0.95, 0.02, 0.97);
   const double x = s.phase * kTwoPi;
 
@@ -197,11 +208,18 @@ extern "C" void soemdsp_dsf_oscillator_sample(
       break;
     }
     case 5: {  // Fractal Stack: three octave-spaced saws, falling amplitude.
+      // Each layer runs at its own frequency (f, 2f, 4f) and needs its own
+      // independent Nyquist cap -- reusing the base layer's `n` here would
+      // let the higher octaves alias even though the base layer is safe.
       s.phase2 = wrap01(s.phase2 + increment * 2.0);
       s.phase3 = wrap01(s.phase3 + increment * 4.0);
+      const int n2Cap = static_cast<int>(nyquist / (safeFrequency * 2.0));
+      const int n3Cap = static_cast<int>(nyquist / (safeFrequency * 4.0));
+      const int n2 = requestedHarmonics < n2Cap ? requestedHarmonics : (n2Cap < 1 ? 1 : n2Cap);
+      const int n3 = requestedHarmonics < n3Cap ? requestedHarmonics : (n3Cap < 1 ? 1 : n3Cap);
       const double layer1 = dsf(s.phase * kTwoPi, a, n, 0.0);
-      const double layer2 = dsf(s.phase2 * kTwoPi, a, n, 0.0) * 0.5;
-      const double layer3 = dsf(s.phase3 * kTwoPi, a, n, 0.0) * 0.25;
+      const double layer2 = dsf(s.phase2 * kTwoPi, a, n2, 0.0) * 0.5;
+      const double layer3 = dsf(s.phase3 * kTwoPi, a, n3, 0.0) * 0.25;
       sample = (layer1 + layer2 + layer3) / 1.75;
       break;
     }

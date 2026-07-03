@@ -6430,7 +6430,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const increment = this.clampValue((Number(options.frequencyHz) || 0) / sampleRate, -0.5, 0.5);
     state.phase = this.wrapValue(state.phase + increment, 0, 1);
 
-    const n = Math.max(1, Math.min(64, Math.round(Number(options.harmonics) || 16)));
+    // The Harmonics slider is a ceiling, not a fixed count: if N*frequency
+    // were allowed above Nyquist, that excess content would alias back down
+    // instead of being suppressed.
+    const nyquist = sampleRate * 0.5;
+    const safeFrequency = Number(options.frequencyHz) > 1 ? Number(options.frequencyHz) : 1;
+    const nyquistCappedHarmonics = Math.floor(nyquist / safeFrequency);
+    const requestedHarmonics = Math.max(1, Math.min(64, Math.round(Number(options.harmonics) || 16)));
+    const n = Math.max(1, Math.min(requestedHarmonics, nyquistCappedHarmonics));
     const a = this.clampValue(0.02 + this.clampValue(Number(options.morph) || 0, 0, 1) * 0.95, 0.02, 0.97);
     const x = state.phase * Math.PI * 2;
     const waveform = Math.round(Number(options.waveform) || 0);
@@ -6461,11 +6468,15 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         break;
       }
       case 5: {
+        // Each layer runs at its own frequency (f, 2f, 4f) and needs its own
+        // independent Nyquist cap.
         state.phase2 = this.wrapValue(state.phase2 + increment * 2, 0, 1);
         state.phase3 = this.wrapValue(state.phase3 + increment * 4, 0, 1);
+        const n2 = Math.max(1, Math.min(requestedHarmonics, Math.floor(nyquist / (safeFrequency * 2))));
+        const n3 = Math.max(1, Math.min(requestedHarmonics, Math.floor(nyquist / (safeFrequency * 4))));
         const layer1 = this.dsf(state.phase * Math.PI * 2, a, n, 0);
-        const layer2 = this.dsf(state.phase2 * Math.PI * 2, a, n, 0) * 0.5;
-        const layer3 = this.dsf(state.phase3 * Math.PI * 2, a, n, 0) * 0.25;
+        const layer2 = this.dsf(state.phase2 * Math.PI * 2, a, n2, 0) * 0.5;
+        const layer3 = this.dsf(state.phase3 * Math.PI * 2, a, n3, 0) * 0.25;
         sample = (layer1 + layer2 + layer3) / 1.75;
         break;
       }

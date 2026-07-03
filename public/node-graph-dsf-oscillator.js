@@ -44,7 +44,15 @@ function nodeGraphDsfOscillatorSample(state, options = {}) {
   const increment = clampNodeSliderValue((Number(options.frequencyHz) || 0) / sampleRate, -0.5, 0.5);
   state.phase = wrapNodeSliderValue(state.phase + increment, 0, 1);
 
-  const n = Math.max(1, Math.min(64, Math.round(Number(options.harmonics) || 16)));
+  // The Harmonics slider is a ceiling, not a fixed count: if N*frequency were
+  // allowed above Nyquist, that excess content would alias back down instead
+  // of being suppressed. Mirrors the studied file's numPartials_ =
+  // halffreq_/frequency_, recalculated every time frequency changes.
+  const nyquist = sampleRate * 0.5;
+  const safeFrequency = Number(options.frequencyHz) > 1 ? Number(options.frequencyHz) : 1;
+  const nyquistCappedHarmonics = Math.floor(nyquist / safeFrequency);
+  const requestedHarmonics = Math.max(1, Math.min(64, Math.round(Number(options.harmonics) || 16)));
+  const n = Math.max(1, Math.min(requestedHarmonics, nyquistCappedHarmonics));
   const a = clampNodeSliderValue(0.02 + clampNodeSliderValue(Number(options.morph) || 0, 0, 1) * 0.95, 0.02, 0.97);
   const x = state.phase * Math.PI * 2;
   const waveform = Math.round(Number(options.waveform) || 0);
@@ -75,11 +83,16 @@ function nodeGraphDsfOscillatorSample(state, options = {}) {
       break;
     }
     case 5: {
+      // Each layer runs at its own frequency (f, 2f, 4f) and needs its own
+      // independent Nyquist cap -- reusing the base layer's n would let the
+      // higher octaves alias even though the base layer is safe.
       state.phase2 = wrapNodeSliderValue(state.phase2 + increment * 2, 0, 1);
       state.phase3 = wrapNodeSliderValue(state.phase3 + increment * 4, 0, 1);
+      const n2 = Math.max(1, Math.min(requestedHarmonics, Math.floor(nyquist / (safeFrequency * 2))));
+      const n3 = Math.max(1, Math.min(requestedHarmonics, Math.floor(nyquist / (safeFrequency * 4))));
       const layer1 = nodeGraphDsf(state.phase * Math.PI * 2, a, n, 0);
-      const layer2 = nodeGraphDsf(state.phase2 * Math.PI * 2, a, n, 0) * 0.5;
-      const layer3 = nodeGraphDsf(state.phase3 * Math.PI * 2, a, n, 0) * 0.25;
+      const layer2 = nodeGraphDsf(state.phase2 * Math.PI * 2, a, n2, 0) * 0.5;
+      const layer3 = nodeGraphDsf(state.phase3 * Math.PI * 2, a, n3, 0) * 0.25;
       sample = (layer1 + layer2 + layer3) / 1.75;
       break;
     }

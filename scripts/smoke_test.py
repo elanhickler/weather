@@ -16865,6 +16865,9 @@ def require_readme_scheduler_contract() -> None:
         "native_modules/dsf_oscillator",
         "Fractal Stack",
         "amplitude normalization",
+        "Harmonics slider itself could alias",
+        "numPartials_",
+        "independent cap too",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
     for snippet in [
