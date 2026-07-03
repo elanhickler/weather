@@ -7533,8 +7533,11 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         const state = this.robinSupersawStates.get(nodeId) || this.createRobinSupersawState();
         this.robinSupersawStates.set(nodeId, state);
         const read = (key, fallback) => this.readEffectiveParameter(node, key, fallback, frame, frames, frameValues);
+        const baseFrequency = Math.max(0, read("frequency", 220));
+        const pitchInput = this.clampValue(this.safeFilterNumber(mixInput(nodeId, "0.1V/Oct"), null), -1, 1);
+        const pitchedFrequency = Math.max(0, baseFrequency * (2 ** (pitchInput / 0.1)));
         value = this.robinSupersawSample(state, {
-          frequencyHz: Math.max(0, read("frequency", 220)),
+          frequencyHz: pitchedFrequency,
           sampleRate: this.engineSampleRate || sampleRate,
           detuneCents: read("detuneCents", 30),
           voices: read("voices", 7),

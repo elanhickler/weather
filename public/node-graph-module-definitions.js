@@ -785,6 +785,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     ],
   },
   robinSupersaw: {
+    inputs: ["0.1V/Oct"],
     outputs: ["Mono", "Left", "Right"],
     parameters: [
       { key: "frequency", label: "Frequency", kind: "frequency", defaultValue: "220", min: "0", mid: "220", max: "20000", step: "any", unit: "Hz" },
