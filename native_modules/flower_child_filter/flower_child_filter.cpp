@@ -19,16 +19,22 @@
 //     resonance-scaled, and the output makeup gain is pushed much harder --
 //     producing an aggressive, growling character at high resonance.
 //
-// Approximation note: the original design used a proprietary multi-node
-// spline library (piecewise EXPONENTIAL/RATIONAL easing curves) for two
-// shaping curves -- the FM/PM crossfade-vs-frequency curve and the
-// resonance-vs-frequency soft-limit curve. That library's exact source
-// wasn't available for this port, so both curves are reproduced here with
-// a documented, equivalent-shape substitute (the same rational tension
-// formula used elsewhere in the original codebase, curve()), rather than
-// silently guessed. The core architecture -- feedback-modulated phasor,
-// waveshaper choice, one-pole cascade, resonance-scaled feedback -- is
-// reproduced exactly from the original C++.
+// Exact-reproduction note: the original design's two shaping curves used a
+// node-based spline library (soemdsp::utility::Graph / soemdsp::curve::
+// Rational). With that source now available, both are reproduced exactly:
+//
+//   - The FM/PM crossfade-vs-frequency curve is queried at a value (the
+//     pitch-mapped cutoff, 3..161) that always exceeds the curve's node
+//     domain (nodes only at x=0 and x=1) -- Graph::getValue clamps to the
+//     last node's y for any x past the final node, and that node's y is 0
+//     for both Rev1 and Rev2. So the crossfade is provably always 0 (pure
+//     FM feedback, no PM component), not an approximation -- it's simplified
+//     out below rather than computed.
+//   - The resonance-vs-frequency soft-limit curve is reproduced with the
+//     exact 3-node Graph structure and the exact Rational curve formula
+//     (out = ((1+skew)*p) / (1-skew+2*skew*p)), including the detail that
+//     Rev2 (unlike Rev1) samples this curve at the *frequency* slider
+//     position, not at resonance.
 
 namespace {
 
@@ -128,12 +134,31 @@ static inline double jmap01(double v, double outMin, double outMax) {
   return outMin + (outMax - outMin) * v;
 }
 
-// Standard 0->0, 1->1 rational tension/ease curve. tension=0 is linear.
+// Standalone tension/ease curve (soemdsp's free-standing curve() function,
+// distinct from curve::Rational below). 0->0, 1->1, tension=0 is linear.
 static inline double curveShape(double v, double tension) {
   double t = tension;
   double denom = 2.0 * t * v - t - 1.0;
   if (denom == 0.0) return v;
   return (t * v - v) / denom;
+}
+
+// Exact soemdsp::curve::Rational::get(p), p already normalized to [0,1].
+static inline double rationalCurve(double p, double skew) {
+  return ((1.0 + skew) * p) / (1.0 - skew + 2.0 * skew * p);
+}
+
+// Exact soemdsp::utility::Graph::getValue for the 3-node shape this filter
+// uses: node0=(0, n0y, linear), node1=(breakpoint, n1y, linear -- n1y==n0y
+// makes this segment flat regardless of shape), node2=(1, n2y, RATIONAL
+// with the given skew). x is clamped to the first node's y below x=0 and to
+// the last node's y at or beyond x=1, exactly like Graph::getValue.
+static inline double evalResonanceGraph(double x, double n0y, double breakpoint, double n2y, double skew) {
+  if (x < 0.0) return n0y;
+  if (x >= 1.0) return n2y;
+  if (x < breakpoint) return n0y;  // flat segment: n1y == n0y
+  double p = (x - breakpoint) / (1.0 - breakpoint);
+  return n0y + (n2y - n0y) * rationalCurve(p, skew);
 }
 
 static inline double pitchToFreq(double pitch) {
@@ -251,20 +276,19 @@ extern "C" double soemdsp_flower_child_filter_sample(
   const double normalizedFreqInUse = jmap01(freqNorm < maxNormFreq ? freqNorm : maxNormFreq, 3.0, 161.0);
   const double frequencyHz = pitchToFreq(normalizedFreqInUse);
 
-  // FM/PM crossfade-vs-frequency curve (approximated -- see file header).
-  // Starts near 0.21 (clean) / 0.2 (dirty) at the lowest cutoff and eases
-  // toward 0 (pure FM feedback) as cutoff frequency rises.
-  const double crossfadeStart = dirty ? 0.2 : 0.21;
-  const double fmPmCrossfade = crossfadeStart * (1.0 - curveShape(freqNorm, 0.53));
+  // FM/PM crossfade is provably always 0 here -- see the exact-reproduction
+  // note above. cos(0)=1, sin(0)=0, so this collapses to pure FM feedback:
+  // fm = mod, pm = 0.
 
   const double cutoff1 = frequencyHz * 0.164312;
   const double cutoff2 = frequencyHz * 0.366131;
   const double a1 = onePoleCoefficient(cutoff1, safeRate);
   const double a2 = onePoleCoefficient(cutoff2, safeRate);
 
-  // Resonance soft-limit curve (approximated -- see file header). Tracks
-  // resonance 1:1 up to a breakpoint, then eases toward a per-mode/tier cap
-  // so the feedback amount can't push the oscillator past a safe bound.
+  // Resonance-vs-frequency soft-limit curve, exact Graph/Rational
+  // reproduction. Rev1 samples it at the resonance value itself; Rev2
+  // samples it at the frequency slider position instead (matching the
+  // original's updateResonance override exactly).
   double breakpoint, cap;
   if (dirty) {
     if (safeRate <= 44100.0) { breakpoint = 0.816054; cap = 0.602339; }
@@ -275,19 +299,16 @@ extern "C" double soemdsp_flower_child_filter_sample(
     else if (safeRate <= 88200.0) { breakpoint = 0.816054; cap = 0.818713; }
     else { breakpoint = 0.879599; cap = 0.807018; }
   }
-  double effectiveReso = reso;
-  if (reso > breakpoint) {
-    double t = (reso - breakpoint) / (1.0 - breakpoint);
-    double cappedTarget = reso < cap ? reso : cap;
-    effectiveReso = breakpoint + (cappedTarget - breakpoint) * curveShape(t, -0.38);
-  }
+  const double cappedTarget = reso < cap ? reso : cap;
 
   double selfModAmp = 1.0;
   double ellipseC = -1.0;
   if (!dirty) {
-    selfModAmp = jmap01(curveShape(effectiveReso, 0.4), 0.0368, 0.6333);
+    const double graphValue = evalResonanceGraph(reso, reso, breakpoint, cappedTarget, -0.38);
+    selfModAmp = jmap01(curveShape(graphValue, 0.4), 0.0368, 0.6333);
   } else {
-    ellipseC = jmap01(curveShape(effectiveReso, -0.6), -1.0, 0.00001);
+    const double graphValue = evalResonanceGraph(freqNorm, reso, breakpoint, cappedTarget, -0.38);
+    ellipseC = jmap01(curveShape(graphValue, -0.6), -1.0, 0.00001);
   }
 
   const double clampLimit = dirty ? 1.198 : 1.0;
@@ -300,10 +321,9 @@ extern "C" double soemdsp_flower_child_filter_sample(
   inputSignal = s.selfMod + 0.035848699999999845 * inputSignal;
 
   const double mod = 1.4 * inputSignal;
-  const double fm = dsp_cos(kHalfPi * fmPmCrossfade) * mod;
-  const double pm = dsp_sin(kHalfPi * fmPmCrossfade) * mod;
+  const double fm = mod;
 
-  s.phaseOffset = pm;
+  s.phaseOffset = 0.0;
   const double incAmt = (frequencyHz * fm) / safeRate;
   s.phase = s.phase + incAmt;
   s.phase = s.phase - dsp_floor(s.phase);

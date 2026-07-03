@@ -854,6 +854,22 @@ function nodeGraphFlowerChildFilterCurveShape(v, tension) {
   return (tension * v - v) / denom;
 }
 
+// Exact soemdsp::curve::Rational::get(p), p already normalized to [0,1].
+function nodeGraphFlowerChildFilterRationalCurve(p, skew) {
+  return ((1 + skew) * p) / (1 - skew + 2 * skew * p);
+}
+
+// Exact soemdsp::utility::Graph::getValue for the 3-node shape this filter
+// uses -- see native_modules/flower_child_filter/flower_child_filter.cpp's
+// header comment for the full derivation.
+function nodeGraphFlowerChildFilterEvalResonanceGraph(x, n0y, breakpoint, n2y, skew) {
+  if (x < 0) return n0y;
+  if (x >= 1) return n2y;
+  if (x < breakpoint) return n0y;
+  const p = (x - breakpoint) / (1 - breakpoint);
+  return n0y + (n2y - n0y) * nodeGraphFlowerChildFilterRationalCurve(p, skew);
+}
+
 function nodeGraphFlowerChildFilterOnePoleCoefficient(cutoffHz, sampleRate) {
   const rawWc = 2 * Math.PI * cutoffHz / sampleRate;
   const wc = Math.max(1e-9, Math.min(Math.PI * 0.98, rawWc));
@@ -890,8 +906,8 @@ function nodeGraphFlowerChildFilterSample(state, input, params, sampleRate, runt
   const normalizedFreqInUse = (Math.min(freqNorm, maxNormFreq)) * (161 - 3) + 3;
   const frequencyHz = 440 * Math.pow(2, (normalizedFreqInUse - 69) / 12);
 
-  const crossfadeStart = dirty ? 0.2 : 0.21;
-  const fmPmCrossfade = crossfadeStart * (1 - nodeGraphFlowerChildFilterCurveShape(freqNorm, 0.53));
+  // FM/PM crossfade is provably always 0 (see the .cpp header comment) --
+  // collapses to pure FM feedback: fm = mod, pm = 0.
 
   const cutoff1 = frequencyHz * 0.164312;
   const cutoff2 = frequencyHz * 0.366131;
@@ -908,19 +924,16 @@ function nodeGraphFlowerChildFilterSample(state, input, params, sampleRate, runt
     else if (rate <= 88200) { breakpoint = 0.816054; cap = 0.818713; }
     else { breakpoint = 0.879599; cap = 0.807018; }
   }
-  let effectiveReso = reso;
-  if (reso > breakpoint) {
-    const t = (reso - breakpoint) / (1 - breakpoint);
-    const cappedTarget = Math.min(reso, cap);
-    effectiveReso = breakpoint + (cappedTarget - breakpoint) * nodeGraphFlowerChildFilterCurveShape(t, -0.38);
-  }
+  const cappedTarget = Math.min(reso, cap);
 
   let selfModAmp = 1;
   let ellipseC = -1;
   if (!dirty) {
-    selfModAmp = 0.0368 + (0.6333 - 0.0368) * nodeGraphFlowerChildFilterCurveShape(effectiveReso, 0.4);
+    const graphValue = nodeGraphFlowerChildFilterEvalResonanceGraph(reso, reso, breakpoint, cappedTarget, -0.38);
+    selfModAmp = 0.0368 + (0.6333 - 0.0368) * nodeGraphFlowerChildFilterCurveShape(graphValue, 0.4);
   } else {
-    ellipseC = -1 + (0.00001 - -1) * nodeGraphFlowerChildFilterCurveShape(effectiveReso, -0.6);
+    const graphValue = nodeGraphFlowerChildFilterEvalResonanceGraph(freqNorm, reso, breakpoint, cappedTarget, -0.38);
+    ellipseC = -1 + (0.00001 - -1) * nodeGraphFlowerChildFilterCurveShape(graphValue, -0.6);
   }
 
   const clampLimit = dirty ? 1.198 : 1;
@@ -934,10 +947,9 @@ function nodeGraphFlowerChildFilterSample(state, input, params, sampleRate, runt
   inputSignal = state.selfMod + 0.035848699999999845 * inputSignal;
 
   const mod = 1.4 * inputSignal;
-  const fm = Math.cos((Math.PI / 2) * fmPmCrossfade) * mod;
-  const pm = Math.sin((Math.PI / 2) * fmPmCrossfade) * mod;
+  const fm = mod;
 
-  state.phaseOffset = pm;
+  state.phaseOffset = 0;
   const incAmt = (frequencyHz * fm) / rate;
   state.phase = state.phase + incAmt;
   state.phase = state.phase - Math.floor(state.phase);
