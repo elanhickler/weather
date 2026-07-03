@@ -927,7 +927,12 @@ audio {
 }
 
 html.soemdsp-hide-ui {
+  overflow: hidden;
   scrollbar-gutter: auto;
+}
+
+html.soemdsp-hide-ui .status-strip {
+  display: none;
 }
 
 .node-wiring-panel.modular-only-view > :not(.node-graph-workspace):not(.node-view-toolbar):not(.node-scene-context-menu):not(.node-parameter-metadata-popover):not(.node-ui-dev-helper):not(.node-user-ui-settings-panel):not(.node-saved-patches-window):not(.node-module-shop-view) {
