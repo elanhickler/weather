@@ -140,6 +140,7 @@ const nodeGraphModuleStoreUnderConstructionTypes = Object.freeze(new Set([
   "graph2",
   "groupInput",
   "groupOutput",
+  "humanFilter",
   "shootingStarTail",
 ]));
 
