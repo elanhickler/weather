@@ -94,36 +94,50 @@ python tools\webui-clap-host\webui_clap_host.py --doctor --inspect-metadata
 # Click Diagnostics to read setup counts from the running host.
 # Click Refresh Plugins to read the host catalog.
 # Add a CLAP Plugin module to store a selected catalog entry.
+
+# Prototype instance API:
+# GET /health reports host capabilities.
+# GET /health also reports hostConfig: bind host, port, Python executable, scan dirs, explicit plugins, and probe flags.
+# GET /diagnostics reports hostConfig, catalog counts, metadata errors, instantiation errors, and missing explicit plugin paths.
+# --doctor reports hostConfig, catalog counts, metadata errors, instantiation errors, and missing explicit plugin paths as JSON.
+# Capabilities include maxProcessFrames, processBatch, and offlineRenderSessions.
+# Current maxProcessFrames default is 48000.
+# POST /instances
+# GET /instances
+# GET /instances/<id>/params
+# POST /instances/<id>/param
+# POST /instances/<id>/params
+# GET /instances/<id>/editor
+# POST /instances/<id>/editor/open
+# POST /instances/<id>/editor/close
+# GET /instances/<id>/latency
+# GET /instances/<id>/tail
+# GET /instances/<id>/state
+# POST /instances/<id>/state
+# POST /instances/<id>/render/begin
+# POST /instances/<id>/process
+# POST /instances/<id>/render/end
+# POST /process-batch
+# /process can accept and return bounded planar-f32-base64 audio.
+# /process can apply a parameters array before processing the chunk.
+# CLAP_PROCESS_ERROR fails the process call instead of returning audio.
+# Direct /param and /params writes are blocked while a render session is active.
+# Abandoned render sessions are released by an idle timeout.
+# A second render/begin is rejected while a non-idle render session is active.
+# Render Sample opens one render session per CLAP instance, processes chunks, then closes the session.
+# Render Sample requires audioProcessing: true from the host.
+# Render Sample requires offlineRenderSessions: true from the host.
+# Render Sample uses maxProcessFrames for CLAP process chunk size.
+# WebUI CLAP audio lanes flatten every CLAP audio port in host port order.
+# CLAP editor status can be detected; supported Win32 clap.gui editors can open when the plugin accepts the GUI sequence.
+# CLAP latency is compensated when Render Sample injects returned CLAP output.
+# Finite CLAP tails can extend Render Sample up to the bounded tail limit; infinite tails remain metadata-only.
+# CLAP state can be saved into patch JSON and restored into a new host instance when the plugin exposes clap.state.
+# Reachable CLAP nodes are processed chunk-by-chunk in graph order.
+# Independent CLAP nodes in the same chunk can share one batch request.
+# POST /instances/<id>/safety/reset
+# DELETE /instances/<id>
 ```
-
-**Prototype instance API:**
-
-| Endpoint | Purpose |
-|---|---|
-| `GET /health` | Host capabilities, `hostConfig` (bind host, port, Python executable, scan dirs, explicit plugins, probe flags) |
-| `GET /diagnostics` | `hostConfig`, catalog counts, metadata/instantiation errors, missing explicit plugin paths |
-| `--doctor` | Same report as `/diagnostics`, printed as JSON without starting the server |
-| `POST /instances` · `GET /instances` | Create / list CLAP instances |
-| `GET /instances/<id>/params` · `POST /instances/<id>/param` · `POST /instances/<id>/params` | Read/write parameters |
-| `GET /instances/<id>/editor` · `POST /instances/<id>/editor/open` · `POST /instances/<id>/editor/close` | Editor lifecycle (supported Win32 `clap.gui` editors) |
-| `GET /instances/<id>/latency` · `GET /instances/<id>/tail` · `GET /instances/<id>/state` · `POST /instances/<id>/state` | Latency, tail, and state save/restore (via `clap.state`) |
-| `POST /instances/<id>/render/begin` · `POST /instances/<id>/process` · `POST /instances/<id>/render/end` | One render session per instance, processed chunk-by-chunk |
-| `POST /process-batch` | Independent CLAP nodes in the same chunk can share one batch request |
-| `POST /instances/<id>/safety/reset` · `DELETE /instances/<id>` | Recovery and teardown |
-
-Capabilities include `maxProcessFrames`, `processBatch`, and
-`offlineRenderSessions` (current `maxProcessFrames` default: 48000).
-`/process` accepts and returns bounded planar-f32-base64 audio and can apply
-a parameters array before processing the chunk.
-`CLAP_PROCESS_ERROR` fails the process call instead of returning audio.
-Direct `/param`/`/params` writes are blocked while a render session is
-active; abandoned render sessions are released by an idle timeout, and a
-second `render/begin` is rejected while a non-idle session is active.
-CLAP latency is compensated when Render Sample injects returned CLAP output,
-and finite CLAP tails can extend Render Sample up to the bounded tail limit
-(infinite tails stay metadata-only). WebUI CLAP audio lanes flatten every
-CLAP audio port in host port order, and reachable CLAP nodes are processed
-chunk-by-chunk in graph order.
 
 </details>
 

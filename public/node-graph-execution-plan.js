@@ -577,8 +577,18 @@ function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch) {
     .map((node) => node.id);
 
   const uniqueIssues = [...new Set(issues)];
+  // "missing <node> input/gate/trigger/light/clock" flags a node whose
+  // required input is unconnected -- a content warning, not a structural
+  // break. The node still runs (reading silence/0 on that port), so it must
+  // not block the live plan from applying: otherwise disconnecting a wire
+  // that leaves a node like this (e.g. a reverb's only input) gets silently
+  // rejected and the previous, still-connected live audio plan keeps
+  // running instead, making the disconnect appear to do nothing.
+  const softMissingInputIssue = /^missing .+ (input|gate|trigger|light|clock)$/;
   const blockingIssues = uniqueIssues.filter((issue) => (
-    issue !== "output node missing" && issue !== "missing Output speaker input"
+    issue !== "output node missing" &&
+    issue !== "missing Output speaker input" &&
+    !softMissingInputIssue.test(issue)
   ));
 
   return {
