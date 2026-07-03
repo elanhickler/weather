@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
-BUILD_NUMBER = "20260766"
+BUILD_NUMBER = "20260767"
 VERSION_FILE = ROOT / "VERSION"
 SANDBOX_VERSION = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "0.0.0"
 DEFAULT_PRESET = PUBLIC / "presets" / "default.json"
@@ -1328,7 +1328,7 @@ class SandboxServer(BaseHTTPRequestHandler):
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", default=8765, type=int)
+    parser.add_argument("--port", default=int(os.environ.get("PORT", 8765)), type=int)
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     args = parser.parse_args()
 

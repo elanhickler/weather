@@ -1,3 +1,20 @@
+// The SMOOTHING TIME (s) field is seconds-facing for the user, but the
+// underlying metadata.smoothingSeconds is a sample count (app-wide policy:
+// 0 = instant, 1 = 1 sample, 2 = 2 samples, ...). Convert at the UI edge.
+function nodeGraphMetadataSmoothingSecondsToSamples(seconds) {
+  const rate = typeof nodeGraphSmoothingSampleRate === "function" ? nodeGraphSmoothingSampleRate() : 44100;
+  const value = Number(seconds);
+  const safeSeconds = Number.isFinite(value) ? Math.max(0, value) : 0;
+  return Math.round(safeSeconds * rate);
+}
+
+function nodeGraphMetadataSmoothingSamplesToSeconds(samples) {
+  const rate = typeof nodeGraphSmoothingSampleRate === "function" ? nodeGraphSmoothingSampleRate() : 44100;
+  const value = Number(samples);
+  const safeSamples = Number.isFinite(value) ? Math.max(0, value) : 0;
+  return rate > 0 ? safeSamples / rate : 0;
+}
+
 function positionNodeMetadataPopover(popover, x, y, remember = false) {
   if (!popover) {
     return;
@@ -1310,7 +1327,9 @@ function writeNodeMetadataEditorValues(metadata) {
   document.getElementById("metadataLinearSmoothingValue").checked = metadata.linearSmoothing;
   document.getElementById("metadataNonlinearSliderValue").checked = metadata.nonlinearSlider;
   document.getElementById("metadataSmoothingSecondsValue").value =
-    Number.isFinite(Number(metadata.smoothingSeconds)) ? formatNodeSliderCompactNumber(metadata.smoothingSeconds) : "";
+    Number.isFinite(Number(metadata.smoothingSeconds))
+      ? formatNodeSliderCompactNumber(nodeGraphMetadataSmoothingSamplesToSeconds(metadata.smoothingSeconds))
+      : "";
   syncMetadataSmoothingModeButtons(metadata);
   document.getElementById("metadataSliderCurveValue").value = normalizeNodeSliderCurve(metadata.sliderCurve, metadata.nonlinearSlider);
   document.getElementById("metadataCurveSensitivityValue").value = formatNodeSliderCompactNumber(metadata.curveAmount);
@@ -1574,27 +1593,25 @@ function stepNodeMetadataField(event) {
   syncNodeMetadataScriptFromFields({ force: true });
 }
 
-// How many samples a mode will actually smooth over, for the status line
-// under the 5-way smoothing-source buttons.
+// How many samples a mode will actually use, for the status line under the
+// 5-way smoothing-source buttons. Sample counts are always rounded down.
 function nodeGraphSmoothingModeStatusText(mode, smoothingSamples) {
   const rate = Math.max(1, Number(nodeGraphMvp?.sampleRate) || 44100);
   const globalSeconds = Number(nodeGraphMvp?.live?.autoSmoothingSeconds) || 0;
-  const globalSamples = Math.round(globalSeconds * rate);
-  const internalSamples = Math.max(0, Math.round(Number(smoothingSamples) || 0));
+  const globalSamples = Math.floor(globalSeconds * rate);
+  const internalSamples = Math.max(0, Math.floor(Number(smoothingSamples) || 0));
   switch (mode) {
     case "global":
-      return `🌍 Global — using the app-wide global smoothing time (~${globalSamples} samples).`;
+      return `🌍 Global — ${globalSamples} samples.`;
     case "blockSize":
-      return "📟 Block Size — smoothing over exactly one audio block.";
+      return "📟 Block Size — one audio block.";
     case "internalGlobal":
-      return `🙂🌍 Internal + Global — ${internalSamples} internal + ~${globalSamples} global ≈ ${internalSamples + globalSamples} samples total.`;
+      return `🙂🌍 Internal + Global — ${internalSamples} internal + ${globalSamples} global = ${internalSamples + globalSamples} samples.`;
     case "off":
-      return "❌ Off — always instant, 0 samples.";
+      return "❌ Off — 0 samples.";
     case "internal":
     default:
-      return internalSamples > 0
-        ? `🙂 Internal — smoothing over ${internalSamples} sample${internalSamples === 1 ? "" : "s"}.`
-        : "🙂 Internal — 0 samples, snaps instantly.";
+      return `🙂 Internal — ${internalSamples} sample${internalSamples === 1 ? "" : "s"}.`;
   }
 }
 
@@ -1628,9 +1645,8 @@ function clickNodeMetadataSmoothingModeButton(event) {
   group.dataset.mode = normalizeNodeGraphMetadataSmoothingMode(button.dataset.smoothingMode);
   syncMetadataSmoothingModeButtons({
     smoothingMode: group.dataset.mode,
-    smoothingSeconds: parseNodeMetadataNumber(
-      document.getElementById("metadataSmoothingSecondsValue")?.value,
-      0,
+    smoothingSeconds: nodeGraphMetadataSmoothingSecondsToSamples(
+      parseNodeMetadataNumber(document.getElementById("metadataSmoothingSecondsValue")?.value, 0),
     ),
   });
   setNodeMetadataFieldsDirty(true);
@@ -1910,9 +1926,10 @@ function readNodeMetadataEditorValues(slider) {
   const stepInput = sanitizeMetadataNumberInput("metadataStepValue");
   const kind = normalizeNodeMetadataKind(document.getElementById("metadataKindValue").value);
   const smoothingSecondsInput = sanitizeMetadataNumberInput("metadataSmoothingSecondsValue");
+  const smoothingSecondsFallback = nodeGraphMetadataSmoothingSamplesToSeconds(current.smoothingSeconds ?? 0);
   const smoothingSeconds = smoothingSecondsInput === ""
-    ? null
-    : Math.max(0, parseNodeMetadataNumber(smoothingSecondsInput, current.smoothingSeconds ?? 0));
+    ? 0
+    : nodeGraphMetadataSmoothingSecondsToSamples(parseNodeMetadataNumber(smoothingSecondsInput, smoothingSecondsFallback));
   return {
     alias: normalizeNodeGraphPatchMetadataAlias(document.getElementById("metadataAliasValue").value),
     tooltip: String(document.getElementById("metadataTooltipValue").value || "").trim().slice(0, 240),
