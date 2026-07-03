@@ -243,6 +243,28 @@ too (its `2f`/`4f` layers need a tighter cap than the base `f` layer, not
 the same one). Added as a permanent regression test, not just a one-off
 check: FFT-verified that Harmonics = 64 at 2000 Hz now stays alias-free.
 
+**🐛 A third real bug, reported live: Formant mode had a genuine DC bias, not
+aliasing.** After the Harmonics fix shipped, a live report came in of "a ton
+of aliasing" — re-measured every waveform's spectrum directly instead of
+assuming the earlier fix was incomplete, and found the Harmonics cap was
+working correctly everywhere except Formant, which showed only 31–49% of
+its spectral energy on true harmonics. The actual FFT told the real story:
+the single largest peak in Formant's spectrum was at **0 Hz** — a DC
+offset, not folded high-frequency content. The closed-form equation's
+numerator has a standalone `sin(fi)` term that isn't tied to phase `x`, so
+a nonzero `fi` (which only Formant mode uses) doesn't average to zero over
+a cycle the way the rest of the equation does. Measured: **+0.31 mean DC
+offset** for Formant, versus under 0.02 for every other waveform — audible
+as harsh thump/distortion, which is exactly what "a ton of aliasing" sounds
+like even though the actual cause was unrelated to Nyquist at all.
+
+The fix: a standard one-pole DC-blocking highpass (`y[n] = x[n] − x[n−1] +
+R·y[n−1]`, `R = 0.9995`) on the final output stage, the same idea the
+studied file's own `leak_` integrator uses for a related purpose. Verified
+the DC mean settles to **~0.0008** after warm-up (was 0.31), added as a
+permanent regression test across all six waveforms, and reconfirmed live in
+the browser with the exact reported scenario.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use

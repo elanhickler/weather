@@ -8,7 +8,20 @@ function createNodeGraphDsfOscillatorState() {
     phase2: 0,
     phase3: 0,
     triangleIntegrator: 0,
+    dcBlockLastInput: 0,
+    dcBlockLastOutput: 0,
   };
+}
+
+// Modes with a nonzero phase offset fi (Formant) carry a real DC bias --
+// measured ~+0.31 mean offset, audible as harsh thump/distortion, easily
+// mistaken for aliasing. A one-pole DC-blocking highpass removes it.
+function nodeGraphDsfDcBlock(state, input) {
+  const r = 0.9995;
+  const output = input - state.dcBlockLastInput + r * state.dcBlockLastOutput;
+  state.dcBlockLastInput = input;
+  state.dcBlockLastOutput = output;
+  return output;
 }
 
 function nodeGraphDsfPow(base, exponent) {
@@ -101,6 +114,7 @@ function nodeGraphDsfOscillatorSample(state, options = {}) {
       break;
   }
 
-  const out = clampNodeSliderValue(sample, -1.5, 1.5) * level;
+  const dcFreeSample = nodeGraphDsfDcBlock(state, sample);
+  const out = clampNodeSliderValue(dcFreeSample, -1.5, 1.5) * level;
   return { Out: out };
 }

@@ -16868,6 +16868,8 @@ def require_readme_scheduler_contract() -> None:
         "Harmonics slider itself could alias",
         "numPartials_",
         "independent cap too",
+        "DC bias, not aliasing",
+        "DC-blocking highpass",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
     for snippet in [

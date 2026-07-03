@@ -6391,8 +6391,20 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       phase2: 0,
       phase3: 0,
       triangleIntegrator: 0,
+      dcBlockLastInput: 0,
+      dcBlockLastOutput: 0,
       nativeHandle: 0,
     };
+  }
+
+  // Modes with a nonzero phase offset fi (Formant) carry a real DC bias --
+  // measured ~+0.31 mean offset. A one-pole DC-blocking highpass removes it.
+  dsfDcBlock(state, input) {
+    const r = 0.9995;
+    const output = input - state.dcBlockLastInput + r * state.dcBlockLastOutput;
+    state.dcBlockLastInput = input;
+    state.dcBlockLastOutput = output;
+    return output;
   }
 
   destroyDsfOscillatorNativeState(state) {
@@ -6485,7 +6497,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         break;
     }
 
-    const out = this.clampValue(sample, -1.5, 1.5) * level;
+    const dcFreeSample = this.dsfDcBlock(state, sample);
+    const out = this.clampValue(dcFreeSample, -1.5, 1.5) * level;
     return { Out: out };
   }
 
