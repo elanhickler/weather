@@ -141,6 +141,22 @@ work out: RS-MET's pitch dithering for cheap, alias-free density at scale,
 and Soundemote's existing `Supersaw`/`Hypersaw` voice architecture for the
 musical character on top of it.
 
+---
+
+## 🌀 Hypersaw
+
+A sibling voice architecture to Supersaw (reference copy:
+[`docs/reference/Hypersaw.hpp`](docs/reference/Hypersaw.hpp)) — a phase-modulated
+bank of sawtooths where every voice is kept confined to a small band of
+phases, rather than allowed to drift or randomize freely across the full
+cycle. Letting detuned saws roam into arbitrary, uncorrelated phase
+relationships is exactly what produces unwanted flanging and phasing as
+their relative offsets sweep in and out of alignment — Hypersaw sidesteps
+that by design, keeping the phase spread narrow enough that voices stay
+in a stable relationship to one another.
+
+📄 Dedicated write-up: *link coming soon*
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use
