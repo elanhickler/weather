@@ -2956,6 +2956,7 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         frequencyHz: Math.max(0, read("frequency", 220)),
         sampleRate,
         waveform: read("waveform", 1),
+        morph: read("morph", 1),
         level: read("level", 1),
       });
     } else if (node?.type === "midiOut") {

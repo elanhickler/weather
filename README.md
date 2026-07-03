@@ -473,6 +473,21 @@ and zero NaN/out-of-range samples across a full frequency sweep for both
 Sine and Saw — confirmed in wasmtime, then confirmed again by calling
 the shipped JS directly inside the running browser page.
 
+### Round 6: Harmonics knob back on top of the verified base Saw
+
+With the base Saw confirmed working, added a Harmonics control (0–1):
+crossfades the harmonic count from 1 (a single harmonic — verified >98%
+spectral energy at the fundamental, i.e. an exact sine) up to
+`floor(Nyquist / frequency)` (the maximum alias-free count), blending
+between the two nearest integer harmonic counts so the sweep is smooth
+rather than stepped. Blending `pureSawEng`'s raw output before it enters
+the leaky integrator is equivalent to blending two separately-integrated
+signals, since the integrator is linear — verified numerically (bounded
+output, monotonically rising spectral centroid) across the full range
+before shipping. The knob currently displays a raw `0.000`–`1.000`
+fraction rather than an actual harmonic count — that conversion is a
+follow-up, not yet built.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use

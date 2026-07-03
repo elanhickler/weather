@@ -6398,12 +6398,25 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
 
   // pureSawEng(t, n), transcribed and simplified directly from "Extended
   // DSF Oscillators.cxx": sin(PI*t*(2N+1)) / sin(PI*t) - 1. Guarded at the
-  // removable singularity t=0 via its L'Hopital limit (2N+1). No Morph or
-  // Harmonics control -- n is always floor(Nyquist/frequency).
+  // removable singularity t=0 via its L'Hopital limit (2N+1).
   dsfPureSawEng(t, n) {
     const denom = Math.sin(Math.PI * t);
     if (denom > -1e-9 && denom < 1e-9) return (2 * n + 1) - 1;
     return Math.sin(Math.PI * t * (2 * n + 1)) / denom - 1;
+  }
+
+  // Morph (0-1): crossfades the harmonic count from 1 (a single harmonic,
+  // an exact sine) up to nMax (Nyquist/frequency). Blending pureSawEng's
+  // raw output before it enters the leaky integrator is equivalent to
+  // blending two separately-integrated signals, since the integrator is
+  // linear.
+  dsfPureSawEngMorphed(t, nMax, morph) {
+    const m = this.clampValue(Number(morph) || 0, 0, 1);
+    const target = 1 + m * (nMax - 1);
+    const lowN = Math.max(1, Math.floor(target));
+    const highN = Math.min(lowN + 1, nMax);
+    const frac = target - lowN;
+    return this.dsfPureSawEng(t, lowN) * (1 - frac) + this.dsfPureSawEng(t, highN) * frac;
   }
 
   dsfOscillatorSampleJs(state, options = {}) {
@@ -6416,9 +6429,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     let sample;
     if (waveform === 1) {
       const nyquist = sampleRate * 0.5;
-      const n = Math.max(1, Math.floor(nyquist / safeFrequency));
+      const nMax = Math.max(1, Math.floor(nyquist / safeFrequency));
       state.t = this.wrapValue(state.t + dt * 0.9999, 0, 1);
-      state.value = state.value * 0.999 + this.dsfPureSawEng(state.t, n) * dt;
+      state.value = state.value * 0.999 + this.dsfPureSawEngMorphed(state.t, nMax, options.morph) * dt;
       sample = state.value;
     } else {
       state.t = this.wrapValue(state.t + dt, 0, 1);
@@ -6444,12 +6457,14 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
           const frequencyHz = Number(options.frequencyHz) || 0;
           const waveform = Math.round(Number(options.waveform) || 0);
+          const morph = Number(options.morph) || 0;
           const level = Number(options.level) || 0;
           this.nativeDsfOscillator.soemdsp_dsf_oscillator_sample(
             state.nativeHandle,
             frequencyHz,
             sampleRate,
             waveform,
+            morph,
             level,
           );
           return {
@@ -7267,6 +7282,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           frequencyHz: Math.max(0, read("frequency", 220)),
           sampleRate: this.engineSampleRate || sampleRate,
           waveform: read("waveform", 1),
+          morph: read("morph", 1),
           level: read("level", 1),
         });
       } else if (node?.type === "midiOut") {

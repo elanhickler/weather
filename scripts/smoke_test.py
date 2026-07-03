@@ -16895,6 +16895,8 @@ def require_readme_scheduler_contract() -> None:
         "pureSawEng(t, N) = sin(pi * t * (2N + 1)) / sin(pi * t) - 1",
         "no Morph, Harmonics, or Mix parameter at all",
         "near-unity gain",
+        "Round 6: Harmonics knob back on top of the verified base Saw",
+        "displays a raw",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
     for snippet in [
