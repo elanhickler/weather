@@ -157,6 +157,35 @@ in a stable relationship to one another.
 
 📄 Dedicated write-up: *link coming soon*
 
+---
+
+## 🎼 Additive supersaw (research idea, not yet implemented)
+
+A third, distinct approach worth tracking alongside pitch dithering and
+Hypersaw's phase-banding: build the sawtooth **additively** — as an
+explicit sum of sine harmonics up to Nyquist — and inject independent
+**noise modulation on each harmonic** (small, decorrelated jitter in each
+partial's phase and/or amplitude) rather than on the fundamental or the
+phase relationship between voices.
+
+This targets the same underlying complaint pitch dithering and Hypersaw
+each address in their own way — a supersaw stack that sounds too static,
+too perfectly aligned, or harshly beating as voices drift in and out of
+phase — but from a different domain entirely. Pitch dithering randomizes
+the *fundamental's timing*; Hypersaw constrains the *phase relationship
+between voices*; this idea randomizes *each harmonic independently*
+within a single additive voice. The result, if it works as intended,
+would be a softer, more dispersed, less "laser-etched" character to the
+individual sawtooth itself — closer to how a real unison section's
+micro-variation lives in the fine spectral detail of each note, not just
+in its pitch or its stereo phase spread.
+
+Open questions before this becomes a real module: how much per-harmonic
+noise depth is possible before the result stops reading as "a sawtooth"
+at all, and whether an explicit oscillator-per-harmonic bank (up to
+`Nyquist / frequency` oscillators per voice) is cheap enough to run
+per-voice across a 63-voice supersaw stack in real time.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use
