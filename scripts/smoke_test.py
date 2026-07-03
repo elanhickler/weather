@@ -16906,6 +16906,8 @@ def require_readme_scheduler_contract() -> None:
         "Round 9: fixed-retention accumulators were distorting at low/mid frequencies",
         "exp(-0.23026 * dt)",
         "raises the leaky integrator's steady-state gain",
+        "Naming: TriMorph",
+        "100% just a saw with tri morph",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
     for snippet in [

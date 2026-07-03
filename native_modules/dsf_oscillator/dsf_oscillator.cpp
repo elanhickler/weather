@@ -27,7 +27,7 @@
 // alias-free by construction. Harmonics (0..1) crossfades n from 1 (a
 // single harmonic, an exact sine) up to that Nyquist-safe maximum.
 //
-// SEVENTH REWRITE: adds Square (PWM), Triangle, and a Saw/Square Blend on
+// SEVENTH REWRITE: adds Square (PWM), Triangle, and a TriMorph on
 // top of the verified base Saw, rather than reintroducing the earlier
 // unverified Formant/Fractal-Stack designs from scratch.
 //
@@ -48,7 +48,7 @@
 // normalizer is added on top specifically to fix that, verified to keep
 // it bounded everywhere Square already was.
 //
-// Blend: a plain crossfade between the (already correct, independently
+// TriMorph: a plain crossfade between the (already correct, independently
 // verified) Saw and Square outputs -- no new synthesis math needed.
 //
 // EIGHTH REWRITE: two real bugs reported live, both fixed by re-examining
@@ -59,9 +59,9 @@
 //    960 samples at 50 Hz), so the accumulator saturated to a flat
 //    plateau mid-ramp instead of completing a linear ramp -- literally a
 //    rounded square shape, not a triangle. Same root cause as bug 2.
-// 2. Blend and Saw/Square showed real DC asymmetry and shape distortion
+// 2. TriMorph and Saw/Square showed real DC asymmetry and shape distortion
 //    at some frequencies ("all over the place"). Root cause: every
-//    accumulator (Saw, Square, Blend) used a fixed retention (0.999,
+//    accumulator (Saw, Square, TriMorph) used a fixed retention (0.999,
 //    ~1000-sample memory), also too short relative to the period at low
 //    frequencies (2400+ samples at 20 Hz) -- confirmed in plain Python
 //    that the distortion persists even after full settling, so it's a
@@ -226,11 +226,11 @@ extern "C" void soemdsp_dsf_oscillator_reset(int handle) {
   s.triPeak = 1.0;
 }
 
-// waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=Saw/Square Blend
+// waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=TriMorph
 // morph: 0..1 (Harmonics) -- 0 is an exact sine, 1 is the full
 // Nyquist-safe harmonic count.
 // pulseWidth: 0..1 -- Square/Triangle's duty cycle (0.5 = symmetric).
-// blend: 0..1 -- Saw/Square crossfade amount for the Blend waveform.
+// blend: 0..1 -- Saw/Square crossfade amount for the TriMorph waveform.
 extern "C" void soemdsp_dsf_oscillator_sample(
   int handle,
   double frequencyHz,
@@ -265,7 +265,7 @@ extern "C" void soemdsp_dsf_oscillator_sample(
     if (waveform == 1) {
       sample = s.sawAcc;
     } else if (waveform == 4) {
-      // Blend: crossfades Saw with a plain, fixed 50%-duty Square, kept
+      // TriMorph: crossfades Saw with a plain, fixed 50%-duty Square, kept
       // deliberately decoupled from the PWM slider -- simpler, and closer
       // to the very first Saw/Square crossfade this module had, which
       // just mixed two cleanly-shaped waveforms rather than inheriting

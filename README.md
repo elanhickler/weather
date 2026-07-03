@@ -573,6 +573,15 @@ ramps at every frequency; bounds/DC-mean check across Saw, Square,
 Triangle, and Blend from 20 Hz to 18 kHz, zero flagged issues (previously
 6 failures, all at 20 Hz, including hard clipping).
 
+### Naming: TriMorph
+
+Live feedback on the Saw/Square Blend waveform: it sounds like "100%
+just a saw with tri morph." Renamed to **TriMorph** to match how it
+actually sounds — a Saw crossfaded with a fixed 50%-duty square lands on
+a saw-to-triangle-like character, not a saw-to-square one. No behavior
+change, label only (`waveform` choice, the `blend` parameter's display
+label, and module description).
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use

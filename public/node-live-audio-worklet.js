@@ -6421,13 +6421,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   // constant -- a fixed retention was far shorter than the period at low
   // frequencies, so accumulators forgot mid-ramp and produced distorted,
   // asymmetric shapes (Triangle sounding like a square wave; DC
-  // asymmetry in Saw/Square/Blend). See dsf_oscillator.cpp for the full
+  // asymmetry in Saw/Square/TriMorph). See dsf_oscillator.cpp for the full
   // story.
   dsfAdaptiveRetention(dt) {
     return Math.exp(-0.23026 * dt);
   }
 
-  // waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=Saw/Square Blend.
+  // waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=TriMorph.
   // Square: saw(t) - saw(t - pulseWidth) -- alias-free since it's a
   // subtraction of phase-shifted copies of an already-verified Saw.
   // Triangle: a second leaky integration on the (bounded) Square output,
@@ -6456,7 +6456,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (waveform === 1) {
         sample = state.sawAcc;
       } else if (waveform === 4) {
-        // Blend: crossfades Saw with a plain, fixed 50%-duty Square,
+        // TriMorph: crossfades Saw with a plain, fixed 50%-duty Square,
         // decoupled from the PWM slider on purpose -- reported live as
         // sounding "triangle-like" when it inherited PWM's variable duty
         // cycle; simplified back to always crossfading two cleanly-
