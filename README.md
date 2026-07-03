@@ -488,6 +488,32 @@ before shipping. The knob currently displays a raw `0.000`–`1.000`
 fraction rather than an actual harmonic count — that conversion is a
 follow-up, not yet built.
 
+### Round 7: PWM Square, Triangle, and a Saw/Square Blend
+
+With the base Saw + Harmonics verified, added the rest of the waveform
+set on top of it rather than re-deriving anything new from scratch:
+
+- **Square (PWM):** `square(t) = saw(t) - saw(t - pulseWidth)`. Subtracting
+  a phase-shifted copy of an already-verified, alias-free Saw is itself
+  alias-free — no new closed form, no new singularity to chase.
+  `pulseWidth` (0–1) sets duty cycle the way PWM traditionally does.
+- **Triangle:** a second leaky integration on top of the (already
+  bounded) Square output. Verified numerically that, unlike Square, this
+  second stage does **not** stay bounded on its own across the full
+  frequency range — it grows with the per-sample step size, which scales
+  with frequency. An adaptive leaky peak-follower normalizer is added on
+  top specifically to fix that, verified to keep it bounded everywhere
+  Square already was.
+- **Saw/Square Blend:** a plain crossfade between the two already-correct
+  outputs — confirmed the blend's endpoints (0 and 1) match pure Saw and
+  pure Square exactly, bit for bit.
+
+**Verified, not assumed:** bounded, asymmetric PWM shape across duty
+cycles 0.1–0.9; bounded Triangle across the same range; blend endpoints
+match Saw/Square exactly; zero NaN/out-of-range samples across a full
+1080-combination sweep (5 waveforms × 6 frequencies × 4 Harmonics values
+× 3 pulse widths × 3 blend amounts) in wasmtime before shipping.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use

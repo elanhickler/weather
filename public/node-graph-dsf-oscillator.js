@@ -1,15 +1,19 @@
 // Shared offline JS mirror of native_modules/dsf_oscillator -- the DSF
 // starter kit. See dsf_oscillator.cpp for the full derivation and design
-// notes. SIXTH REWRITE: adds a Morph control back on top of the verified
-// base Saw (pureSawEng and its exact leaky-integrator usage pattern from
-// "Extended DSF Oscillators.cxx"). Morph (0-1) crossfades the harmonic
-// count from 1 (a single harmonic -- verified >98% spectral energy at the
-// fundamental, i.e. an exact sine) up to Nyquist/frequency (the maximum
-// alias-free count), blending between the two nearest integer harmonic
-// counts so the sweep is smooth rather than stepped.
+// notes. SEVENTH REWRITE: adds Square (PWM), Triangle, and a Saw/Square
+// Blend on top of the verified base Saw + Harmonics.
+//
+// Square (PWM): square(t) = saw(t) - saw(t - pulseWidth). Subtracting a
+// phase-shifted copy of an already-verified, alias-free Saw is itself
+// alias-free -- no new closed form, no new singularity to chase.
+// Triangle: a second leaky integration on top of the (already bounded)
+// Square output, with an adaptive peak-follower on top since -- unlike
+// Square -- this second stage doesn't stay bounded on its own across the
+// full frequency range (verified numerically before shipping).
+// Blend: a plain crossfade between the Saw and Square outputs.
 
 function createNodeGraphDsfOscillatorState() {
-  return { t: 0, value: 0 };
+  return { t: 0, sawAcc: 0, sqAcc: 0, triAcc: 0, triPeak: 1 };
 }
 
 // pureSawEng(t, n), transcribed and simplified directly from "Extended DSF
@@ -21,9 +25,8 @@ function nodeGraphDsfPureSawEng(t, n) {
   return Math.sin(Math.PI * t * (2 * n + 1)) / denom - 1;
 }
 
-// Blending pureSawEng's raw output before it enters the leaky integrator
-// is equivalent to blending two separately-integrated signals, since the
-// integrator is linear.
+// Harmonics (0-1): crossfades the harmonic count from 1 (a single
+// harmonic, an exact sine) up to nMax (Nyquist/frequency).
 function nodeGraphDsfPureSawEngMorphed(t, nMax, morph) {
   const m = clampNodeSliderValue(Number(morph) || 0, 0, 1);
   const target = 1 + m * (nMax - 1);
@@ -33,7 +36,13 @@ function nodeGraphDsfPureSawEngMorphed(t, nMax, morph) {
   return nodeGraphDsfPureSawEng(t, lowN) * (1 - frac) + nodeGraphDsfPureSawEng(t, highN) * frac;
 }
 
-// options: { frequencyHz, sampleRate, waveform (0=Sine,1=Saw), morph (0-1), level }
+function nodeGraphDsfWrap01(x) {
+  return x - Math.floor(x);
+}
+
+// options: { frequencyHz, sampleRate, waveform (0=Sine,1=Saw,2=Square PWM,
+//            3=Triangle,4=Saw/Square Blend), morph (Harmonics, 0-1),
+//            pulseWidth (0-1), blend (0-1), level }
 function nodeGraphDsfOscillatorSample(state, options = {}) {
   const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
   const safeFrequency = Number(options.frequencyHz) > 1 ? Number(options.frequencyHz) : 1;
@@ -42,15 +51,36 @@ function nodeGraphDsfOscillatorSample(state, options = {}) {
   const level = Number(options.level) || 0;
 
   let sample;
-  if (waveform === 1) {
+  if (waveform === 0) {
+    state.t = nodeGraphDsfWrap01(state.t + dt);
+    sample = Math.sin(state.t * Math.PI * 2);
+  } else {
     const nyquist = sampleRate * 0.5;
     const nMax = Math.max(1, Math.floor(nyquist / safeFrequency));
-    state.t = wrapNodeSliderValue(state.t + dt * 0.9999, 0, 1);
-    state.value = state.value * 0.999 + nodeGraphDsfPureSawEngMorphed(state.t, nMax, options.morph) * dt;
-    sample = state.value;
-  } else {
-    state.t = wrapNodeSliderValue(state.t + dt, 0, 1);
-    sample = Math.sin(state.t * Math.PI * 2);
+    state.t = nodeGraphDsfWrap01(state.t + dt * 0.9999);
+
+    const rawSaw = nodeGraphDsfPureSawEngMorphed(state.t, nMax, options.morph);
+    state.sawAcc = state.sawAcc * 0.999 + rawSaw * dt;
+
+    if (waveform === 1) {
+      sample = state.sawAcc;
+    } else {
+      const pw = clampNodeSliderValue(Number(options.pulseWidth) ?? 0.5, 0.01, 0.99);
+      const rawShiftedSaw = nodeGraphDsfPureSawEngMorphed(nodeGraphDsfWrap01(state.t - pw), nMax, options.morph);
+      const rawSquare = rawSaw - rawShiftedSaw;
+      state.sqAcc = state.sqAcc * 0.999 + rawSquare * dt;
+
+      if (waveform === 2) {
+        sample = state.sqAcc;
+      } else if (waveform === 3) {
+        state.triAcc = state.triAcc * 0.995 + state.sqAcc * dt * 4;
+        state.triPeak = Math.max(1, state.triPeak * 0.999 + Math.abs(state.triAcc) * 0.001);
+        sample = state.triAcc / state.triPeak;
+      } else {
+        const blend = clampNodeSliderValue(Number(options.blend) ?? 0.5, 0, 1);
+        sample = state.sawAcc * (1 - blend) + state.sqAcc * blend;
+      }
+    }
   }
 
   if (!Number.isFinite(sample)) sample = 0;

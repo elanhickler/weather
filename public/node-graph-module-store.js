@@ -410,7 +410,7 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
   },
   dsfOscillator: {
     category: "Oscillator",
-    description: "The DSF starter kit: Sine and a bandlimited Saw built from pureSawEng (Walter H. Hackett, Extended DSF Oscillators.cxx), run through its own leaky-integrator accumulator rather than evaluated as a direct per-sample waveform. Alias-free by construction: the maximum harmonic count is always Nyquist/frequency, never user-settable above that. The Harmonics knob (0-1) crossfades from a single harmonic (an exact sine) at 0 up to that Nyquist-safe maximum at 1 -- currently displayed as a raw 0.000-1.000 fraction rather than an actual harmonic count. Native C++/WASM.",
+    description: "The DSF starter kit: Sine, a bandlimited Saw built from pureSawEng (Walter H. Hackett, Extended DSF Oscillators.cxx), a PWM Square derived from two phase-offset Saws, a Triangle (a second leaky integration on the Square), and a Saw/Square Blend. Alias-free by construction: the maximum harmonic count is always Nyquist/frequency. The Harmonics knob (0-1) crossfades from a single harmonic (an exact sine) at 0 up to that Nyquist-safe maximum at 1 -- currently displayed as a raw 0.000-1.000 fraction rather than an actual harmonic count. Native C++/WASM.",
     label: "DSF Oscillator",
     notes: ["oscillator", "dsf", "discrete summation formula", "anti-aliasing", "native"],
   },

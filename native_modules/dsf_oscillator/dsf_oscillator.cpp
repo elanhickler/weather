@@ -7,10 +7,6 @@
 // other alias-free technique studied for the aliasing-wars mission (see
 // README.md), distinct from Surge Oscillator's PolyBLEP approach.
 //
-// FIFTH REWRITE. Explicit direction: stop adding Morph/Harmonics
-// complexity and get the base Saw working first, starting from a real,
-// given working example rather than re-deriving anything.
-//
 // This is a direct transcription of pureSawEng() and its exact usage
 // pattern from "Extended DSF Oscillators.cxx" (Walter H. Hackett), one of
 // the reference files provided directly:
@@ -24,21 +20,36 @@
 //   note.t  = note.t - floor(note.t);
 //   note.value = note.value*0.999 + pureSawEng(note.t, note.n) * note.dt;
 //
-// Two things this rewrite got wrong before, caught by re-reading the
-// actual file instead of relying on memory of it:
-// 1. The formula is NOT divided by 2N -- that normalization was
-//    something a previous rewrite added on its own, not part of the real
-//    reference. The un-normalized raw form, run through the leaky
-//    integrator below, is what produces the correct sawtooth shape.
-//    Verified in Python: dividing by 2N, or evaluating the closed form
-//    directly per-sample without the integrator, both distort the shape.
-// 2. This formula never had a Morph or Harmonics control in the
-//    reference -- `n` is always `floor(Nyquist / frequency)`, and that's
-//    the only per-note parameter. So there is none here either.
+// The formula is NOT divided by 2N -- an earlier rewrite added that
+// normalization on its own, not part of the real reference; the raw form
+// run through the leaky integrator above is what produces the correct
+// sawtooth. n = floor(Nyquist/frequency) is auto-derived every sample --
+// alias-free by construction. Harmonics (0..1) crossfades n from 1 (a
+// single harmonic, an exact sine) up to that Nyquist-safe maximum.
 //
-// n = floor(Nyquist/frequency) is auto-derived every sample, same as
-// every other DSF oscillator studied in this mission -- alias-free by
-// construction, no user-facing harmonic-count slider.
+// SEVENTH REWRITE: adds Square (PWM), Triangle, and a Saw/Square Blend on
+// top of the verified base Saw, rather than reintroducing the earlier
+// unverified Formant/Fractal-Stack designs from scratch.
+//
+// Square (PWM): a classic bandlimited-pulse construction --
+// square(t) = saw(t) - saw(t - pulseWidth). Subtracting a phase-shifted
+// copy of an already-verified, alias-free Saw is itself alias-free (no
+// new closed form, no new singularity to chase), and pulseWidth (0..1)
+// controls duty cycle the way PWM traditionally does. Verified
+// numerically (Python) that this stays bounded across frequency x
+// Harmonics x pulseWidth before shipping.
+//
+// Triangle: a second leaky integration on top of the (already-integrated,
+// bounded) Square output -- same idea used elsewhere in this project for
+// deriving a triangle from a square. Verified numerically that, unlike
+// Square, this second integration stage does NOT stay bounded on its own
+// across the full frequency range (it grows with the per-sample step
+// size, which scales with frequency) -- an adaptive leaky peak-follower
+// normalizer is added on top specifically to fix that, verified to keep
+// it bounded everywhere Square already was.
+//
+// Blend: a plain crossfade between the (already correct, independently
+// verified) Saw and Square outputs -- no new synthesis math needed.
 
 namespace {
 
@@ -87,7 +98,7 @@ double pureSawEng(double t, int n) {
   return sinApprox(kPi * t * static_cast<double>(2 * n + 1)) / denom - 1.0;
 }
 
-// Morph (0..1): crossfades the harmonic count n from 1 (a single
+// Harmonics (0..1): crossfades the harmonic count n from 1 (a single
 // harmonic -- verified >98% spectral energy at the fundamental, i.e. an
 // exact sine) up to nMax (Nyquist/frequency, the maximum alias-free
 // count), blending between the two nearest integer harmonic counts so
@@ -95,9 +106,9 @@ double pureSawEng(double t, int n) {
 // output before it enters the leaky integrator is equivalent to blending
 // two separately-integrated signals, since the integrator is linear --
 // verified numerically (Python) that this stays bounded across the full
-// Morph range before shipping.
-double pureSawEngMorphed(double t, int nMax, double morph) {
-  const double m = clampD(morph, 0.0, 1.0);
+// Harmonics range before shipping.
+double pureSawEngMorphed(double t, int nMax, double harmonics) {
+  const double m = clampD(harmonics, 0.0, 1.0);
   const double target = 1.0 + m * static_cast<double>(nMax - 1);
   int lowN = static_cast<int>(target);
   if (lowN < 1) lowN = 1;
@@ -110,8 +121,11 @@ constexpr int kMaxInstances = 16;
 
 struct DsfOscillatorState {
   bool active;
-  double t;      // phase, 0..1
-  double value;  // leaky-integrator accumulator
+  double t;         // phase, 0..1
+  double sawAcc;    // Saw's leaky-integrator accumulator
+  double sqAcc;     // Square's leaky-integrator accumulator
+  double triAcc;     // Triangle's second-stage leaky-integrator accumulator
+  double triPeak;    // Triangle's adaptive peak-follower
   double out;
 };
 
@@ -124,6 +138,7 @@ extern "C" int soemdsp_dsf_oscillator_create() {
     if (!gPool[i].active) {
       gPool[i] = DsfOscillatorState{};
       gPool[i].active = true;
+      gPool[i].triPeak = 1.0;
       return i + 1;
     }
   }
@@ -139,18 +154,25 @@ extern "C" void soemdsp_dsf_oscillator_reset(int handle) {
   if (handle < 1 || handle > kMaxInstances) return;
   DsfOscillatorState& s = gPool[handle - 1];
   s.t = 0.0;
-  s.value = 0.0;
+  s.sawAcc = 0.0;
+  s.sqAcc = 0.0;
+  s.triAcc = 0.0;
+  s.triPeak = 1.0;
 }
 
-// waveform: 0=Sine, 1=Saw
-// morph: 0..1 -- 0 is an exact sine, 1 is the full Nyquist-safe harmonic
-// count. Only used by Saw.
+// waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=Saw/Square Blend
+// morph: 0..1 (Harmonics) -- 0 is an exact sine, 1 is the full
+// Nyquist-safe harmonic count.
+// pulseWidth: 0..1 -- Square/Triangle's duty cycle (0.5 = symmetric).
+// blend: 0..1 -- Saw/Square crossfade amount for the Blend waveform.
 extern "C" void soemdsp_dsf_oscillator_sample(
   int handle,
   double frequencyHz,
   double sampleRate,
   int waveform,
   double morph,
+  double pulseWidth,
+  double blend,
   double level
 ) {
   if (handle < 1 || handle > kMaxInstances) return;
@@ -161,16 +183,39 @@ extern "C" void soemdsp_dsf_oscillator_sample(
   const double dt = clampD(frequencyHz / safeSampleRate, -0.5, 0.5);
 
   double sample;
-  if (waveform == 1) {
+  if (waveform == 0) {
+    s.t = wrap01(s.t + dt);
+    sample = sinApprox(s.t * kPi * 2.0);
+  } else {
     const double nyquist = safeSampleRate * 0.5;
     int nMax = static_cast<int>(nyquist / safeFrequency);
     if (nMax < 1) nMax = 1;
     s.t = wrap01(s.t + dt * 0.9999);
-    s.value = s.value * 0.999 + pureSawEngMorphed(s.t, nMax, morph) * dt;
-    sample = s.value;
-  } else {
-    s.t = wrap01(s.t + dt);
-    sample = sinApprox(s.t * kPi * 2.0);
+
+    const double rawSaw = pureSawEngMorphed(s.t, nMax, morph);
+    s.sawAcc = s.sawAcc * 0.999 + rawSaw * dt;
+
+    if (waveform == 1) {
+      sample = s.sawAcc;
+    } else {
+      const double pw = clampD(pulseWidth, 0.01, 0.99);
+      const double rawShiftedSaw = pureSawEngMorphed(wrap01(s.t - pw), nMax, morph);
+      const double rawSquare = rawSaw - rawShiftedSaw;
+      s.sqAcc = s.sqAcc * 0.999 + rawSquare * dt;
+
+      if (waveform == 2) {
+        sample = s.sqAcc;
+      } else if (waveform == 3) {
+        s.triAcc = s.triAcc * 0.995 + s.sqAcc * dt * 4.0;
+        const double absTri = s.triAcc < 0.0 ? -s.triAcc : s.triAcc;
+        s.triPeak = s.triPeak * 0.999 + absTri * 0.001;
+        if (s.triPeak < 1.0) s.triPeak = 1.0;
+        sample = s.triAcc / s.triPeak;
+      } else {  // waveform == 4: Saw/Square Blend
+        const double b = clampD(blend, 0.0, 1.0);
+        sample = s.sawAcc * (1.0 - b) + s.sqAcc * b;
+      }
+    }
   }
 
   const bool finite = sample * 0.0 == 0.0;
@@ -184,5 +229,5 @@ extern "C" double soemdsp_dsf_oscillator_out(int handle) {
 }
 
 extern "C" int soemdsp_dsf_oscillator_version() {
-  return 6;
+  return 7;
 }

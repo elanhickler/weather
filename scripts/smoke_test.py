@@ -16897,6 +16897,9 @@ def require_readme_scheduler_contract() -> None:
         "near-unity gain",
         "Round 6: Harmonics knob back on top of the verified base Saw",
         "displays a raw",
+        "Round 7: PWM Square, Triangle, and a Saw/Square Blend",
+        "square(t) = saw(t) - saw(t - pulseWidth)",
+        "does **not** stay bounded on its own",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
     for snippet in [

@@ -6386,7 +6386,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   }
 
   createDsfOscillatorState() {
-    return { t: 0, value: 0, nativeHandle: 0 };
+    return { t: 0, sawAcc: 0, sqAcc: 0, triAcc: 0, triPeak: 1, nativeHandle: 0 };
   }
 
   destroyDsfOscillatorNativeState(state) {
@@ -6405,11 +6405,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return Math.sin(Math.PI * t * (2 * n + 1)) / denom - 1;
   }
 
-  // Morph (0-1): crossfades the harmonic count from 1 (a single harmonic,
-  // an exact sine) up to nMax (Nyquist/frequency). Blending pureSawEng's
-  // raw output before it enters the leaky integrator is equivalent to
-  // blending two separately-integrated signals, since the integrator is
-  // linear.
+  // Harmonics (0-1): crossfades the harmonic count from 1 (a single
+  // harmonic, an exact sine) up to nMax (Nyquist/frequency).
   dsfPureSawEngMorphed(t, nMax, morph) {
     const m = this.clampValue(Number(morph) || 0, 0, 1);
     const target = 1 + m * (nMax - 1);
@@ -6419,6 +6416,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return this.dsfPureSawEng(t, lowN) * (1 - frac) + this.dsfPureSawEng(t, highN) * frac;
   }
 
+  // waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=Saw/Square Blend.
+  // Square: saw(t) - saw(t - pulseWidth) -- alias-free since it's a
+  // subtraction of phase-shifted copies of an already-verified Saw.
+  // Triangle: a second leaky integration on the (bounded) Square output,
+  // with an adaptive peak-follower since that second stage doesn't stay
+  // bounded on its own across the full frequency range.
   dsfOscillatorSampleJs(state, options = {}) {
     const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
     const safeFrequency = Number(options.frequencyHz) > 1 ? Number(options.frequencyHz) : 1;
@@ -6427,15 +6430,36 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     const level = Number(options.level) || 0;
 
     let sample;
-    if (waveform === 1) {
+    if (waveform === 0) {
+      state.t = this.wrapValue(state.t + dt, 0, 1);
+      sample = Math.sin(state.t * Math.PI * 2);
+    } else {
       const nyquist = sampleRate * 0.5;
       const nMax = Math.max(1, Math.floor(nyquist / safeFrequency));
       state.t = this.wrapValue(state.t + dt * 0.9999, 0, 1);
-      state.value = state.value * 0.999 + this.dsfPureSawEngMorphed(state.t, nMax, options.morph) * dt;
-      sample = state.value;
-    } else {
-      state.t = this.wrapValue(state.t + dt, 0, 1);
-      sample = Math.sin(state.t * Math.PI * 2);
+
+      const rawSaw = this.dsfPureSawEngMorphed(state.t, nMax, options.morph);
+      state.sawAcc = state.sawAcc * 0.999 + rawSaw * dt;
+
+      if (waveform === 1) {
+        sample = state.sawAcc;
+      } else {
+        const pw = this.clampValue(Number(options.pulseWidth) ?? 0.5, 0.01, 0.99);
+        const rawShiftedSaw = this.dsfPureSawEngMorphed(this.wrapValue(state.t - pw, 0, 1), nMax, options.morph);
+        const rawSquare = rawSaw - rawShiftedSaw;
+        state.sqAcc = state.sqAcc * 0.999 + rawSquare * dt;
+
+        if (waveform === 2) {
+          sample = state.sqAcc;
+        } else if (waveform === 3) {
+          state.triAcc = state.triAcc * 0.995 + state.sqAcc * dt * 4;
+          state.triPeak = Math.max(1, state.triPeak * 0.999 + Math.abs(state.triAcc) * 0.001);
+          sample = state.triAcc / state.triPeak;
+        } else {
+          const blend = this.clampValue(Number(options.blend) ?? 0.5, 0, 1);
+          sample = state.sawAcc * (1 - blend) + state.sqAcc * blend;
+        }
+      }
     }
 
     if (!Number.isFinite(sample)) sample = 0;
@@ -6458,6 +6482,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           const frequencyHz = Number(options.frequencyHz) || 0;
           const waveform = Math.round(Number(options.waveform) || 0);
           const morph = Number(options.morph) || 0;
+          const pulseWidth = Number(options.pulseWidth) ?? 0.5;
+          const blend = Number(options.blend) ?? 0.5;
           const level = Number(options.level) || 0;
           this.nativeDsfOscillator.soemdsp_dsf_oscillator_sample(
             state.nativeHandle,
@@ -6465,6 +6491,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             sampleRate,
             waveform,
             morph,
+            pulseWidth,
+            blend,
             level,
           );
           return {
@@ -7283,6 +7311,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           sampleRate: this.engineSampleRate || sampleRate,
           waveform: read("waveform", 1),
           morph: read("morph", 1),
+          pulseWidth: read("pulseWidth", 0.5),
+          blend: read("blend", 0.5),
           level: read("level", 1),
         });
       } else if (node?.type === "midiOut") {

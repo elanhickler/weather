@@ -2957,6 +2957,8 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
         sampleRate,
         waveform: read("waveform", 1),
         morph: read("morph", 1),
+        pulseWidth: read("pulseWidth", 0.5),
+        blend: read("blend", 0.5),
         level: read("level", 1),
       });
     } else if (node?.type === "midiOut") {
