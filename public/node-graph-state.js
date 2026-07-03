@@ -193,6 +193,7 @@ var nodeGraphMvp = {
     fractalBrownianNoise: 0,
     gain: 1,
     graph: 0,
+    flowerChildFilter: 0,
     graph2: 0,
     highpass: 0,
     image: 0,

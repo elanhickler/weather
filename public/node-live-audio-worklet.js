@@ -138,6 +138,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.nativeFbmReady = false;
     this.nativeLadderFilter = null;
     this.nativeLadderFilterReady = false;
+    this.nativeFlowerChildFilter = null;
+    this.nativeFlowerChildFilterReady = false;
     this.nativeTb303Filter = null;
     this.nativeTb303FilterReady = false;
     this.nativePassiveFilter = null;
@@ -156,6 +158,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     this.gpuAdditiveStatusCounter = 0;
     this.gpuAdditiveUnderruns = 0;
     this.flowerChildEnvelopeFollowerStates = new Map();
+    this.flowerChildFilterStates = new Map();
     this.ladderFilterStates = new Map();
     this.tb303FilterStates = new Map();
     this.linearEnvelopeStates = new Map();
@@ -523,6 +526,22 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
         });
         return;
       }
+      if (name === "flower_child_filter" || targetType === "flowerChildFilter") {
+        for (const state of this.flowerChildFilterStates.values()) {
+          this.destroyFlowerChildFilterNativeState(state);
+        }
+        this.nativeFlowerChildFilter = exports;
+        this.nativeFlowerChildFilterReady = Boolean(
+          this.nativeFlowerChildFilter?.soemdsp_flower_child_filter_create &&
+          this.nativeFlowerChildFilter?.soemdsp_flower_child_filter_sample,
+        );
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "flower_child_filter",
+          status: this.nativeFlowerChildFilterReady ? "ready" : "missing exports",
+        });
+        return;
+      }
       if (name === "tb303_filter" || targetType === "tb303Filter") {
         for (const state of this.tb303FilterStates.values()) {
           this.destroyTb303FilterNativeState(state);
@@ -742,6 +761,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       this.destroyLadderFilterNativeState(state);
     }
     this.ladderFilterStates = new Map();
+    for (const state of this.flowerChildFilterStates.values()) {
+      this.destroyFlowerChildFilterNativeState(state);
+    }
+    this.flowerChildFilterStates = new Map();
     for (const state of this.tb303FilterStates.values()) {
       this.destroyTb303FilterNativeState(state);
     }
@@ -1006,6 +1029,9 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "ladderFilter" && !this.ladderFilterStates.has(id)) {
         this.ladderFilterStates.set(id, this.createLadderFilterState());
       }
+      if (node?.type === "flowerChildFilter" && !this.flowerChildFilterStates.has(id)) {
+        this.flowerChildFilterStates.set(id, this.createFlowerChildFilterState());
+      }
       if (node?.type === "tb303Filter" && !this.tb303FilterStates.has(id)) {
         this.tb303FilterStates.set(id, this.createTb303FilterState());
       }
@@ -1224,6 +1250,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (!ids.has(id)) {
         this.destroyLadderFilterNativeState(this.ladderFilterStates.get(id));
         this.ladderFilterStates.delete(id);
+      }
+    }
+    for (const id of [...this.flowerChildFilterStates.keys()]) {
+      if (!ids.has(id)) {
+        this.destroyFlowerChildFilterNativeState(this.flowerChildFilterStates.get(id));
+        this.flowerChildFilterStates.delete(id);
       }
     }
     for (const id of [...this.tb303FilterStates.keys()]) {
@@ -3058,6 +3090,10 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return { y: [0, 0, 0, 0, 0], nativeHandle: 0 };
   }
 
+  createFlowerChildFilterState() {
+    return { phase: 0, phaseOffset: 0, stage1: 0, stage2: 0, selfMod: 0, nativeHandle: 0 };
+  }
+
   resetCookbookFilterState(state) {
     for (const key of ["x1", "x2", "y1", "y2"]) {
       if (Array.isArray(state?.[key])) {
@@ -3259,6 +3295,13 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   destroyLadderFilterNativeState(state) {
     if (state.nativeHandle && this.nativeLadderFilter?.soemdsp_ladder_filter_destroy) {
       this.nativeLadderFilter.soemdsp_ladder_filter_destroy(state.nativeHandle);
+      state.nativeHandle = 0;
+    }
+  }
+
+  destroyFlowerChildFilterNativeState(state) {
+    if (state.nativeHandle && this.nativeFlowerChildFilter?.soemdsp_flower_child_filter_destroy) {
+      this.nativeFlowerChildFilter.soemdsp_flower_child_filter_destroy(state.nativeHandle);
       state.nativeHandle = 0;
     }
   }
@@ -3623,6 +3666,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     runtime.flowerChildEnvelopeFollowerStates = new Map();
     runtime.graphInputConnections = new Map();
     runtime.ladderFilterStates = new Map();
+    runtime.flowerChildFilterStates = new Map();
     runtime.linearEnvelopeStates = new Map();
     runtime.noiseGeneratorStates = new Map();
     runtime.oscResetStates = new Map();
@@ -3703,6 +3747,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (node?.type === "passiveFilter") this.passiveFilterStates.set(id, this.createPassiveFilterState());
       if (node?.type === "cookbookFilter") this.cookbookFilterStates.set(id, this.createCookbookFilterState());
       if (node?.type === "ladderFilter") this.ladderFilterStates.set(id, this.createLadderFilterState());
+      if (node?.type === "flowerChildFilter") this.flowerChildFilterStates.set(id, this.createFlowerChildFilterState());
       if (node?.type === "tb303Filter") this.tb303FilterStates.set(id, this.createTb303FilterState());
       if (node?.type === "clock") this.clockStates.set(id, this.createClockState());
       if (node?.type === "graph" || node?.type === "graph2") this.graphLfoStates.set(id, this.createGraphLfoState());
@@ -4334,6 +4379,151 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
     const output = coeff.c[0] * y[0] + coeff.c[1] * y[1] + coeff.c[2] * y[2] + coeff.c[3] * y[3] + coeff.c[4] * y[4];
     return this.safeFilterNumber(output, state);
+  }
+
+  flowerChildFilterCurveShape(v, tension) {
+    const denom = 2 * tension * v - tension - 1;
+    if (denom === 0) return v;
+    return (tension * v - v) / denom;
+  }
+
+  flowerChildFilterOnePoleCoefficient(cutoffHz, sampleRateValue) {
+    const rawWc = (2 * Math.PI * cutoffHz) / sampleRateValue;
+    const wc = this.clampValue(rawWc, 1e-9, Math.PI * 0.98);
+    const s = Math.sin(wc);
+    const c = Math.cos(wc);
+    const t = Math.tan(0.25 * (wc - Math.PI));
+    let denom = s - c * t;
+    if (denom > -1e-12 && denom < 1e-12) denom = denom >= 0 ? 1e-12 : -1e-12;
+    return t / denom;
+  }
+
+  flowerChildFilterOnePoleStep(prevY1, input, a) {
+    let y0 = input;
+    y0 = y0 / (1 + y0 * y0);
+    return y0 + a * (y0 - prevY1);
+  }
+
+  flowerChildFilterEllipse(phase, ellipseC) {
+    const sinX = Math.sin(phase * 2 * Math.PI);
+    const cosX = Math.cos(phase * 2 * Math.PI);
+    let sqrtVal = Math.sqrt(cosX * cosX + (ellipseC * sinX) * (ellipseC * sinX));
+    if (sqrtVal < 1e-12) sqrtVal = 1e-12;
+    return cosX / sqrtVal;
+  }
+
+  flowerChildFilterSampleJs(state, input, params, rate) {
+    const safeRate = Math.max(1, Number(rate) || sampleRate || 44100);
+    const freqNorm = this.clampValue(this.safeFilterNumber(params.frequency, state), 0, 1);
+    const reso = this.clampValue(this.safeFilterNumber(params.resonance, state), 0, 1);
+    const chaos = this.clampValue(this.safeFilterNumber(params.chaos, state), 0, 1);
+    const dirty = Math.round(Number(params.mode) || 0) !== 0;
+
+    const maxNormFreq = safeRate <= 44100 ? 0.928 : 1;
+    const normalizedFreqInUse = Math.min(freqNorm, maxNormFreq) * (161 - 3) + 3;
+    const frequencyHz = 440 * Math.pow(2, (normalizedFreqInUse - 69) / 12);
+
+    const crossfadeStart = dirty ? 0.2 : 0.21;
+    const fmPmCrossfade = crossfadeStart * (1 - this.flowerChildFilterCurveShape(freqNorm, 0.53));
+
+    const cutoff1 = frequencyHz * 0.164312;
+    const cutoff2 = frequencyHz * 0.366131;
+    const a1 = this.flowerChildFilterOnePoleCoefficient(cutoff1, safeRate);
+    const a2 = this.flowerChildFilterOnePoleCoefficient(cutoff2, safeRate);
+
+    let breakpoint, cap;
+    if (dirty) {
+      if (safeRate <= 44100) { breakpoint = 0.816054; cap = 0.602339; }
+      else if (safeRate <= 88200) { breakpoint = 0.902657; cap = 0.654971; }
+      else { breakpoint = 0.977649; cap = 0.760234; }
+    } else {
+      if (safeRate <= 44100) { breakpoint = 0.732441; cap = 0.649123; }
+      else if (safeRate <= 88200) { breakpoint = 0.816054; cap = 0.818713; }
+      else { breakpoint = 0.879599; cap = 0.807018; }
+    }
+    let effectiveReso = reso;
+    if (reso > breakpoint) {
+      const t = (reso - breakpoint) / (1 - breakpoint);
+      const cappedTarget = Math.min(reso, cap);
+      effectiveReso = breakpoint + (cappedTarget - breakpoint) * this.flowerChildFilterCurveShape(t, -0.38);
+    }
+
+    let selfModAmp = 1;
+    let ellipseC = -1;
+    if (!dirty) {
+      selfModAmp = 0.0368 + (0.6333 - 0.0368) * this.flowerChildFilterCurveShape(effectiveReso, 0.4);
+    } else {
+      ellipseC = -1 + (0.00001 - -1) * this.flowerChildFilterCurveShape(effectiveReso, -0.6);
+    }
+
+    const clampLimit = dirty ? 1.198 : 1;
+    const safeInput = this.safeFilterNumber(input, state);
+    let inputSignal = this.clampValue(-safeInput, -clampLimit, clampLimit);
+
+    if (chaos > 0) {
+      inputSignal += (Math.random() * 2 - 1) * chaos;
+    }
+
+    inputSignal = state.selfMod + 0.035848699999999845 * inputSignal;
+
+    const mod = 1.4 * inputSignal;
+    const fm = Math.cos((Math.PI / 2) * fmPmCrossfade) * mod;
+    const pm = Math.sin((Math.PI / 2) * fmPmCrossfade) * mod;
+
+    state.phaseOffset = pm;
+    const incAmt = (frequencyHz * fm) / safeRate;
+    state.phase = state.phase + incAmt;
+    state.phase = state.phase - Math.floor(state.phase);
+    let unipolarPhase = state.phase + state.phaseOffset;
+    unipolarPhase = unipolarPhase - Math.floor(unipolarPhase);
+
+    const oscValue = dirty
+      ? this.flowerChildFilterEllipse(unipolarPhase, ellipseC) * 0.1
+      : Math.sin(unipolarPhase * 2 * Math.PI) * 1.3;
+
+    let out = this.flowerChildFilterOnePoleStep(state.stage1, oscValue, a1);
+    state.stage1 = out;
+    out = this.flowerChildFilterOnePoleStep(state.stage2, out, a2);
+    state.stage2 = out;
+
+    state.selfMod = dirty ? out * 0.465 : out * selfModAmp;
+
+    const output = dirty ? out * 5.22 : out * 1.31;
+    return this.safeFilterNumber(output, state);
+  }
+
+  flowerChildFilterSample(state, input, params, rate = sampleRate) {
+    if (this.nativeFlowerChildFilterReady) {
+      try {
+        if (!state.nativeHandle) {
+          state.nativeHandle = this.nativeFlowerChildFilter.soemdsp_flower_child_filter_create();
+        }
+        if (state.nativeHandle) {
+          return this.safeFilterNumber(
+            this.nativeFlowerChildFilter.soemdsp_flower_child_filter_sample(
+              state.nativeHandle,
+              this.safeFilterNumber(input, state),
+              this.clampValue(this.safeFilterNumber(params.frequency, state), 0, 1),
+              this.clampValue(this.safeFilterNumber(params.resonance, state), 0, 1),
+              this.clampValue(this.safeFilterNumber(params.chaos, state), 0, 1),
+              Math.round(Number(params.mode) || 0) !== 0 ? 1 : 0,
+              Math.max(1, Number(rate) || sampleRate || 44100),
+            ),
+            state,
+          );
+        }
+      } catch (error) {
+        this.nativeFlowerChildFilterReady = false;
+        state.nativeHandle = 0;
+        this.port.postMessage({
+          type: "nativeModuleStatus",
+          name: "flower_child_filter",
+          status: "disabled",
+          message: String(error?.message || error || "native Flower Child Filter failed"),
+        });
+      }
+    }
+    return this.flowerChildFilterSampleJs(state, input, params, rate);
   }
 
   tb303FilterSample(state, input, params, rate = sampleRate) {
@@ -7178,6 +7368,20 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
             mode: this.readEffectiveParameter(node, "mode", 1, frame, frames, frameValues),
             resonance: this.readEffectiveParameter(node, "resonance", 0.2, frame, frames, frameValues),
             stages: this.readEffectiveParameter(node, "stages", 4, frame, frames, frameValues),
+          },
+          safeRate,
+        );
+      } else if (node?.type === "flowerChildFilter") {
+        const state = this.flowerChildFilterStates.get(nodeId) || this.createFlowerChildFilterState();
+        this.flowerChildFilterStates.set(nodeId, state);
+        value = this.flowerChildFilterSample(
+          state,
+          mixInput(nodeId),
+          {
+            chaos: this.readEffectiveParameter(node, "chaos", 0, frame, frames, frameValues),
+            frequency: this.readEffectiveParameter(node, "frequency", 0.5, frame, frames, frameValues),
+            mode: this.readEffectiveParameter(node, "mode", 0, frame, frames, frameValues),
+            resonance: this.readEffectiveParameter(node, "resonance", 0.2, frame, frames, frameValues),
           },
           safeRate,
         );

@@ -840,6 +840,125 @@ function nodeGraphLadderFilterSample(state, input, params, sampleRate, runtime =
   return nodeGraphSafeFilterNumber(output, runtime, nodeId, state, "ladder filter output");
 }
 
+// Resonant self-oscillating filter: a feedback-modulated phasor through two
+// cascaded one-pole stages. Mirrors native_modules/flower_child_filter
+// exactly -- see that file's header comment for the approximation note on
+// the two proprietary node-based-function shaping curves.
+function createNodeGraphFlowerChildFilterState() {
+  return { phase: 0, phaseOffset: 0, stage1: 0, stage2: 0, selfMod: 0 };
+}
+
+function nodeGraphFlowerChildFilterCurveShape(v, tension) {
+  const denom = 2 * tension * v - tension - 1;
+  if (denom === 0) return v;
+  return (tension * v - v) / denom;
+}
+
+function nodeGraphFlowerChildFilterOnePoleCoefficient(cutoffHz, sampleRate) {
+  const rawWc = 2 * Math.PI * cutoffHz / sampleRate;
+  const wc = Math.max(1e-9, Math.min(Math.PI * 0.98, rawWc));
+  const s = Math.sin(wc);
+  const c = Math.cos(wc);
+  const t = Math.tan(0.25 * (wc - Math.PI));
+  let denom = s - c * t;
+  if (denom > -1e-12 && denom < 1e-12) denom = denom >= 0 ? 1e-12 : -1e-12;
+  return t / denom;
+}
+
+function nodeGraphFlowerChildFilterOnePoleStep(prevY1, input, a) {
+  let y0 = input;
+  y0 = y0 / (1 + y0 * y0);
+  return y0 + a * (y0 - prevY1);
+}
+
+function nodeGraphFlowerChildFilterEllipse(phase, ellipseC) {
+  const sinX = Math.sin(phase * 2 * Math.PI);
+  const cosX = Math.cos(phase * 2 * Math.PI);
+  let sqrtVal = Math.sqrt(cosX * cosX + (ellipseC * sinX) * (ellipseC * sinX));
+  if (sqrtVal < 1e-12) sqrtVal = 1e-12;
+  return cosX / sqrtVal;
+}
+
+function nodeGraphFlowerChildFilterSample(state, input, params, sampleRate, runtime = null, nodeId = "") {
+  const rate = Math.max(1, Number(sampleRate) || nodeGraphMvp.sampleRate || 44100);
+  const freqNorm = Math.max(0, Math.min(1, Number(params.frequency) || 0));
+  const reso = Math.max(0, Math.min(1, Number(params.resonance) || 0));
+  const chaos = Math.max(0, Math.min(1, Number(params.chaos) || 0));
+  const dirty = Math.round(Number(params.mode) || 0) !== 0;
+
+  const maxNormFreq = rate <= 44100 ? 0.928 : 1;
+  const normalizedFreqInUse = (Math.min(freqNorm, maxNormFreq)) * (161 - 3) + 3;
+  const frequencyHz = 440 * Math.pow(2, (normalizedFreqInUse - 69) / 12);
+
+  const crossfadeStart = dirty ? 0.2 : 0.21;
+  const fmPmCrossfade = crossfadeStart * (1 - nodeGraphFlowerChildFilterCurveShape(freqNorm, 0.53));
+
+  const cutoff1 = frequencyHz * 0.164312;
+  const cutoff2 = frequencyHz * 0.366131;
+  const a1 = nodeGraphFlowerChildFilterOnePoleCoefficient(cutoff1, rate);
+  const a2 = nodeGraphFlowerChildFilterOnePoleCoefficient(cutoff2, rate);
+
+  let breakpoint, cap;
+  if (dirty) {
+    if (rate <= 44100) { breakpoint = 0.816054; cap = 0.602339; }
+    else if (rate <= 88200) { breakpoint = 0.902657; cap = 0.654971; }
+    else { breakpoint = 0.977649; cap = 0.760234; }
+  } else {
+    if (rate <= 44100) { breakpoint = 0.732441; cap = 0.649123; }
+    else if (rate <= 88200) { breakpoint = 0.816054; cap = 0.818713; }
+    else { breakpoint = 0.879599; cap = 0.807018; }
+  }
+  let effectiveReso = reso;
+  if (reso > breakpoint) {
+    const t = (reso - breakpoint) / (1 - breakpoint);
+    const cappedTarget = Math.min(reso, cap);
+    effectiveReso = breakpoint + (cappedTarget - breakpoint) * nodeGraphFlowerChildFilterCurveShape(t, -0.38);
+  }
+
+  let selfModAmp = 1;
+  let ellipseC = -1;
+  if (!dirty) {
+    selfModAmp = 0.0368 + (0.6333 - 0.0368) * nodeGraphFlowerChildFilterCurveShape(effectiveReso, 0.4);
+  } else {
+    ellipseC = -1 + (0.00001 - -1) * nodeGraphFlowerChildFilterCurveShape(effectiveReso, -0.6);
+  }
+
+  const clampLimit = dirty ? 1.198 : 1;
+  const safeInput = nodeGraphSafeFilterNumber(input, runtime, nodeId, state, "flower child input");
+  let inputSignal = Math.max(-clampLimit, Math.min(clampLimit, -safeInput));
+
+  if (chaos > 0) {
+    inputSignal += (Math.random() * 2 - 1) * chaos;
+  }
+
+  inputSignal = state.selfMod + 0.035848699999999845 * inputSignal;
+
+  const mod = 1.4 * inputSignal;
+  const fm = Math.cos((Math.PI / 2) * fmPmCrossfade) * mod;
+  const pm = Math.sin((Math.PI / 2) * fmPmCrossfade) * mod;
+
+  state.phaseOffset = pm;
+  const incAmt = (frequencyHz * fm) / rate;
+  state.phase = state.phase + incAmt;
+  state.phase = state.phase - Math.floor(state.phase);
+  let unipolarPhase = state.phase + state.phaseOffset;
+  unipolarPhase = unipolarPhase - Math.floor(unipolarPhase);
+
+  const oscValue = dirty
+    ? nodeGraphFlowerChildFilterEllipse(unipolarPhase, ellipseC) * 0.1
+    : Math.sin(unipolarPhase * 2 * Math.PI) * 1.3;
+
+  let out = nodeGraphFlowerChildFilterOnePoleStep(state.stage1, oscValue, a1);
+  state.stage1 = out;
+  out = nodeGraphFlowerChildFilterOnePoleStep(state.stage2, out, a2);
+  state.stage2 = out;
+
+  state.selfMod = dirty ? out * 0.465 : out * selfModAmp;
+
+  const output = dirty ? out * 5.22 : out * 1.31;
+  return nodeGraphSafeFilterNumber(output, runtime, nodeId, state, "flower child output");
+}
+
 function createNodeGraphTb303FilterState() {
   return { y: [0, 0, 0, 0], hpX: 0, hpY: 0 };
 }
@@ -3187,6 +3306,22 @@ function evaluateNodeGraphPlanFrame(runtime, sampleRate, frame, frames) {
           mode: readNodeGraphLiveEffectiveParam(runtime, node, "mode", 1, frame, frames, frameValues),
           resonance: readNodeGraphLiveEffectiveParam(runtime, node, "resonance", 0.2, frame, frames, frameValues),
           stages: readNodeGraphLiveEffectiveParam(runtime, node, "stages", 4, frame, frames, frameValues),
+        },
+        sampleRate,
+        runtime,
+        nodeId,
+      );
+    } else if (node?.type === "flowerChildFilter") {
+      const state = runtime.flowerChildFilterStates.get(nodeId) || createNodeGraphFlowerChildFilterState();
+      runtime.flowerChildFilterStates.set(nodeId, state);
+      value = nodeGraphFlowerChildFilterSample(
+        state,
+        mixInput(nodeId),
+        {
+          chaos: readNodeGraphLiveEffectiveParam(runtime, node, "chaos", 0, frame, frames, frameValues),
+          frequency: readNodeGraphLiveEffectiveParam(runtime, node, "frequency", 0.5, frame, frames, frameValues),
+          mode: readNodeGraphLiveEffectiveParam(runtime, node, "mode", 0, frame, frames, frameValues),
+          resonance: readNodeGraphLiveEffectiveParam(runtime, node, "resonance", 0.2, frame, frames, frameValues),
         },
         sampleRate,
         runtime,

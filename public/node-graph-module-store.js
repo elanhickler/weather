@@ -83,6 +83,7 @@ const nodeGraphModuleStoreTypes = Object.freeze([
   "sampleLooper",
   "passiveFilter",
   "cookbookFilter",
+  "flowerChildFilter",
   "ladderFilter",
   "tb303Filter",
   "slewLimiter",
@@ -786,6 +787,12 @@ const nodeGraphModuleStoreCatalog = Object.freeze({
     description: "RSMET cookbook biquad cascade with mode, frequency, stages, Q, and gain controls plus an in-module response curve.",
     label: "Multi Stage Filter",
     notes: ["mode selection", "biquad stages", "curve display"],
+  },
+  flowerChildFilter: {
+    category: "Filter",
+    description: "Resonant self-oscillating filter built from a feedback-modulated phasor through two cascaded one-pole stages. Mode switches between Clean (sine oscillator, gentler feedback) and Dirty (reshaped oscillator, wider clamp, fixed feedback, hotter output).",
+    label: "Flower Child Filter",
+    notes: ["self-oscillating", "clean/dirty switch", "feedback FM"],
   },
   ladderFilter: {
     category: "Filter",

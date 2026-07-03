@@ -244,6 +244,7 @@ function createNodeGraphLiveRuntime(plan) {
   const expAdsrStates = new Map();
   const fractalBrownianNoiseStates = new Map();
   const flowerChildEnvelopeFollowerStates = new Map();
+  const flowerChildFilterStates = new Map();
   const ladderFilterStates = new Map();
   const tb303FilterStates = new Map();
   const linearEnvelopeStates = new Map();
@@ -318,6 +319,9 @@ function createNodeGraphLiveRuntime(plan) {
     }
     if (node.type === "ladderFilter") {
       ladderFilterStates.set(node.id, createNodeGraphLadderFilterState());
+    }
+    if (node.type === "flowerChildFilter") {
+      flowerChildFilterStates.set(node.id, createNodeGraphFlowerChildFilterState());
     }
     if (node.type === "tb303Filter") {
       tb303FilterStates.set(node.id, createNodeGraphTb303FilterState());
@@ -424,6 +428,7 @@ function createNodeGraphLiveRuntime(plan) {
     expAdsrStates,
     fractalBrownianNoiseStates,
     flowerChildEnvelopeFollowerStates,
+    flowerChildFilterStates,
     graphInputConnections,
     graphLfoStates,
     ladderFilterStates,
@@ -551,6 +556,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   }
   if (!runtime.ladderFilterStates) {
     runtime.ladderFilterStates = new Map();
+  }
+  if (!runtime.flowerChildFilterStates) {
+    runtime.flowerChildFilterStates = new Map();
   }
   if (!runtime.tb303FilterStates) {
     runtime.tb303FilterStates = new Map();
@@ -703,6 +711,9 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
     }
     if (node.type === "ladderFilter" && !runtime.ladderFilterStates.has(node.id)) {
       runtime.ladderFilterStates.set(node.id, createNodeGraphLadderFilterState());
+    }
+    if (node.type === "flowerChildFilter" && !runtime.flowerChildFilterStates.has(node.id)) {
+      runtime.flowerChildFilterStates.set(node.id, createNodeGraphFlowerChildFilterState());
     }
     if (node.type === "clock" && !runtime.clockStates.has(node.id)) {
       runtime.clockStates.set(node.id, createNodeGraphClockState());
@@ -921,6 +932,11 @@ function updateNodeGraphLiveRuntimePlan(runtime, plan) {
   for (const id of [...runtime.ladderFilterStates.keys()]) {
     if (!nodeIds.has(id)) {
       runtime.ladderFilterStates.delete(id);
+    }
+  }
+  for (const id of [...runtime.flowerChildFilterStates.keys()]) {
+    if (!nodeIds.has(id)) {
+      runtime.flowerChildFilterStates.delete(id);
     }
   }
   for (const id of [...runtime.tb303FilterStates.keys()]) {

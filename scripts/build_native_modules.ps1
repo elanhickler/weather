@@ -163,6 +163,21 @@ if (!(Test-Path -LiteralPath $clang)) {
   -fno-exceptions `
   -fno-rtti `
   "-Wl,--no-entry" `
+  "-Wl,--export=soemdsp_flower_child_filter_create" `
+  "-Wl,--export=soemdsp_flower_child_filter_destroy" `
+  "-Wl,--export=soemdsp_flower_child_filter_sample" `
+  "-Wl,--export=soemdsp_flower_child_filter_version" `
+  "-Wl,--export-memory" `
+  -o "$root\native_modules\flower_child_filter\flower_child_filter.wasm" `
+  "$root\native_modules\flower_child_filter\flower_child_filter.cpp"
+
+& $clang `
+  --target=wasm32 `
+  -O3 `
+  -nostdlib `
+  -fno-exceptions `
+  -fno-rtti `
+  "-Wl,--no-entry" `
   "-Wl,--export=soemdsp_tb303_filter_create" `
   "-Wl,--export=soemdsp_tb303_filter_destroy" `
   "-Wl,--export=soemdsp_tb303_filter_sample" `
