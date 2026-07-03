@@ -6385,17 +6385,8 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     return this.surgeOscillatorSampleJs(state, options);
   }
 
-  createDsfGeneratorState() {
-    return { leak: 1, preAmpAdjustOut: 0, peak: 1, dcLastInput: 0, dcLastOutput: 0 };
-  }
-
   createDsfOscillatorState() {
-    return {
-      phase: 0,
-      saw: this.createDsfGeneratorState(),
-      square: this.createDsfGeneratorState(),
-      nativeHandle: 0,
-    };
+    return { t: 0, value: 0, nativeHandle: 0 };
   }
 
   destroyDsfOscillatorNativeState(state) {
@@ -6405,128 +6396,33 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
     }
   }
 
-  // A faithful port of DSFOscillatorSineSaw / DSFOscillatorSineSquare from
-  // soemdsp/include/soemdsp/oscillator/DSFOscillator.hpp -- the classes a
-  // real, shipped Soundemote VST2 plugin (SoEmSawSquareSine) uses in
-  // production. DSF() is a rate of change that DSFOscillatorBase::run()
-  // leaky-integrates, not a direct per-sample waveform -- see
-  // dsf_oscillator.cpp's file header for the full story (an earlier
-  // rewrite missed this and evaluated the closed form directly instead).
-  // No user-facing "Harmonics" slider: numPartials_ is always
-  // Nyquist/frequency, auto-derived. Morph (0-1) is the only timbre knob.
-  dsfMap01(t, a, b) {
-    return a + t * (b - a);
-  }
-
-  // DSFOscillatorSineSaw::morphChanged(), transcribed.
-  dsfSawMorphCoeffs(morph) {
-    const m = this.clampValue(Number(morph) || 0, 0, 1);
-    const k = (1 - Math.pow(m, 0.14)) * 4;
-    const k2 = k * k;
-    const k42 = Math.pow(4, k2);
-    return { k2, k42, ampAdjust: this.dsfMap01(m, 3.15, 2.7) };
-  }
-
-  // DSFOscillatorSineSaw::DSF(), transcribed.
-  dsfSawDsf(dsfState, numPartials, c) {
-    const x = dsfState;
-    const xn = dsfState * numPartials;
-    const cosx = Math.cos(x);
-    const cosxn = Math.cos(xn);
-    const sinx = Math.sin(x);
-    const sinxn = Math.sin(xn);
-    const den = 1 - Math.pow(2, 1 + c.k2) * cosx + c.k42;
-    if (den > -1e-9 && den < 1e-9) return 0;
-    const num = (c.k42 * cosxn - Math.pow(8, c.k2) * (cosxn * cosx - sinxn * sinx)) *
-                    Math.pow(2, -c.k2 * (numPartials + 1)) +
-                cosx * c.k42 - Math.pow(2, c.k2);
-    return num / den;
-  }
-
-  // DSFOscillatorSineSquare::morphChanged(), transcribed.
-  dsfSquareMorphCoeffs(morph) {
-    const m = this.clampValue(Number(morph) || 0, 0, 1);
-    const k = 1 - (1 / (Math.pow(m / 2 + 0.25, 14) * 10000 + 1)) + 1e-12;
-    return { k, ampAdjust: this.dsfMap01(m, 0.34, 0.81) };
-  }
-
-  // DSFOscillatorSineSquare::DSF(), transcribed. Guarded against k -> 0 and
-  // the denominator's own zero -- both real edge cases of this formula.
-  dsfSquareDsf(dsfState, numPartials, c) {
-    const x = dsfState;
-    const k = c.k;
-    if (k > -1e-9 && k < 1e-9) return 0;
-    const powKNP1 = Math.pow(k, numPartials + 1);
-    const den = k * (1 + k * k - 2 * k * Math.cos(2 * x));
-    if (den > -1e-12 && den < 1e-12) return 0;
-    const num = powKNP1 * k * Math.cos(x * (2 * numPartials - 1)) -
-                powKNP1 * Math.cos(x * (2 * numPartials + 1)) -
-                k * Math.cos(x) * (k - 1);
-    return 8 * (num / den);
-  }
-
-  // One sample of DSFOscillatorBase::run(): leaky-integrate DSF() (scaled
-  // by increment, i.e. treated as a rate of change), then a DC blocker and
-  // adaptive peak-follower on top -- verified needed to keep the real
-  // architecture from collapsing to flat, fully-clipped DC at high Morph
-  // (a documented bug in the original: "morph_ not consistent in volume").
-  dsfRunGenerator(g, dsf, increment, ampAdjust) {
-    g.leak = g.leak * 0.99 + 0.000005;
-    g.preAmpAdjustOut = g.preAmpAdjustOut * (1 - g.leak) + dsf * increment;
-    const raw = g.preAmpAdjustOut * ampAdjust;
-
-    const r = 0.995;
-    const dcOut = raw - g.dcLastInput + r * g.dcLastOutput;
-    g.dcLastInput = raw;
-    g.dcLastOutput = dcOut;
-
-    g.peak = Math.max(1, g.peak * 0.999 + Math.abs(dcOut) * 0.001);
-    return dcOut / g.peak;
+  // pureSawEng(t, n), transcribed and simplified directly from "Extended
+  // DSF Oscillators.cxx": sin(PI*t*(2N+1)) / sin(PI*t) - 1. Guarded at the
+  // removable singularity t=0 via its L'Hopital limit (2N+1). No Morph or
+  // Harmonics control -- n is always floor(Nyquist/frequency).
+  dsfPureSawEng(t, n) {
+    const denom = Math.sin(Math.PI * t);
+    if (denom > -1e-9 && denom < 1e-9) return (2 * n + 1) - 1;
+    return Math.sin(Math.PI * t * (2 * n + 1)) / denom - 1;
   }
 
   dsfOscillatorSampleJs(state, options = {}) {
     const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
     const safeFrequency = Number(options.frequencyHz) > 1 ? Number(options.frequencyHz) : 1;
-    const increment = this.clampValue((Number(options.frequencyHz) || 0) / sampleRate, -0.5, 0.5);
-    // calculateState(): phase_ += increment_ * 0.9999; dsfState_ = wrap(phase_) * TAU.
-    state.phase = this.wrapValue(state.phase + increment * 0.9999, 0, 1);
-    const dsfState = state.phase * Math.PI * 2;
-
-    const nyquist = sampleRate * 0.5;
-    const numPartialsSaw = Math.max(1, nyquist / safeFrequency);
-    const numPartialsSquare = Math.max(1, numPartialsSaw * 0.5);
-
+    const dt = this.clampValue((Number(options.frequencyHz) || 0) / sampleRate, -0.5, 0.5);
     const waveform = Math.round(Number(options.waveform) || 0);
     const level = Number(options.level) || 0;
 
     let sample;
-    switch (waveform) {
-      case 1: {
-        const c = this.dsfSawMorphCoeffs(options.morph);
-        const dsf = this.dsfSawDsf(dsfState, numPartialsSaw, c);
-        sample = this.dsfRunGenerator(state.saw, dsf, increment, c.ampAdjust);
-        break;
-      }
-      case 2: {
-        const c = this.dsfSquareMorphCoeffs(options.morph);
-        const dsf = this.dsfSquareDsf(dsfState, numPartialsSquare, c);
-        sample = this.dsfRunGenerator(state.square, dsf, increment, c.ampAdjust);
-        break;
-      }
-      case 3: {
-        const sc = this.dsfSawMorphCoeffs(options.morph);
-        const sawDsf = this.dsfSawDsf(dsfState, numPartialsSaw, sc);
-        const sawOut = this.dsfRunGenerator(state.saw, sawDsf, increment, sc.ampAdjust);
-        const qc = this.dsfSquareMorphCoeffs(options.morph);
-        const squareDsf = this.dsfSquareDsf(dsfState, numPartialsSquare, qc);
-        const squareOut = this.dsfRunGenerator(state.square, squareDsf, increment, qc.ampAdjust);
-        const blend = this.clampValue(Number(options.mix) || 0, 0, 1);
-        sample = sawOut * (1 - blend) + squareOut * blend;
-        break;
-      }
-      default:
-        sample = Math.sin(dsfState);
-        break;
+    if (waveform === 1) {
+      const nyquist = sampleRate * 0.5;
+      const n = Math.max(1, Math.floor(nyquist / safeFrequency));
+      state.t = this.wrapValue(state.t + dt * 0.9999, 0, 1);
+      state.value = state.value * 0.999 + this.dsfPureSawEng(state.t, n) * dt;
+      sample = state.value;
+    } else {
+      state.t = this.wrapValue(state.t + dt, 0, 1);
+      sample = Math.sin(state.t * Math.PI * 2);
     }
 
     if (!Number.isFinite(sample)) sample = 0;
@@ -6548,16 +6444,12 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
           const frequencyHz = Number(options.frequencyHz) || 0;
           const waveform = Math.round(Number(options.waveform) || 0);
-          const morph = Number(options.morph) || 0;
-          const mix = Number(options.mix) || 0;
           const level = Number(options.level) || 0;
           this.nativeDsfOscillator.soemdsp_dsf_oscillator_sample(
             state.nativeHandle,
             frequencyHz,
             sampleRate,
             waveform,
-            morph,
-            mix,
             level,
           );
           return {
@@ -7375,8 +7267,6 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           frequencyHz: Math.max(0, read("frequency", 220)),
           sampleRate: this.engineSampleRate || sampleRate,
           waveform: read("waveform", 1),
-          morph: read("morph", 0.6),
-          mix: read("mix", 0.5),
           level: read("level", 1),
         });
       } else if (node?.type === "midiOut") {

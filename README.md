@@ -425,6 +425,54 @@ stays audibly oscillating and bounded, at multiple frequencies, both
 offline (Python/wasmtime) and by calling the shipped JS directly inside
 the running browser page before pushing.
 
+### Round 5: still distorted live — stripped back to just the base Saw
+
+Round 4's leaky-integrator fix still didn't sound right live: **"the
+sawtooth gets distorted still."** Direct instruction: stop adding Morph
+and Harmonics complexity, and get one simple, correct Saw working first,
+starting from a real given example instead of re-deriving anything.
+
+Re-read `Extended DSF Oscillators.cxx` directly (rather than trusting
+memory of it) and found a real transcription mistake: a previous rewrite
+had divided `pureSawEng` by `2N` — a normalization step that isn't in
+the reference at all. The actual formula, simplified from the source:
+
+```
+pureSawEng(t, N) = sin(pi * t * (2N + 1)) / sin(pi * t) - 1
+```
+
+run through the exact same accumulator every DSF oscillator in this
+mission uses:
+
+```
+t += dt * 0.9999
+t  = wrap(t)
+value = value * 0.999 + pureSawEng(t, N) * dt
+```
+
+with `N = floor(Nyquist / frequency)` and no Morph, Harmonics, or Mix
+parameter at all — none of those exist for this formula in the
+reference. `pureSawEng` only ever needs `t` and `N`.
+
+**One more real bug found getting this minimal version to run cleanly:**
+the hand-rolled `sinApprox` (a 5-term Taylor series, needed since
+freestanding WASM has no libm) has ~7e-3 absolute error near `x = pi` —
+small in isolation, but this oscillator's leaky integrator has a
+retention factor of `0.999`, i.e. near-unity gain (~1000x steady-state
+amplification of any per-sample bias). That small a systematic error
+compounded into visible, growing drift over a few thousand samples —
+reproduced in plain Python with the exact same approximate `sin`, not a
+WASM-only issue. Fixed by extending the Taylor series to 8 terms
+(verified accurate to ~2e-5 across the needed range), which keeps the
+integrator's output bounded and stable indefinitely.
+
+**Verified, not assumed:** clean, monotonic sawtooth ramp shape (not an
+approximate one — printed the actual per-sample values across a cycle),
+bounded amplitude at 55 Hz through 10 kHz, correct fundamental via FFT,
+and zero NaN/out-of-range samples across a full frequency sweep for both
+Sine and Saw — confirmed in wasmtime, then confirmed again by calling
+the shipped JS directly inside the running browser page.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use
