@@ -16910,6 +16910,7 @@ def require_readme_scheduler_contract() -> None:
         "100% just a saw with tri morph",
         "Round 10: Triangle went silent at extreme PWM",
         "sin(pi * dutyCycle)",
+        "Naming, again: Triangle",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
     for snippet in [

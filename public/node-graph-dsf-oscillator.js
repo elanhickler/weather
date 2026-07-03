@@ -1,16 +1,16 @@
 // Shared offline JS mirror of native_modules/dsf_oscillator -- the DSF
 // starter kit. See dsf_oscillator.cpp for the full derivation and design
-// notes. SEVENTH REWRITE: adds Square (PWM), Triangle, and a Saw/Square
-// TriMorph on top of the verified base Saw + Harmonics.
+// notes. SEVENTH REWRITE: adds Square (PWM), Trimorph, and a Saw/Square
+// SquSaw on top of the verified base Saw + Harmonics.
 //
 // Square (PWM): square(t) = saw(t) - saw(t - pulseWidth). Subtracting a
 // phase-shifted copy of an already-verified, alias-free Saw is itself
 // alias-free -- no new closed form, no new singularity to chase.
-// Triangle: a second leaky integration on top of the (already bounded)
+// Trimorph: a second leaky integration on top of the (already bounded)
 // Square output, with an adaptive peak-follower on top since -- unlike
 // Square -- this second stage doesn't stay bounded on its own across the
 // full frequency range (verified numerically before shipping).
-// TriMorph: a plain crossfade between Saw and a fixed 50%-duty Square, kept
+// SquSaw: a plain crossfade between Saw and a fixed 50%-duty Square, kept
 // deliberately decoupled from the PWM slider -- reported live as sounding
 // "triangle-like" when it inherited PWM's variable duty cycle; simplified
 // back to always crossfading two cleanly-shaped waveforms instead.
@@ -19,8 +19,8 @@
 // oscillation period (~20 periods of memory) instead of a fixed per-
 // sample constant -- a fixed retention was far shorter than the period
 // at low frequencies, so accumulators forgot mid-ramp and produced
-// distorted, asymmetric shapes (Triangle sounding like a square wave;
-// DC asymmetry in Saw/Square/TriMorph). See dsf_oscillator.cpp for the full
+// distorted, asymmetric shapes (Trimorph sounding like a square wave;
+// DC asymmetry in Saw/Square/SquSaw). See dsf_oscillator.cpp for the full
 // story.
 
 function createNodeGraphDsfOscillatorState() {
@@ -57,7 +57,7 @@ function nodeGraphDsfWrap01(x) {
 }
 
 // options: { frequencyHz, sampleRate, waveform (0=Sine,1=Saw,2=Square PWM,
-//            3=Triangle,4=TriMorph), morph (Harmonics, 0-1),
+//            3=Trimorph,4=SquSaw), morph (Harmonics, 0-1),
 //            pulseWidth (0-1), blend (0-1), level }
 function nodeGraphDsfOscillatorSample(state, options = {}) {
   const sampleRate = Number(options.sampleRate) > 1 ? Number(options.sampleRate) : 48000;
@@ -97,9 +97,9 @@ function nodeGraphDsfOscillatorSample(state, options = {}) {
       } else {
         state.triAcc = state.triAcc * retention + state.sqAcc * dt * 4;
         // Compensate for the fundamental's own amplitude shrinking toward
-        // 0 as pulseWidth approaches 0 or 1 (Triangle mostly tracks
+        // 0 as pulseWidth approaches 0 or 1 (Trimorph mostly tracks
         // Square's fundamental, whose amplitude ~ sin(pi*pulseWidth)) --
-        // reported live as Triangle going quiet toward silence at extreme
+        // reported live as Trimorph going quiet toward silence at extreme
         // PWM. Square itself doesn't need this (its higher harmonics keep
         // its peak swing roughly constant as duty cycle narrows).
         const compensation = 1 / clampNodeSliderValue(Math.abs(Math.sin(Math.PI * pw)), 0.05, 1);

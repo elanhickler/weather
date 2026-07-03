@@ -27,7 +27,7 @@
 // alias-free by construction. Harmonics (0..1) crossfades n from 1 (a
 // single harmonic, an exact sine) up to that Nyquist-safe maximum.
 //
-// SEVENTH REWRITE: adds Square (PWM), Triangle, and a TriMorph on
+// SEVENTH REWRITE: adds Square (PWM), Trimorph, and a SquSaw on
 // top of the verified base Saw, rather than reintroducing the earlier
 // unverified Formant/Fractal-Stack designs from scratch.
 //
@@ -39,7 +39,7 @@
 // numerically (Python) that this stays bounded across frequency x
 // Harmonics x pulseWidth before shipping.
 //
-// Triangle: a second leaky integration on top of the (already-integrated,
+// Trimorph: a second leaky integration on top of the (already-integrated,
 // bounded) Square output -- same idea used elsewhere in this project for
 // deriving a triangle from a square. Verified numerically that, unlike
 // Square, this second integration stage does NOT stay bounded on its own
@@ -48,20 +48,20 @@
 // normalizer is added on top specifically to fix that, verified to keep
 // it bounded everywhere Square already was.
 //
-// TriMorph: a plain crossfade between the (already correct, independently
+// SquSaw: a plain crossfade between the (already correct, independently
 // verified) Saw and Square outputs -- no new synthesis math needed.
 //
 // EIGHTH REWRITE: two real bugs reported live, both fixed by re-examining
 // actual signal shapes rather than just bounds/NaN checks:
-// 1. Triangle sounded like a square wave. Its second-stage leaky
+// 1. Trimorph sounded like a square wave. Its second-stage leaky
 //    integrator used a fixed retention (0.995, ~200-sample memory) far
 //    shorter than the oscillation period at low/mid frequencies (e.g.
 //    960 samples at 50 Hz), so the accumulator saturated to a flat
 //    plateau mid-ramp instead of completing a linear ramp -- literally a
 //    rounded square shape, not a triangle. Same root cause as bug 2.
-// 2. TriMorph and Saw/Square showed real DC asymmetry and shape distortion
+// 2. SquSaw and Saw/Square showed real DC asymmetry and shape distortion
 //    at some frequencies ("all over the place"). Root cause: every
-//    accumulator (Saw, Square, TriMorph) used a fixed retention (0.999,
+//    accumulator (Saw, Square, SquSaw) used a fixed retention (0.999,
 //    ~1000-sample memory), also too short relative to the period at low
 //    frequencies (2400+ samples at 20 Hz) -- confirmed in plain Python
 //    that the distortion persists even after full settling, so it's a
@@ -189,8 +189,8 @@ struct DsfOscillatorState {
   double blendSqAcc;   // Blend's own fixed-50%-duty square accumulator --
                         // decoupled from PWM's pulseWidth on purpose (see
                         // sample() comment).
-  double triAcc;       // Triangle's second-stage leaky-integrator accumulator
-  double triPeak;      // Triangle's adaptive peak-follower
+  double triAcc;       // Trimorph's second-stage leaky-integrator accumulator
+  double triPeak;      // Trimorph's adaptive peak-follower
   double out;
 };
 
@@ -226,11 +226,11 @@ extern "C" void soemdsp_dsf_oscillator_reset(int handle) {
   s.triPeak = 1.0;
 }
 
-// waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=TriMorph
+// waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Trimorph, 4=SquSaw
 // morph: 0..1 (Harmonics) -- 0 is an exact sine, 1 is the full
 // Nyquist-safe harmonic count.
-// pulseWidth: 0..1 -- Square/Triangle's duty cycle (0.5 = symmetric).
-// blend: 0..1 -- Saw/Square crossfade amount for the TriMorph waveform.
+// pulseWidth: 0..1 -- Square/Trimorph's duty cycle (0.5 = symmetric).
+// blend: 0..1 -- Saw/Square crossfade amount for the SquSaw waveform.
 extern "C" void soemdsp_dsf_oscillator_sample(
   int handle,
   double frequencyHz,
@@ -265,7 +265,7 @@ extern "C" void soemdsp_dsf_oscillator_sample(
     if (waveform == 1) {
       sample = s.sawAcc;
     } else if (waveform == 4) {
-      // TriMorph: crossfades Saw with a plain, fixed 50%-duty Square, kept
+      // SquSaw: crossfades Saw with a plain, fixed 50%-duty Square, kept
       // deliberately decoupled from the PWM slider -- simpler, and closer
       // to the very first Saw/Square crossfade this module had, which
       // just mixed two cleanly-shaped waveforms rather than inheriting
@@ -282,9 +282,9 @@ extern "C" void soemdsp_dsf_oscillator_sample(
 
       if (waveform == 2) {
         sample = s.sqAcc;
-      } else {  // waveform == 3: Triangle
+      } else {  // waveform == 3: Trimorph
         s.triAcc = s.triAcc * retention + s.sqAcc * dt * 4.0;
-        // Triangle is a second integration on top of Square, which makes
+        // Trimorph is a second integration on top of Square, which makes
         // it track mostly the square's fundamental harmonic -- and that
         // fundamental's own amplitude genuinely shrinks toward 0 as
         // pulseWidth approaches 0 or 1 (a real property of PWM pulse
@@ -292,11 +292,11 @@ extern "C" void soemdsp_dsf_oscillator_sample(
         // live as "gets quieter until silence" at extreme PWM. Square
         // itself doesn't have this problem since its many higher
         // harmonics keep its peak swing roughly constant as duty cycle
-        // narrows -- only Triangle, which discards most of that via its
+        // narrows -- only Trimorph, which discards most of that via its
         // second integration, needs the compensation. Verified
         // numerically (Python) that dividing by sin(pi*pulseWidth)
         // (floor to cap the gain right at the pulseWidth clamp's edges)
-        // keeps Triangle's loudness roughly constant across the full PWM
+        // keeps Trimorph's loudness roughly constant across the full PWM
         // range instead of collapsing to silence at the extremes.
         const double sinPw = sinApprox(kPi * pw);
         const double compensation = 1.0 / clampD(sinPw < 0.0 ? -sinPw : sinPw, 0.05, 1.0);

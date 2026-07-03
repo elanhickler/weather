@@ -609,6 +609,13 @@ practical PWM sweep (0.01–0.99), instead of collapsing toward silence at
 the extremes — confirmed in wasmtime with zero NaN across a full
 frequency × PWM sweep.
 
+### Naming, again: Triangle → Trimorph, TriMorph → SquSaw
+
+Renamed once more per direct request: the waveform previously called
+**Triangle** is now **Trimorph**, and the waveform previously called
+**TriMorph** is now **SquSaw**. Label-only change — no behavior, math, or
+parameter-key change.
+
 ## License
 
 This repository is source-available for noncommercial use only. Commercial use

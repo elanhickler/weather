@@ -6420,17 +6420,17 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
   // scales with the oscillation period instead of a fixed per-sample
   // constant -- a fixed retention was far shorter than the period at low
   // frequencies, so accumulators forgot mid-ramp and produced distorted,
-  // asymmetric shapes (Triangle sounding like a square wave; DC
-  // asymmetry in Saw/Square/TriMorph). See dsf_oscillator.cpp for the full
+  // asymmetric shapes (Trimorph sounding like a square wave; DC
+  // asymmetry in Saw/Square/SquSaw). See dsf_oscillator.cpp for the full
   // story.
   dsfAdaptiveRetention(dt) {
     return Math.exp(-0.23026 * dt);
   }
 
-  // waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Triangle, 4=TriMorph.
+  // waveform: 0=Sine, 1=Saw, 2=Square (PWM), 3=Trimorph, 4=SquSaw.
   // Square: saw(t) - saw(t - pulseWidth) -- alias-free since it's a
   // subtraction of phase-shifted copies of an already-verified Saw.
-  // Triangle: a second leaky integration on the (bounded) Square output,
+  // Trimorph: a second leaky integration on the (bounded) Square output,
   // with an adaptive peak-follower since that second stage doesn't stay
   // bounded on its own across the full frequency range.
   dsfOscillatorSampleJs(state, options = {}) {
@@ -6456,7 +6456,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
       if (waveform === 1) {
         sample = state.sawAcc;
       } else if (waveform === 4) {
-        // TriMorph: crossfades Saw with a plain, fixed 50%-duty Square,
+        // SquSaw: crossfades Saw with a plain, fixed 50%-duty Square,
         // decoupled from the PWM slider on purpose -- reported live as
         // sounding "triangle-like" when it inherited PWM's variable duty
         // cycle; simplified back to always crossfading two cleanly-
@@ -6477,7 +6477,7 @@ class NodeLiveAudioProcessor extends AudioWorkletProcessor {
           state.triAcc = state.triAcc * retention + state.sqAcc * dt * 4;
           // Compensate for the fundamental's own amplitude shrinking
           // toward 0 as pulseWidth approaches 0 or 1 -- reported live as
-          // Triangle going quiet toward silence at extreme PWM.
+          // Trimorph going quiet toward silence at extreme PWM.
           const compensation = 1 / this.clampValue(Math.abs(Math.sin(Math.PI * pw)), 0.05, 1);
           const compensatedTri = state.triAcc * compensation;
           state.triPeak = Math.max(1, state.triPeak * 0.999 + Math.abs(compensatedTri) * 0.001);

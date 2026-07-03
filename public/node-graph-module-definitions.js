@@ -763,7 +763,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
     outputs: ["Out"],
     parameters: [
       {
-        choices: ["Sine", "Saw", "Square (PWM)", "Triangle", "TriMorph"],
+        choices: ["Sine", "Saw", "Square (PWM)", "Trimorph", "SquSaw"],
         defaultValue: "1",
         displayChoices: true,
         divideChoicesVisibly: true,
@@ -779,7 +779,7 @@ const nodeGraphModuleDefinitions = Object.freeze({
       { key: "frequency", label: "Frequency", kind: "frequency", defaultValue: "220", min: "0", mid: "220", max: "20000", step: "any", unit: "Hz" },
       { key: "morph", label: "Harmonics", defaultValue: "1", min: "0", mid: "0.5", max: "1", step: "0.001" },
       { key: "pulseWidth", label: "PWM", defaultValue: "0.5", min: "0.01", mid: "0.5", max: "0.99", step: "0.01" },
-      { key: "blend", label: "TriMorph", defaultValue: "0.5", min: "0", mid: "0.5", max: "1", step: "0.01" },
+      { key: "blend", label: "SquSaw", defaultValue: "0.5", min: "0", mid: "0.5", max: "1", step: "0.01" },
       { key: "level", label: "Level", defaultValue: "1", min: "0", mid: "0.5", max: "1", step: "0.01" },
     ],
   },
