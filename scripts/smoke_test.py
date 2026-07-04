@@ -9726,7 +9726,7 @@ def require_node_graph_mvp_contract() -> None:
         "function nodeGraphModuleOutputPorts(type)",
         "function nodeGraphParameterOutputPort(typeOrNode, port)",
         "function compileNodeGraphExecutionPlan(patch = nodeGraphMvp.patch)",
-        "const passthroughTypes = new Set([\"badvalMonitor\", \"bias\", \"cookbookFilter\", \"gain\", \"ladderFilter\", \"passiveFilter\", \"pll\", \"reverbEffect\", \"sampleHold\", \"slewLimiter\", \"softClipper\", \"speakerProtection\"])",
+        "const passthroughTypes = new Set([\"badvalMonitor\", \"bias\", \"chaoticPhaseLockingFilter\", \"cookbookFilter\", \"flowerChildFilter\", \"gain\", \"humanFilter\", \"ladderFilter\", \"passiveFilter\", \"pll\", \"resonatorFilter\", \"reverbEffect\", \"rsmetFilter\", \"sampleHold\", \"slewLimiter\", \"softClipper\", \"speakerProtection\", \"superloveFilter\", \"yellowjacketFilter\"])",
         "nodeGraphModuleDefinitions[node?.type]?.visualSink",
         "function nodeGraphVisualSinkActiveInPlan(node, options = {})",
         "return true;",
@@ -12771,7 +12771,7 @@ def require_node_graph_mvp_contract() -> None:
     require('"scope2d"' in module_store_source and 'label: "2D Burn"' in module_store_source, "2D Burn oscilloscope should exist")
     require('"scope2dTrace"' in module_store_source and 'label: "2D Trace"' in module_store_source, "2D Trace oscilloscope should exist")
     require('"dotOscilloscope",\n  "valueOscilloscope",\n  "numberReadout",\n  "lineBurnOscilloscope",\n  "scope2d",\n  "scope2dTrace"' in module_store_source, "Oscilloscope modules should be listed together")
-    require('nodeGraphModuleStoreUnderConstructionTypes = Object.freeze(new Set([\n  "canvas",\n  "graph",\n  "graph2",\n  "groupInput",\n  "groupOutput",\n  "shootingStarTail",\n]));' in module_store_source, "Canvas, graph modules, group portals, and shooting star tail should be under construction in the store set")
+    require('nodeGraphModuleStoreUnderConstructionTypes = Object.freeze(new Set([\n  "canvas",\n  "graph",\n  "graph2",\n  "groupInput",\n  "groupOutput",\n  "humanFilter",\n  "shootingStarTail",\n]));' in module_store_source, "Canvas, graph modules, group portals, Human Filter, and shooting star tail should be under construction in the store set")
     for oscilloscope_type in ["dotOscilloscope", "valueOscilloscope", "numberReadout", "lineBurnOscilloscope", "scope2d", "scope2dTrace"]:
         require(f"{oscilloscope_type}: {{" in module_definitions_source, f"{oscilloscope_type} should have a spawnable module definition")
     require('displayType: "dot"' in module_definitions_source, "0D Burn oscilloscope should declare dot display type")
@@ -16840,87 +16840,48 @@ def require_node_graph_mvp_contract() -> None:
 
 
 def require_readme_scheduler_contract() -> None:
+    # This fork's README was intentionally rewritten to document the analog
+    # filter research focus rather than preserve upstream's full CLAP host
+    # reference (that content still lives in docs/ and
+    # tools/webui-clap-host/README.md).
     readme_source = (ROOT / "README.md").read_text(encoding="utf-8")
     readme_text = " ".join(readme_source.split())
     for snippet in [
-        "git clone https://github.com/soundemote/soemdsp-sandbox.git",
-        "cd soemdsp-sandbox",
+        "git clone https://github.com/elanhickler/soemdsp-sandbox-analog-filters.git",
+        "cd soemdsp-sandbox-analog-filters",
         "python server.py",
         "http://127.0.0.1:8765",
         "python scripts\\smoke_test.py",
-        "No package install is required for the sandbox server.",
-        "The server only writes through explicit save/settings/audio helper routes.",
-        "Open Path is restricted to Downloads.",
-        "The browser patch graph is demo-scoped state.",
-        "The browser compiler is not the production soemdsp scheduler.",
-        "The WebUI does not instantiate real C++ DSP objects yet.",
-        "Patch files can save current module instances and settings.",
-        "Patch files cannot define new module types by themselves.",
-        "python tools\\webui-clap-host\\webui_clap_host.py",
-        "tools\\webui-clap-host\\start_webui_clap_host.cmd",
-        "tools\\webui-clap-host\\start_webui_clap_host.ps1",
-        "Windows launcher, metadata inspection on by default:",
-        "Localhost companion prototype for CLAP catalog and instance probes.",
-        "Render Sample has a bounded CLAP bridge.",
-        "Feedback touching CLAP nodes and Live Audio CLAP plans are blocked for now.",
-        "python tools\\webui-clap-host\\webui_clap_host.py --port 48000",
-        "tools\\webui-clap-host\\start_webui_clap_host.cmd -Port 48000",
-        "tools\\webui-clap-host\\start_webui_clap_host.ps1 -Port 48000",
-        "python tools\\webui-clap-host\\webui_clap_host.py --inspect-metadata",
-        "python tools\\webui-clap-host\\webui_clap_host.py --test-instantiate",
-        "python tools\\webui-clap-host\\webui_clap_host.py --doctor --inspect-metadata",
-        "Edit the Host field if the companion is not using http://127.0.0.1:47991.",
-        "Click Copy Host Command if you need the Windows .cmd launcher command.",
-        "Click Diagnostics to read setup counts from the running host.",
-        "Click Refresh Plugins to read the host catalog.",
-        "Add a CLAP Plugin module to store a selected catalog entry.",
-        "GET /health reports host capabilities.",
-        "GET /health also reports hostConfig: bind host, port, Python executable, scan dirs, explicit plugins, and probe flags.",
-        "GET /diagnostics reports hostConfig, catalog counts, metadata errors, instantiation errors, and missing explicit plugin paths.",
-        "--doctor reports hostConfig, catalog counts, metadata errors, instantiation errors, and missing explicit plugin paths as JSON.",
-        "Capabilities include maxProcessFrames, processBatch, and offlineRenderSessions.",
-        "Current maxProcessFrames default is 48000.",
-        "POST /instances",
-        "GET /instances/<id>/params",
-        "GET /instances/<id>/latency",
-        "GET /instances/<id>/tail",
-        "GET /instances/<id>/state",
-        "POST /instances/<id>/state",
-        "POST /instances/<id>/editor/close",
-        "POST /instances/<id>/param",
-        "POST /instances/<id>/params",
-        "POST /instances/<id>/render/begin",
-        "POST /instances/<id>/process",
-        "POST /instances/<id>/render/end",
-        "POST /process-batch",
-        "/process can accept and return bounded planar-f32-base64 audio.",
-        "/process can apply a parameters array before processing the chunk.",
-        "CLAP_PROCESS_ERROR fails the process call instead of returning audio.",
-        "Direct /param and /params writes are blocked while a render session is active.",
-        "Abandoned render sessions are released by an idle timeout.",
-        "A second render/begin is rejected while a non-idle render session is active.",
-        "Render Sample opens one render session per CLAP instance, processes chunks, then closes the session.",
-        "Render Sample requires audioProcessing: true from the host.",
-        "Render Sample requires offlineRenderSessions: true from the host.",
-        "Render Sample uses maxProcessFrames for CLAP process chunk size.",
-        "WebUI CLAP audio lanes flatten every CLAP audio port in host port order.",
-        "CLAP editor status can be detected; supported Win32 clap.gui editors can open when the plugin accepts the GUI sequence.",
-        "CLAP latency is compensated when Render Sample injects returned CLAP output.",
-        "Finite CLAP tails can extend Render Sample up to the bounded tail limit; infinite tails remain metadata-only.",
-        "CLAP state can be saved into patch JSON and restored into a new host instance when the plugin exposes clap.state.",
-        "Independent CLAP nodes in the same chunk can share one batch request.",
-        "POST /instances/<id>/safety/reset",
-        "DELETE /instances/<id>",
+        "No package install needed.",
+        "Moog Ladder",
+        "Diode Ladder",
+        "Sallen-Key",
+        "State-Variable Filter",
+        "Twin-T Notch",
+        "Discrete Multimode Filter",
+        "Simultaneous LP/HP Filter",
+        "Switchable Third-Order Filter",
+        "Diode-Controlled LP/HP Pair",
+        "Zero-delay feedback",
+        "Self-oscillating resonance",
+        "Built: the Flower Child family",
+        "flower_child_filter",
+        "rsmet_filter",
+        "yellowjacket_filter",
+        "superlove_filter",
+        "chaotic_phase_locking_filter",
+        "resonator_filter",
+        "human_filter",
+        "Characterizing behavior empirically",
+        "morphs a sine into a square",
+        "SuperLove's HP6 mode in particular",
+        "Polivoks-style filter",
+        "Resonator Filter deserves more than",
+        "sinusoidal fractal quality",
+        "docs/assets/resonator-waveforms.png",
+        "docs/assets/yellowjacket-response.png",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
-    for snippet in [
-        "Feedback routing remains blocked",
-        "acyclic browser patches",
-        "CLAP latency can be reported, but Render Sample does not compensate plugin latency yet.",
-        "CLAP tail is recorded as render metadata, but Render Sample does not extend render length for plugin tails yet.",
-        "CLAP editor status can be detected, but native editor opening is not implemented yet.",
-    ]:
-        require(snippet not in readme_text, f"README scheduler contract still has stale text: {snippet}")
 
 
 def fetch_valid_manifest_payload(base_url: str) -> dict[str, object]:
@@ -17193,6 +17154,13 @@ def require_native_module_contract(base_url: str) -> None:
             "soemdsp_helmholtz_frequency",
             "soemdsp_helmholtz_fidelity",
         ],
+        "flower_child_filter": ["soemdsp_flower_child_filter_create", "soemdsp_flower_child_filter_destroy", "soemdsp_flower_child_filter_sample"],
+        "rsmet_filter": ["soemdsp_rsmet_filter_create", "soemdsp_rsmet_filter_destroy", "soemdsp_rsmet_filter_sample"],
+        "yellowjacket_filter": ["soemdsp_yellowjacket_filter_create", "soemdsp_yellowjacket_filter_destroy", "soemdsp_yellowjacket_filter_sample"],
+        "superlove_filter": ["soemdsp_superlove_filter_create", "soemdsp_superlove_filter_destroy", "soemdsp_superlove_filter_sample"],
+        "chaotic_phase_locking_filter": ["soemdsp_chaotic_phase_locking_filter_create", "soemdsp_chaotic_phase_locking_filter_destroy", "soemdsp_chaotic_phase_locking_filter_sample"],
+        "resonator_filter": ["soemdsp_resonator_filter_create", "soemdsp_resonator_filter_destroy", "soemdsp_resonator_filter_sample"],
+        "human_filter": ["soemdsp_human_filter_create", "soemdsp_human_filter_destroy", "soemdsp_human_filter_sample"],
         "ladder_filter": ["soemdsp_ladder_filter_create", "soemdsp_ladder_filter_destroy", "soemdsp_ladder_filter_sample"],
         "logistic_map": ["soemdsp_logistic_map_create", "soemdsp_logistic_map_destroy", "soemdsp_logistic_map_sample"],
         "noise_generator": ["soemdsp_noise_generator_create", "soemdsp_noise_generator_destroy", "soemdsp_noise_generator_sample"],

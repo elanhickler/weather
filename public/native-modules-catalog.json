@@ -2,6 +2,17 @@
   "ok": true,
   "modules": [
     {
+      "name": "chaotic_phase_locking_filter",
+      "label": "Chaotic Phase Locking Filter",
+      "targetType": "chaoticPhaseLockingFilter",
+      "kind": "filter",
+      "source": "native_modules/chaotic_phase_locking_filter/chaotic_phase_locking_filter.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/chaotic_phase_locking_filter/chaotic_phase_locking_filter.cpp",
+      "wasm": "native_modules/chaotic_phase_locking_filter/chaotic_phase_locking_filter.wasm",
+      "wasmUrl": "native_modules/chaotic_phase_locking_filter/chaotic_phase_locking_filter.wasm",
+      "wasmAvailable": true
+    },
+    {
       "name": "chua_attractor",
       "label": "Chua Attractor",
       "targetType": "chuaAttractor",
@@ -21,6 +32,17 @@
       "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/ellipsoid/ellipsoid.cpp",
       "wasm": "native_modules/ellipsoid/ellipsoid.wasm",
       "wasmUrl": "native_modules/ellipsoid/ellipsoid.wasm",
+      "wasmAvailable": true
+    },
+    {
+      "name": "flower_child_filter",
+      "label": "Flower Child Filter",
+      "targetType": "flowerChildFilter",
+      "kind": "filter",
+      "source": "native_modules/flower_child_filter/flower_child_filter.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/flower_child_filter/flower_child_filter.cpp",
+      "wasm": "native_modules/flower_child_filter/flower_child_filter.wasm",
+      "wasmUrl": "native_modules/flower_child_filter/flower_child_filter.wasm",
       "wasmAvailable": true
     },
     {
@@ -54,6 +76,17 @@
       "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/henon_map/henon_map.cpp",
       "wasm": "native_modules/henon_map/henon_map.wasm",
       "wasmUrl": "native_modules/henon_map/henon_map.wasm",
+      "wasmAvailable": true
+    },
+    {
+      "name": "human_filter",
+      "label": "Human Filter",
+      "targetType": "humanFilter",
+      "kind": "filter",
+      "source": "native_modules/human_filter/human_filter.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/human_filter/human_filter.cpp",
+      "wasm": "native_modules/human_filter/human_filter.wasm",
+      "wasmUrl": "native_modules/human_filter/human_filter.wasm",
       "wasmAvailable": true
     },
     {
@@ -134,6 +167,28 @@
       "wasmAvailable": true
     },
     {
+      "name": "resonator_filter",
+      "label": "Resonator Filter",
+      "targetType": "resonatorFilter",
+      "kind": "filter",
+      "source": "native_modules/resonator_filter/resonator_filter.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/resonator_filter/resonator_filter.cpp",
+      "wasm": "native_modules/resonator_filter/resonator_filter.wasm",
+      "wasmUrl": "native_modules/resonator_filter/resonator_filter.wasm",
+      "wasmAvailable": true
+    },
+    {
+      "name": "rsmet_filter",
+      "label": "RSMET Filter",
+      "targetType": "rsmetFilter",
+      "kind": "filter",
+      "source": "native_modules/rsmet_filter/rsmet_filter.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/rsmet_filter/rsmet_filter.cpp",
+      "wasm": "native_modules/rsmet_filter/rsmet_filter.wasm",
+      "wasmUrl": "native_modules/rsmet_filter/rsmet_filter.wasm",
+      "wasmAvailable": true
+    },
+    {
       "name": "sabrina_reverb",
       "label": "Sabrina Reverb",
       "targetType": "reverbEffect",
@@ -167,6 +222,17 @@
       "wasmAvailable": true
     },
     {
+      "name": "superlove_filter",
+      "label": "SuperLove Filter",
+      "targetType": "superloveFilter",
+      "kind": "filter",
+      "source": "native_modules/superlove_filter/superlove_filter.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/superlove_filter/superlove_filter.cpp",
+      "wasm": "native_modules/superlove_filter/superlove_filter.wasm",
+      "wasmUrl": "native_modules/superlove_filter/superlove_filter.wasm",
+      "wasmAvailable": true
+    },
+    {
       "name": "surge_oscillator",
       "label": "Surge Oscillator",
       "targetType": "surgeOscillator",
@@ -197,6 +263,17 @@
       "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/vactrol_envelope/vactrol_envelope.cpp",
       "wasm": "native_modules/vactrol_envelope/vactrol_envelope.wasm",
       "wasmUrl": "native_modules/vactrol_envelope/vactrol_envelope.wasm",
+      "wasmAvailable": true
+    },
+    {
+      "name": "yellowjacket_filter",
+      "label": "Yellowjacket Filter",
+      "targetType": "yellowjacketFilter",
+      "kind": "filter",
+      "source": "native_modules/yellowjacket_filter/yellowjacket_filter.cpp",
+      "sourceUrl": "https://github.com/soundemote/soemdsp-sandbox/blob/master/native_modules/yellowjacket_filter/yellowjacket_filter.cpp",
+      "wasm": "native_modules/yellowjacket_filter/yellowjacket_filter.wasm",
+      "wasmUrl": "native_modules/yellowjacket_filter/yellowjacket_filter.wasm",
       "wasmAvailable": true
     }
   ]
