@@ -94,6 +94,22 @@ is reproduced from the real `soemdsp::utility::Graph` /
 `soemdsp::curve::Rational` source, not approximated — a generic N-node graph
 evaluator was built once and reused across all of them.
 
+**What makes Flower Child Filter itself interesting:** its Dirty/Rev3-style
+oscillators don't crossfade between a sine and a square wave with two
+separate waveshapers — they use one continuous
+[`ellipse()`](https://github.com/soundemote/oldcode/blob/main/old%20stuff%20se_framework/SynthesizerComponents/oscillator/waveshapes.cpp)
+function that morphs a sine into a square (and everywhere in between) as a
+single parameter moves, driven directly by resonance. That's the actual
+mechanism behind why turning resonance from clean to hot doesn't feel like
+switching between two different sounds — it's one continuous, stable
+waveshape sweep behind the feedback loop, which is exactly why it sounds and
+behaves like a real overdriven self-oscillating filter rather than a
+digital effect being crossfaded in.
+
+**SuperLove's HP6 mode in particular** screams — driven hard, it produces
+clean, beautiful square waves and is generally one of the hottest-sounding
+highpass filters in this set.
+
 ---
 
 ## 📈 Characterizing behavior empirically
