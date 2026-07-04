@@ -126,7 +126,12 @@ resonance *is*:
 
 That's a genuinely novel result for a feedback resonator: the *shape* of the
 self-oscillation is the mode, not a label on top of the same underlying
-waveform.
+waveform. Measured directly from the real compiled `.wasm` (driven with a
+220Hz tone at resonance 0.7–0.85, steady state):
+
+<div align="center">
+<img src="docs/assets/resonator-waveforms.png" alt="Three stacked waveform plots: Sinusoid mode showing a rounded sine, Triangle mode showing a triangular shape with jitter, and Sawtooth mode showing an asymmetric ramp-and-decay shape" width="85%"/>
+</div>
 
 ---
 
@@ -156,6 +161,10 @@ resonance fixed at 0.3:
   to ~0.046 above ~400Hz.
 - **Knob 0.8** — a genuine resonant peak around 1.2–1.6kHz (~0.21 RMS,
   roughly double its neighbors), falling off on both sides.
+
+<div align="center">
+<img src="docs/assets/yellowjacket-response.png" alt="Line chart of Yellowjacket Filter output level versus input frequency (log scale) at three Frequency knob settings. Knob 0.2 is flat. Knob 0.5 slopes down like a lowpass. Knob 0.8 has a clear resonant peak around 1.2 to 1.6kHz." width="85%"/>
+</div>
 
 That last point is the answer to "but it sounds like a bandpass in use" —
 it does, and now there's a measurement showing exactly where and how much.

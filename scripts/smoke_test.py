@@ -16877,6 +16877,8 @@ def require_readme_scheduler_contract() -> None:
         "Polivoks-style filter",
         "Resonator Filter deserves more than",
         "sinusoidal fractal quality",
+        "docs/assets/resonator-waveforms.png",
+        "docs/assets/yellowjacket-response.png",
     ]:
         require(snippet in readme_text, f"README scheduler contract missing {snippet}")
 
