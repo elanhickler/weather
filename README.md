@@ -114,12 +114,22 @@ for the foam/crash detail.
 | Piece | Status |
 |---|---|
 | Random pulse train (static/droplets) | 🔲 not started |
-| Pulse Explosion module (skewed-gaussian burst scheduler) | 🔲 not started |
+| Pulse Explosion module (skewed-gaussian burst scheduler) | ✅ built |
 | Clean resonant filter (water/rip FX) | 🔲 not started |
 | Noise color generators (white/pink/red/blue/violet) | 🔲 not started |
 | Layered composites (wind, waves, air conditioner, vacuum) | 🔲 not started |
 
-This is a plan, not a changelog — nothing here is claimed as built yet.
+**Pulse Explosion** (`pulseExplosion` node type) is the first piece built: on a
+rising-edge trigger it schedules a burst of single-sample pulses across a
+Start/Center/End Time window via rejection sampling against a skewed tent-shaped
+density curve (Time Spread controls how tightly the burst concentrates around
+Center Time). An optional Seed makes the burst reproducible; a Curve output
+exposes the same density shape as a continuous signal so it can be patched
+elsewhere. The node's display draws the density curve with dots at the exact
+pre-calculated pulse positions the current seed/parameters will produce.
+
+This is a plan, not a changelog — everything else here is still just a plan,
+not claimed as built.
 
 ---
 
